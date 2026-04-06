@@ -12,5 +12,5 @@ public class LoginRequest {
     private String email;
 
     @NotBlank(message = "Senha é obrigatória")
-    private String senha;
+    private String password;
 }

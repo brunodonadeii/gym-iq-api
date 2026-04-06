@@ -7,10 +7,10 @@ import lombok.Data;
 @Builder
 public class AuthResponse {
     private String token;
-    private String tipo;
-    private Integer idUsuario;
-    private String nome;
+    private String type;
+    private Integer userId;
+    private String name;
     private String email;
-    private String perfil;
-    private Boolean lgpdAceito;
+    private String role;
+    private Boolean lgpdAccepted;
 }

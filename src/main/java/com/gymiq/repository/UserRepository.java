@@ -1,15 +1,15 @@
 package com.gymiq.repository;
 
-import com.gymiq.entity.Usuario;
+import com.gymiq.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
+public interface UserRepository extends JpaRepository<User, Integer> {
 
-    Optional<Usuario> findByEmail(String email);
+    Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
 }
