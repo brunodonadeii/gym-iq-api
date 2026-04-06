@@ -6,13 +6,13 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class MatricularAlunoRequest {
+public class EnrollStudentRequest {
 
     @NotNull(message = "ID do aluno é obrigatório")
-    private Integer idAluno;
+    private Integer studentId;
 
     @NotNull(message = "ID do plano é obrigatório")
-    private Integer idPlano;
+    private Integer planId;
 
-    private LocalDate dataInicio;
+    private LocalDate startDate;
 }

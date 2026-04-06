@@ -1,15 +1,14 @@
 package com.gymiq.security;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
-
 
 @Slf4j
 @Component
@@ -21,35 +20,32 @@ public class JwtUtil {
     @Value("${gymiq.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
-
-    public String gerarToken(String email, String perfil, Integer idUsuario) {
+    public String generateToken(String email, String role, Integer userId) {
         return Jwts.builder()
                 .subject(email)
-                .claim("perfil", perfil)
-                .claim("idUsuario", idUsuario)
+                .claim("role", role)
+                .claim("userId", userId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getChave())
+                .signWith(getKey())
                 .compact();
     }
 
-
-    public String extrairEmail(String token) {
-        return parsearClaims(token).getSubject();
+    public String extractEmail(String token) {
+        return parseClaims(token).getSubject();
     }
 
-    public String extrairPerfil(String token) {
-        return (String) parsearClaims(token).get("perfil");
+    public String extractRole(String token) {
+        return (String) parseClaims(token).get("role");
     }
 
-    public Integer extrairIdUsuario(String token) {
-        return ((Number) parsearClaims(token).get("idUsuario")).intValue();
+    public Integer extractUserId(String token) {
+        return ((Number) parseClaims(token).get("userId")).intValue();
     }
 
-
-    public boolean validarToken(String token) {
+    public boolean validateToken(String token) {
         try {
-            parsearClaims(token);
+            parseClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
             log.warn("JWT expirado: {}", e.getMessage());
@@ -65,19 +61,15 @@ public class JwtUtil {
         return false;
     }
 
-
-    private Claims parsearClaims(String token) {
+    private Claims parseClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getChave())
+                .verifyWith(getKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
-    private SecretKey getChave() {
-        byte[] keyBytes = Decoders.BASE64.decode(
-                java.util.Base64.getEncoder().encodeToString(jwtSecret.getBytes())
-        );
-        return Keys.hmacShaKeyFor(keyBytes);
+    private SecretKey getKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 }

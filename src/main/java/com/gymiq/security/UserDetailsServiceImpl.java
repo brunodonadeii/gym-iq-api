@@ -1,7 +1,7 @@
 package com.gymiq.security;
 
-import com.gymiq.entity.Usuario;
-import com.gymiq.repository.UsuarioRepository;
+import com.gymiq.entity.User;
+import com.gymiq.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
@@ -10,28 +10,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-
 @Service
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "Usuário não encontrado com e-mail: " + email));
 
-        if (!usuario.getAtivo()) {
+        if (!user.getActive()) {
             throw new UsernameNotFoundException("Usuário inativo: " + email);
         }
 
-        return User.builder()
-                .username(usuario.getEmail())
-                .password(usuario.getSenhaHash())
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getPerfil().name())))
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getEmail())
+                .password(user.getPasswordHash())
+                .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
                 .build();
     }
 }

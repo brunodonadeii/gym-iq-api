@@ -1,14 +1,14 @@
 package com.gymiq.service;
 
-import com.gymiq.dto.request.CadastrarAlunoRequest;
+import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.LoginRequest;
-import com.gymiq.dto.response.AlunoResponse;
+import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.dto.response.AuthResponse;
-import com.gymiq.entity.Aluno;
-import com.gymiq.entity.Usuario;
+import com.gymiq.entity.Student;
+import com.gymiq.entity.User;
 import com.gymiq.exception.BusinessException;
-import com.gymiq.repository.AlunoRepository;
-import com.gymiq.repository.UsuarioRepository;
+import com.gymiq.repository.StudentRepository;
+import com.gymiq.repository.UserRepository;
 import com.gymiq.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,90 +26,87 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final UsuarioRepository usuarioRepository;
-    private final AlunoRepository alunoRepository;
+    private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
 
-
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getSenha())
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        Usuario usuario = usuarioRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
 
-        String token = jwtUtil.gerarToken(
-                usuario.getEmail(),
-                usuario.getPerfil().name(),
-                usuario.getIdUsuario()
+        String token = jwtUtil.generateToken(
+                user.getEmail(),
+                user.getRole().name(),
+                user.getUserId()
         );
 
-        log.info("Login realizado: {} ({})", usuario.getEmail(), usuario.getPerfil());
+        log.info("Login realizado: {} ({})", user.getEmail(), user.getRole());
 
         return AuthResponse.builder()
                 .token(token)
-                .tipo("Bearer")
-                .idUsuario(usuario.getIdUsuario())
-                .nome(usuario.getNome())
-                .email(usuario.getEmail())
-                .perfil(usuario.getPerfil().name())
-                .lgpdAceito(usuario.getLgpdAceito())
+                .type("Bearer")
+                .userId(user.getUserId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole().name())
+                .lgpdAccepted(user.getLgpdAccepted())
                 .build();
     }
 
-
     @Transactional
-    public AlunoResponse registrarAluno(CadastrarAlunoRequest request) {
-        if (usuarioRepository.existsByEmail(request.getEmail())) {
+    public StudentResponse registerStudent(CreateStudentRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
         }
-        if (alunoRepository.existsByCpf(request.getCpf())) {
+        if (studentRepository.existsByCpf(request.getCpf())) {
             throw new BusinessException("CPF já cadastrado: " + request.getCpf());
         }
 
-        Usuario usuario = Usuario.builder()
-                .nome(request.getNome())
+        User user = User.builder()
+                .name(request.getName())
                 .email(request.getEmail())
-                .senhaHash(passwordEncoder.encode(request.getSenha()))
-                .perfil(Usuario.Perfil.ALUNO)
-                .ativo(true)
-                .lgpdAceito(false)
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .role(User.Role.STUDENT)
+                .active(true)
+                .lgpdAccepted(false)
                 .build();
-        usuarioRepository.save(usuario);
+        userRepository.save(user);
 
-
-        Aluno aluno = Aluno.builder()
-                .usuario(usuario)
+        Student student = Student.builder()
+                .user(user)
                 .cpf(request.getCpf())
-                .dataNascimento(request.getDataNascimento())
-                .telefone(request.getTelefone())
-                .cep(request.getCep())
-                .endereco(request.getEndereco())
+                .birthDate(request.getBirthDate())
+                .phone(request.getPhone())
+                .zipCode(request.getZipCode())
+                .address(request.getAddress())
                 .build();
-        alunoRepository.save(aluno);
+        studentRepository.save(student);
 
-        log.info("Novo aluno registrado: {} (id={})", usuario.getEmail(), aluno.getIdAluno());
+        log.info("Novo aluno registrado: {} (id={})", user.getEmail(), student.getStudentId());
 
-        return AlunoResponse.fromEntity(aluno);
+        return StudentResponse.fromEntity(student);
     }
 
     @Transactional
-    public void registrarAceiteLgpd(Integer idUsuario) {
-        Usuario usuario = usuarioRepository.findById(idUsuario)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado: " + idUsuario));
+    public void registerLgpdAcceptance(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado: " + userId));
 
-        if (usuario.getLgpdAceito()) {
+        if (user.getLgpdAccepted()) {
             throw new BusinessException("LGPD já aceita para este usuário");
         }
 
-        usuario.setLgpdAceito(true);
-        usuario.setLgpdAceitoEm(LocalDateTime.now());
-        usuarioRepository.save(usuario);
+        user.setLgpdAccepted(true);
+        user.setLgpdAcceptedAt(LocalDateTime.now());
+        userRepository.save(user);
 
-        log.info("LGPD aceita pelo usuário id={} em {}", idUsuario, usuario.getLgpdAceitoEm());
+        log.info("LGPD aceita pelo usuário id={} em {}", userId, user.getLgpdAcceptedAt());
     }
 }
