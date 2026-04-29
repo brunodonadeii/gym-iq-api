@@ -26,7 +26,7 @@ public class Plan {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description")
     private String description;
 
     @Column(name = "monthly_price", nullable = false, precision = 10, scale = 2)
