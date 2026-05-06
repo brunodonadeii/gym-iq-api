@@ -14,11 +14,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/enrollments")
+@RequestMapping({"/api/enrollments"})
 @RequiredArgsConstructor
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<List<EnrollmentResponse>> findAll() {
+        return ResponseEntity.ok(enrollmentService.findAll());
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")

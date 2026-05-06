@@ -2,6 +2,7 @@ package com.gymiq.service;
 
 import com.gymiq.dto.request.EnrollStudentRequest;
 import com.gymiq.dto.response.EnrollmentResponse;
+import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
@@ -25,6 +26,15 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final StudentService studentService;
     private final PlanService planService;
+
+
+    @Transactional(readOnly = true)
+    public List<EnrollmentResponse> findAll() {
+        return enrollmentRepository.findAll()
+                .stream()
+                .map(EnrollmentResponse::fromEntity)
+                .toList();
+    }
 
     @Transactional
     public EnrollmentResponse enroll(EnrollStudentRequest request) {

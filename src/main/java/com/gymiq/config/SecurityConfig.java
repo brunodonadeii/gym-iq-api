@@ -59,25 +59,35 @@ public class SecurityConfig {
 
 
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/registro").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
 
 
-                .requestMatchers(HttpMethod.POST, "/api/alunos").hasAnyRole("ADMIN", "RECEPCAO")
-                .requestMatchers(HttpMethod.GET,  "/api/alunos").hasAnyRole("ADMIN", "RECEPCAO", "INSTRUTOR")
-                .requestMatchers(HttpMethod.GET,  "/api/alunos/**").hasAnyRole("ADMIN", "RECEPCAO", "INSTRUTOR", "ALUNO")
-                .requestMatchers(HttpMethod.PUT,  "/api/alunos/**").hasAnyRole("ADMIN", "RECEPCAO")
-                .requestMatchers(HttpMethod.DELETE, "/api/alunos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/students").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/students").hasAnyRole("ADMIN", "RECEPTION", "INSTRUCTOR")
+                .requestMatchers(HttpMethod.GET,  "/api/students/**").hasAnyRole("ADMIN", "RECEPTION", "INSTRUCTOR", "STUDENT")
+                .requestMatchers(HttpMethod.PUT,  "/api/students/**").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.DELETE, "/api/students/**").hasRole("ADMIN")
 
 
-                .requestMatchers(HttpMethod.GET, "/api/planos").hasAnyRole("ADMIN", "RECEPCAO", "ALUNO")
-                .requestMatchers(HttpMethod.POST, "/api/planos").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/planos/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/planos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/plans").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
+                .requestMatchers(HttpMethod.GET, "/api/plans/**").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
+                .requestMatchers(HttpMethod.POST, "/api/plans").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/plans/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/plans/**").hasRole("ADMIN")
 
 
-                .requestMatchers(HttpMethod.POST, "/api/matriculas").hasAnyRole("ADMIN", "RECEPCAO")
-                .requestMatchers(HttpMethod.GET,  "/api/matriculas/**").hasAnyRole("ADMIN", "RECEPCAO")
-                .requestMatchers(HttpMethod.PATCH, "/api/matriculas/**").hasAnyRole("ADMIN", "RECEPCAO")
+                .requestMatchers(HttpMethod.POST, "/api/enrollments").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/enrollments").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/enrollments/**").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
+                .requestMatchers(HttpMethod.PATCH, "/api/enrollments/**").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.POST, "/api/enrollments/**").hasAnyRole("ADMIN", "RECEPTION")
+
+
+                .requestMatchers(HttpMethod.POST, "/api/payments").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.POST, "/api/payments/**").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/payments").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/payments/**").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.PATCH, "/api/payments/**").hasAnyRole("ADMIN", "RECEPTION")
 
 
                 .anyRequest().authenticated()
