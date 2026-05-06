@@ -75,7 +75,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.changeStatus(id, newStatus));
     }
 
-    @PostMapping("/refresh-overdue")
+    @PatchMapping("/refresh-overdue")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<List<PaymentResponse>> refreshOverdue() {
         return ResponseEntity.ok(paymentService.refreshOverdue());

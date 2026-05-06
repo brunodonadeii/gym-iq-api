@@ -151,9 +151,8 @@ public class PaymentService {
 
     @Transactional
     public List<PaymentResponse> refreshOverdue() {
-        List<Payment> overduePayments = paymentRepository.findByStatusInAndDueDateBefore(
-                List.of(PaymentStatus.PENDING, PaymentStatus.OVERDUE),
-                LocalDate.now());
+        List<Payment> overduePayments = paymentRepository
+                .findByStatusAndDueDateBefore(PaymentStatus.PENDING, LocalDate.now());
 
         overduePayments.forEach(payment -> payment.setStatus(PaymentStatus.OVERDUE));
         paymentRepository.saveAll(overduePayments);

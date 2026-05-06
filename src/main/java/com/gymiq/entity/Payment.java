@@ -57,8 +57,9 @@ public class Payment {
     private LocalDateTime updatedAt;
 
     public enum PaymentStatus {
-        PAID,
         PENDING,
-        OVERDUE
+        PAID,
+        OVERDUE,
+        CANCELED
     }
 }
