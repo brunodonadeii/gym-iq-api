@@ -18,4 +18,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
     List<Payment> findByStatus(PaymentStatus status);
 
     List<Payment> findByStatusAndDueDateBefore(PaymentStatus status, LocalDate date);
+
+    long countByEnrollmentStudentStudentIdAndStatus(Integer studentId, PaymentStatus status);
+
+    long countByEnrollmentStudentStudentIdAndStatusAndDueDateBefore(
+            Integer studentId,
+            PaymentStatus status,
+            LocalDate date);
 }

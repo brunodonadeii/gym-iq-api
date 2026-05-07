@@ -117,6 +117,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,  "/api/workout-sheet-exercises/**").hasAnyRole("ADMIN", "INSTRUCTOR")
                 .requestMatchers(HttpMethod.DELETE, "/api/workout-sheet-exercises/**").hasAnyRole("ADMIN", "INSTRUCTOR")
 
+                .requestMatchers(HttpMethod.GET, "/api/retention-alerts/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/retention-alerts/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/api/retention-alerts/**").hasRole("ADMIN")
+
                 .anyRequest().authenticated()
             )
 

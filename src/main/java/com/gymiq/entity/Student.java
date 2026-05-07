@@ -57,4 +57,7 @@ public class Student {
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<WorkoutSheet> workoutSheets;
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<RetentionAlert> retentionAlerts;
 }

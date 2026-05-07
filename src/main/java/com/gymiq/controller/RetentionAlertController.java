@@ -1,0 +1,54 @@
+package com.gymiq.controller;
+
+import com.gymiq.dto.response.RetentionAlertResponse;
+import com.gymiq.service.RetentionAlertService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/retention-alerts")
+@RequiredArgsConstructor
+public class RetentionAlertController {
+
+    private final RetentionAlertService retentionAlertService;
+
+    @PostMapping("/student/{studentId}/generate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<RetentionAlertResponse> generateForStudent(@PathVariable Integer studentId) {
+        return ResponseEntity.ok(retentionAlertService.generateForStudent(studentId));
+    }
+
+    @PostMapping("/generate-active-students")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<RetentionAlertResponse>> generateForActiveStudents() {
+        return ResponseEntity.ok(retentionAlertService.generateForActiveStudents());
+    }
+
+    @GetMapping("/open")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<RetentionAlertResponse>> findOpenAlerts() {
+        return ResponseEntity.ok(retentionAlertService.findOpenAlerts());
+    }
+
+    @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<RetentionAlertResponse>> findByStudent(@PathVariable Integer studentId) {
+        return ResponseEntity.ok(retentionAlertService.findByStudent(studentId));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<RetentionAlertResponse> findById(@PathVariable Integer id) {
+        return ResponseEntity.ok(retentionAlertService.findById(id));
+    }
+
+    @PatchMapping("/{id}/resolve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<RetentionAlertResponse> resolve(@PathVariable Integer id) {
+        return ResponseEntity.ok(retentionAlertService.resolve(id));
+    }
+}
