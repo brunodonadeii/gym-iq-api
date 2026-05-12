@@ -1,7 +1,9 @@
 package com.gymiq.controller;
 
 import com.gymiq.dto.request.CreateStudentRequest;
+import com.gymiq.dto.response.AddressLookupResponse;
 import com.gymiq.dto.response.StudentResponse;
+import com.gymiq.service.AddressLookupService;
 import com.gymiq.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService studentService;
+    private final AddressLookupService addressLookupService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
@@ -37,6 +40,12 @@ public class StudentController {
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<List<StudentResponse>> search(@RequestParam String q) {
         return ResponseEntity.ok(studentService.search(q));
+    }
+
+    @GetMapping("/address-by-zip-code/{zipCode}")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<AddressLookupResponse> findAddressByZipCode(@PathVariable String zipCode) {
+        return ResponseEntity.ok(addressLookupService.lookupByZipCode(zipCode));
     }
 
     @GetMapping("/{id}")
