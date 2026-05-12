@@ -1,6 +1,7 @@
 package com.gymiq.controller;
 
 import com.gymiq.dto.request.CreateStudentRequest;
+import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.AddressLookupResponse;
 import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.service.AddressLookupService;
@@ -58,7 +59,7 @@ public class StudentController {
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<StudentResponse> update(
             @PathVariable Integer id,
-            @Valid @RequestBody CreateStudentRequest request) {
+            @Valid @RequestBody UpdateStudentRequest request) {
         return ResponseEntity.ok(studentService.update(id, request));
     }
 
