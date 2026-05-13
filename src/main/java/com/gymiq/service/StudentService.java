@@ -2,7 +2,6 @@ package com.gymiq.service;
 
 import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
-import com.gymiq.dto.response.AddressLookupResponse;
 import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
@@ -26,12 +25,11 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final CpfValidationService cpfValidationService;
-    private final AddressLookupService addressLookupService;
+    private final StudentDataService studentDataService;
 
     @Transactional
     public StudentResponse create(CreateStudentRequest request) {
-        cpfValidationService.validate(request.getCpf());
+        studentDataService.validateCpf(request.getCpf());
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
@@ -56,7 +54,7 @@ public class StudentService {
                 .birthDate(request.getBirthDate())
                 .phone(request.getPhone())
                 .zipCode(request.getZipCode())
-                .address(resolveAddress(request.getZipCode(), request.getAddress()))
+                .address(studentDataService.resolveAddress(request.getZipCode(), request.getAddress()))
                 .build();
         studentRepository.save(student);
 
@@ -98,7 +96,7 @@ public class StudentService {
         }
 
         if (request.getCpf() != null && !request.getCpf().isBlank()) {
-            cpfValidationService.validate(request.getCpf());
+            studentDataService.validateCpf(request.getCpf());
             studentRepository.findByCpf(request.getCpf())
                     .filter(s -> !s.getStudentId().equals(id))
                     .ifPresent(s -> { throw new BusinessException("CPF já usado por outro aluno"); });
@@ -121,7 +119,7 @@ public class StudentService {
             student.setZipCode(request.getZipCode());
         }
         if (request.getAddress() != null || request.getZipCode() != null) {
-            student.setAddress(resolveAddress(request.getZipCode(), request.getAddress()));
+            student.setAddress(studentDataService.resolveAddress(request.getZipCode(), request.getAddress()));
         }
 
         studentRepository.save(student);
@@ -140,14 +138,5 @@ public class StudentService {
     public Student findEntityById(Integer id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + id));
-    }
-
-    private String resolveAddress(String zipCode, String fallbackAddress) {
-        if (zipCode == null || zipCode.isBlank()) {
-            return fallbackAddress;
-        }
-
-        AddressLookupResponse address = addressLookupService.lookupByZipCode(zipCode);
-        return address.getFormattedAddress();
     }
 }

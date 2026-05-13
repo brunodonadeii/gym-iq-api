@@ -31,8 +31,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
-    private final CpfValidationService cpfValidationService;
-    private final AddressLookupService addressLookupService;
+    private final StudentDataService studentDataService;
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
@@ -64,7 +63,7 @@ public class AuthService {
 
     @Transactional
     public StudentResponse registerStudent(CreateStudentRequest request) {
-        cpfValidationService.validate(request.getCpf());
+        studentDataService.validateCpf(request.getCpf());
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
@@ -89,21 +88,13 @@ public class AuthService {
                 .birthDate(request.getBirthDate())
                 .phone(request.getPhone())
                 .zipCode(request.getZipCode())
-                .address(resolveAddress(request))
+                .address(studentDataService.resolveAddress(request.getZipCode(), request.getAddress()))
                 .build();
         studentRepository.save(student);
 
         log.info("Novo aluno registrado: {} (id={})", user.getEmail(), student.getStudentId());
 
         return StudentResponse.fromEntity(student);
-    }
-
-    private String resolveAddress(CreateStudentRequest request) {
-        if (request.getZipCode() == null || request.getZipCode().isBlank()) {
-            return request.getAddress();
-        }
-
-        return addressLookupService.lookupByZipCode(request.getZipCode()).getFormattedAddress();
     }
 
     @Transactional
