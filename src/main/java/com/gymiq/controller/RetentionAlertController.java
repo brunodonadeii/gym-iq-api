@@ -28,6 +28,12 @@ public class RetentionAlertController {
         return ResponseEntity.ok(retentionAlertService.generateForActiveStudents());
     }
 
+    @PostMapping("/generate-overdue-students")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<RetentionAlertResponse>> generateForOverdueStudents() {
+        return ResponseEntity.ok(retentionAlertService.generateForOverdueStudents());
+    }
+
     @GetMapping("/open")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<RetentionAlertResponse>> findOpenAlerts() {

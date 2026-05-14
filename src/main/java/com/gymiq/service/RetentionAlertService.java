@@ -79,6 +79,21 @@ public class RetentionAlertService {
                 .toList();
     }
 
+    @Transactional
+    public List<RetentionAlertResponse> generateForOverdueStudents() {
+        List<Integer> studentIds = paymentRepository.findActiveStudentIdsWithOverduePayments(
+                EnrollmentStatus.ACTIVE,
+                PaymentStatus.OVERDUE,
+                PaymentStatus.PENDING,
+                LocalDate.now());
+
+        log.info("Generating retention alerts for {} student(s) with overdue payments", studentIds.size());
+
+        return studentIds.stream()
+                .map(this::generateForStudent)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<RetentionAlertResponse> findOpenAlerts() {
         return retentionAlertRepository.findByStatusOrderByRiskScoreDescUpdatedAtDesc(AlertStatus.OPEN)
