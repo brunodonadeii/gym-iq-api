@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Integer> {
@@ -23,6 +24,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
     List<Payment> findByStatusAndDueDateBefore(PaymentStatus status, LocalDate date);
 
     boolean existsByEnrollmentEnrollmentIdAndDueDate(Integer enrollmentId, LocalDate dueDate);
+
+    Optional<Payment> findTopByEnrollmentEnrollmentIdOrderByDueDateDesc(Integer enrollmentId);
 
     long countByEnrollmentStudentStudentIdAndStatus(Integer studentId, PaymentStatus status);
 
