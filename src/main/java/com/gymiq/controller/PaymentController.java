@@ -1,13 +1,11 @@
 package com.gymiq.controller;
 
-import com.gymiq.dto.request.CreatePaymentRequest;
 import com.gymiq.dto.request.PayPaymentRequest;
 import com.gymiq.dto.response.PaymentResponse;
 import com.gymiq.entity.Payment.PaymentStatus;
 import com.gymiq.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,13 +18,6 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService paymentService;
-
-    @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<PaymentResponse> create(
-            @Valid @RequestBody CreatePaymentRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.create(request));
-    }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")

@@ -1,10 +1,8 @@
 package com.gymiq.service;
 
-import com.gymiq.dto.request.CreatePaymentRequest;
 import com.gymiq.dto.request.PayPaymentRequest;
 import com.gymiq.dto.response.PaymentResponse;
 import com.gymiq.entity.Enrollment;
-import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Payment.PaymentStatus;
 import com.gymiq.exception.BusinessException;
@@ -17,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,33 +29,25 @@ public class PaymentService {
     private final StudentRepository studentRepository;
 
     @Transactional
-    public PaymentResponse create(CreatePaymentRequest request) {
-        Enrollment enrollment = enrollmentRepository.findById(request.getEnrollmentId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Matricula nao encontrada: " + request.getEnrollmentId()));
+    public Payment createFirstPaymentForEnrollment(Enrollment enrollment) {
+        LocalDate dueDate = enrollment.getStartDate();
 
-        if (enrollment.getStatus() == EnrollmentStatus.CANCELED) {
-            throw new BusinessException("Nao e possivel criar pagamento para matricula cancelada");
+        if (paymentRepository.existsByEnrollmentEnrollmentIdAndDueDate(
+                enrollment.getEnrollmentId(), dueDate)) {
+            log.info("Pagamento inicial ja existe para matricula id={} e vencimento={}",
+                    enrollment.getEnrollmentId(), dueDate);
+            return null;
         }
-
-        BigDecimal amount = request.getAmount() != null
-                ? request.getAmount()
-                : enrollment.getPlan().getMonthlyPrice();
 
         Payment payment = Payment.builder()
                 .enrollment(enrollment)
-                .amount(amount)
-                .dueDate(request.getDueDate())
-                .status(resolveInitialStatus(request.getDueDate()))
-                .paymentMethod(request.getPaymentMethod())
-                .notes(request.getNotes())
+                .amount(enrollment.getPlan().getMonthlyPrice())
+                .dueDate(enrollment.getStartDate())
+                .status(resolveInitialStatus(enrollment.getStartDate()))
+                .notes("Primeira mensalidade da matricula")
                 .build();
 
-        paymentRepository.save(payment);
-        log.info("Pagamento criado: id={}, matricula={}, valor={}, vencimento={}",
-                payment.getPaymentId(), enrollment.getEnrollmentId(), amount, payment.getDueDate());
-
-        return PaymentResponse.fromEntity(payment);
+        return paymentRepository.save(payment);
     }
 
     @Transactional(readOnly = true)

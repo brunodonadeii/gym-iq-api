@@ -26,6 +26,7 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final StudentService studentService;
     private final PlanService planService;
+    private final PaymentService paymentService;
 
 
     @Transactional(readOnly = true)
@@ -64,6 +65,8 @@ public class EnrollmentService {
                 .build();
 
         enrollmentRepository.save(enrollment);
+
+        paymentService.createFirstPaymentForEnrollment(enrollment);
         log.info("Matrícula criada: id={}, aluno={}, plano={}, fim={}",
                 enrollment.getEnrollmentId(), student.getStudentId(), plan.getName(), end);
 
@@ -132,6 +135,7 @@ public class EnrollmentService {
                 .build();
 
         enrollmentRepository.save(newEnrollment);
+        paymentService.createFirstPaymentForEnrollment(newEnrollment);
         log.info("Matrícula renovada: nova id={}, aluno={}, plano={}, fim={}",
                 newEnrollment.getEnrollmentId(),
                 oldEnrollment.getStudent().getStudentId(),

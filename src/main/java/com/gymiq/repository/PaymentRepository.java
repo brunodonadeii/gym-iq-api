@@ -22,6 +22,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
 
     List<Payment> findByStatusAndDueDateBefore(PaymentStatus status, LocalDate date);
 
+    boolean existsByEnrollmentEnrollmentIdAndDueDate(Integer enrollmentId, LocalDate dueDate);
+
     long countByEnrollmentStudentStudentIdAndStatus(Integer studentId, PaymentStatus status);
 
     long countByEnrollmentStudentStudentIdAndStatusAndDueDateBefore(
