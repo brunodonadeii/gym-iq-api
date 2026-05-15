@@ -5,12 +5,14 @@ import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.service.InstructorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/instructors")
@@ -28,14 +30,17 @@ public class InstructorController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<InstructorResponse>> findAll() {
-        return ResponseEntity.ok(instructorService.findAll());
+    public ResponseEntity<Page<InstructorResponse>> findAll(
+            @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(instructorService.findAll(pageable));
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<InstructorResponse>> search(@RequestParam String q) {
-        return ResponseEntity.ok(instructorService.search(q));
+    public ResponseEntity<Page<InstructorResponse>> search(
+            @RequestParam String q,
+            @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(instructorService.search(q, pageable));
     }
 
     @GetMapping("/{id}")

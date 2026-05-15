@@ -6,6 +6,10 @@ import com.gymiq.entity.Payment.PaymentStatus;
 import com.gymiq.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +25,9 @@ public class PaymentController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<PaymentResponse>> findAll() {
-        return ResponseEntity.ok(paymentService.findAll());
+    public ResponseEntity<Page<PaymentResponse>> findAll(
+            @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(paymentService.findAll(pageable));
     }
 
     @GetMapping("/{id}")
@@ -33,21 +38,25 @@ public class PaymentController {
 
     @GetMapping("/enrollment/{enrollmentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<PaymentResponse>> findByEnrollment(
-            @PathVariable Integer enrollmentId) {
-        return ResponseEntity.ok(paymentService.findByEnrollment(enrollmentId));
+    public ResponseEntity<Page<PaymentResponse>> findByEnrollment(
+            @PathVariable Integer enrollmentId,
+            @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(paymentService.findByEnrollment(enrollmentId, pageable));
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<PaymentResponse>> findByStudent(@PathVariable Integer studentId) {
-        return ResponseEntity.ok(paymentService.findByStudent(studentId));
+    public ResponseEntity<Page<PaymentResponse>> findByStudent(
+            @PathVariable Integer studentId,
+            @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(paymentService.findByStudent(studentId, pageable));
     }
 
     @GetMapping("/overdue")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<PaymentResponse>> findOverdue() {
-        return ResponseEntity.ok(paymentService.findOverdue());
+    public ResponseEntity<Page<PaymentResponse>> findOverdue(
+            @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(paymentService.findOverdue(pageable));
     }
 
     @PatchMapping("/{id}/pay")

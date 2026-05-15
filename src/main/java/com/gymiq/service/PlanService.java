@@ -8,6 +8,8 @@ import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,19 +42,15 @@ public class PlanService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlanResponse> findActive() {
-        return planRepository.findByActiveTrue()
-                .stream()
-                .map(PlanResponse::fromEntity)
-                .toList();
+    public Page<PlanResponse> findActive(Pageable pageable) {
+        return planRepository.findByActiveTrue(pageable)
+                .map(PlanResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PlanResponse> findAll() {
-        return planRepository.findAll()
-                .stream()
-                .map(PlanResponse::fromEntity)
-                .toList();
+    public Page<PlanResponse> findAll(Pageable pageable) {
+        return planRepository.findAll(pageable)
+                .map(PlanResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)

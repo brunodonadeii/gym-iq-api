@@ -5,12 +5,14 @@ import com.gymiq.dto.response.ExerciseResponse;
 import com.gymiq.service.ExerciseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/exercises")
@@ -28,20 +30,24 @@ public class ExerciseController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR','STUDENT')")
-    public ResponseEntity<List<ExerciseResponse>> findActive() {
-        return ResponseEntity.ok(exerciseService.findActive());
+    public ResponseEntity<Page<ExerciseResponse>> findActive(
+            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(exerciseService.findActive(pageable));
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<List<ExerciseResponse>> findAll() {
-        return ResponseEntity.ok(exerciseService.findAll());
+    public ResponseEntity<Page<ExerciseResponse>> findAll(
+            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(exerciseService.findAll(pageable));
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR','STUDENT')")
-    public ResponseEntity<List<ExerciseResponse>> search(@RequestParam String q) {
-        return ResponseEntity.ok(exerciseService.search(q));
+    public ResponseEntity<Page<ExerciseResponse>> search(
+            @RequestParam String q,
+            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(exerciseService.search(q, pageable));
     }
 
     @GetMapping("/{id}")

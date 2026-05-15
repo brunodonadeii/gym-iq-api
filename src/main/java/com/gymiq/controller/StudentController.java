@@ -8,13 +8,14 @@ import com.gymiq.service.AddressLookupService;
 import com.gymiq.service.StudentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
 
 @RestController
 @RequestMapping("/api/students")
@@ -33,14 +34,17 @@ public class StudentController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<List<StudentResponse>> findAll() {
-        return ResponseEntity.ok(studentService.findAll());
+    public ResponseEntity<Page<StudentResponse>> findAll(
+            @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(studentService.findAll(pageable));
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<List<StudentResponse>> search(@RequestParam String q) {
-        return ResponseEntity.ok(studentService.search(q));
+    public ResponseEntity<Page<StudentResponse>> search(
+            @RequestParam String q,
+            @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(studentService.search(q, pageable));
     }
 
     @GetMapping("/address-by-zip-code/{zipCode}")

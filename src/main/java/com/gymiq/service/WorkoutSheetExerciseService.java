@@ -12,6 +12,8 @@ import com.gymiq.repository.WorkoutSheetExerciseRepository;
 import com.gymiq.repository.WorkoutSheetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,15 +43,13 @@ public class WorkoutSheetExerciseService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutSheetExerciseResponse> findByWorkoutSheet(Integer workoutSheetId) {
+    public Page<WorkoutSheetExerciseResponse> findByWorkoutSheet(Integer workoutSheetId, Pageable pageable) {
         if (!workoutSheetRepository.existsById(workoutSheetId)) {
             throw new ResourceNotFoundException("Ficha de treino nao encontrada: " + workoutSheetId);
         }
 
-        return workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetIdOrderByExecutionOrderAsc(workoutSheetId)
-                .stream()
-                .map(WorkoutSheetExerciseResponse::fromEntity)
-                .toList();
+        return workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
+                .map(WorkoutSheetExerciseResponse::fromEntity);
     }
 
     @Transactional

@@ -2,7 +2,6 @@ package com.gymiq.service;
 
 import com.gymiq.dto.request.EnrollStudentRequest;
 import com.gymiq.dto.response.EnrollmentResponse;
-import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
@@ -12,11 +11,12 @@ import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -30,11 +30,9 @@ public class EnrollmentService {
 
 
     @Transactional(readOnly = true)
-    public List<EnrollmentResponse> findAll() {
-        return enrollmentRepository.findAll()
-                .stream()
-                .map(EnrollmentResponse::fromEntity)
-                .toList();
+    public Page<EnrollmentResponse> findAll(Pageable pageable) {
+        return enrollmentRepository.findAll(pageable)
+                .map(EnrollmentResponse::fromEntity);
     }
 
     @Transactional
@@ -74,12 +72,10 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<EnrollmentResponse> findByStudent(Integer studentId) {
+    public Page<EnrollmentResponse> findByStudent(Integer studentId, Pageable pageable) {
         studentService.findEntityById(studentId);
-        return enrollmentRepository.findByStudentStudentId(studentId)
-                .stream()
-                .map(EnrollmentResponse::fromEntity)
-                .toList();
+        return enrollmentRepository.findByStudentStudentId(studentId, pageable)
+                .map(EnrollmentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)

@@ -5,12 +5,14 @@ import com.gymiq.dto.response.WorkoutSheetResponse;
 import com.gymiq.service.WorkoutSheetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/workout-sheets")
@@ -28,8 +30,9 @@ public class WorkoutSheetController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<List<WorkoutSheetResponse>> findAll() {
-        return ResponseEntity.ok(workoutSheetService.findAll());
+    public ResponseEntity<Page<WorkoutSheetResponse>> findAll(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findAll(pageable));
     }
 
     @GetMapping("/{id}")
@@ -40,17 +43,19 @@ public class WorkoutSheetController {
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
-    public ResponseEntity<List<WorkoutSheetResponse>> findByStudent(
+    public ResponseEntity<Page<WorkoutSheetResponse>> findByStudent(
             @PathVariable Integer studentId,
-            @RequestParam(defaultValue = "true") boolean onlyActive) {
-        return ResponseEntity.ok(workoutSheetService.findByStudent(studentId, onlyActive));
+            @RequestParam(defaultValue = "true") boolean onlyActive,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByStudent(studentId, onlyActive, pageable));
     }
 
     @GetMapping("/instructor/{instructorId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<List<WorkoutSheetResponse>> findByInstructor(
-            @PathVariable Integer instructorId) {
-        return ResponseEntity.ok(workoutSheetService.findByInstructor(instructorId));
+    public ResponseEntity<Page<WorkoutSheetResponse>> findByInstructor(
+            @PathVariable Integer instructorId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByInstructor(instructorId, pageable));
     }
 
     @PutMapping("/{id}")

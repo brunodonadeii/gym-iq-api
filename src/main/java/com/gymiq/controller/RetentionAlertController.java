@@ -3,6 +3,10 @@ package com.gymiq.controller;
 import com.gymiq.dto.response.RetentionAlertResponse;
 import com.gymiq.service.RetentionAlertService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -36,14 +40,17 @@ public class RetentionAlertController {
 
     @GetMapping("/open")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<RetentionAlertResponse>> findOpenAlerts() {
-        return ResponseEntity.ok(retentionAlertService.findOpenAlerts());
+    public ResponseEntity<Page<RetentionAlertResponse>> findOpenAlerts(
+            @PageableDefault(size = 10, sort = "riskScore", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(retentionAlertService.findOpenAlerts(pageable));
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<RetentionAlertResponse>> findByStudent(@PathVariable Integer studentId) {
-        return ResponseEntity.ok(retentionAlertService.findByStudent(studentId));
+    public ResponseEntity<Page<RetentionAlertResponse>> findByStudent(
+            @PathVariable Integer studentId,
+            @PageableDefault(size = 10, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(retentionAlertService.findByStudent(studentId, pageable));
     }
 
     @GetMapping("/{id}")

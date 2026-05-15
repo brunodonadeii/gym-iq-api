@@ -16,6 +16,8 @@ import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.WorkoutSheetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,11 +65,9 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutSheetResponse> findAll() {
-        return workoutSheetRepository.findAll()
-                .stream()
-                .map(WorkoutSheetResponse::fromEntity)
-                .toList();
+    public Page<WorkoutSheetResponse> findAll(Pageable pageable) {
+        return workoutSheetRepository.findAll(pageable)
+                .map(WorkoutSheetResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -76,30 +76,26 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutSheetResponse> findByStudent(Integer studentId, boolean onlyActive) {
+    public Page<WorkoutSheetResponse> findByStudent(Integer studentId, boolean onlyActive, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
 
-        List<WorkoutSheet> workoutSheets = onlyActive
-                ? workoutSheetRepository.findByStudentStudentIdAndActiveTrueOrderByCreatedAtDesc(studentId)
-                : workoutSheetRepository.findByStudentStudentIdOrderByCreatedAtDesc(studentId);
+        Page<WorkoutSheet> workoutSheets = onlyActive
+                ? workoutSheetRepository.findByStudentStudentIdAndActiveTrue(studentId, pageable)
+                : workoutSheetRepository.findByStudentStudentId(studentId, pageable);
 
-        return workoutSheets.stream()
-                .map(WorkoutSheetResponse::fromEntity)
-                .toList();
+        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutSheetResponse> findByInstructor(Integer instructorId) {
+    public Page<WorkoutSheetResponse> findByInstructor(Integer instructorId, Pageable pageable) {
         if (!instructorRepository.existsById(instructorId)) {
             throw new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId);
         }
 
-        return workoutSheetRepository.findByInstructorInstructorIdOrderByCreatedAtDesc(instructorId)
-                .stream()
-                .map(WorkoutSheetResponse::fromEntity)
-                .toList();
+        return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
+                .map(WorkoutSheetResponse::fromEntity);
     }
 
     @Transactional

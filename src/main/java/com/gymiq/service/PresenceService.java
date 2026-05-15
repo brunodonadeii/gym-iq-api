@@ -11,12 +11,13 @@ import com.gymiq.repository.PresenceRepository;
 import com.gymiq.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -81,11 +82,9 @@ public class PresenceService {
     }
 
     @Transactional(readOnly = true)
-    public List<PresenceResponse> findAll() {
-        return presenceRepository.findAll()
-                .stream()
-                .map(PresenceResponse::fromEntity)
-                .toList();
+    public Page<PresenceResponse> findAll(Pageable pageable) {
+        return presenceRepository.findAll(pageable)
+                .map(PresenceResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -94,26 +93,22 @@ public class PresenceService {
     }
 
     @Transactional(readOnly = true)
-    public List<PresenceResponse> findByStudent(Integer studentId) {
+    public Page<PresenceResponse> findByStudent(Integer studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
 
-        return presenceRepository.findByStudentStudentIdOrderByCheckInAtDesc(studentId)
-                .stream()
-                .map(PresenceResponse::fromEntity)
-                .toList();
+        return presenceRepository.findByStudentStudentId(studentId, pageable)
+                .map(PresenceResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PresenceResponse> findByDate(LocalDate date) {
+    public Page<PresenceResponse> findByDate(LocalDate date, Pageable pageable) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay().minusNanos(1);
 
-        return presenceRepository.findByCheckInAtBetweenOrderByCheckInAtDesc(start, end)
-                .stream()
-                .map(PresenceResponse::fromEntity)
-                .toList();
+        return presenceRepository.findByCheckInAtBetween(start, end, pageable)
+                .map(PresenceResponse::fromEntity);
     }
 
     private Presence findEntityById(Integer id) {

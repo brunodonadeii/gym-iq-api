@@ -10,11 +10,11 @@ import com.gymiq.repository.InstructorRepository;
 import com.gymiq.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -57,19 +57,15 @@ public class InstructorService {
     }
 
     @Transactional(readOnly = true)
-    public List<InstructorResponse> findAll() {
-        return instructorRepository.findAll()
-                .stream()
-                .map(InstructorResponse::fromEntity)
-                .toList();
+    public Page<InstructorResponse> findAll(Pageable pageable) {
+        return instructorRepository.findAll(pageable)
+                .map(InstructorResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<InstructorResponse> search(String term) {
-        return instructorRepository.searchByTerm(term)
-                .stream()
-                .map(InstructorResponse::fromEntity)
-                .toList();
+    public Page<InstructorResponse> search(String term, Pageable pageable) {
+        return instructorRepository.searchByTerm(term, pageable)
+                .map(InstructorResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)

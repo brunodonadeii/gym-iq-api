@@ -1,17 +1,17 @@
 package com.gymiq.repository;
 
 import com.gymiq.entity.WorkoutSheet;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 public interface WorkoutSheetRepository extends JpaRepository<WorkoutSheet, Integer> {
 
-    List<WorkoutSheet> findByStudentStudentIdOrderByCreatedAtDesc(Integer studentId);
+    Page<WorkoutSheet> findByStudentStudentId(Integer studentId, Pageable pageable);
 
-    List<WorkoutSheet> findByStudentStudentIdAndActiveTrueOrderByCreatedAtDesc(Integer studentId);
+    Page<WorkoutSheet> findByStudentStudentIdAndActiveTrue(Integer studentId, Pageable pageable);
 
-    List<WorkoutSheet> findByInstructorInstructorIdOrderByCreatedAtDesc(Integer instructorId);
+    Page<WorkoutSheet> findByInstructorInstructorId(Integer instructorId, Pageable pageable);
 }

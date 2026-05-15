@@ -3,6 +3,8 @@ package com.gymiq.repository;
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment.PaymentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,9 +19,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
 
     List<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId);
 
+    Page<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId, Pageable pageable);
+
     List<Payment> findByEnrollmentStudentStudentId(Integer studentId);
 
+    Page<Payment> findByEnrollmentStudentStudentId(Integer studentId, Pageable pageable);
+
     List<Payment> findByStatus(PaymentStatus status);
+
+    Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
 
     List<Payment> findByStatusAndDueDateBefore(PaymentStatus status, LocalDate date);
 

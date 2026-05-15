@@ -6,6 +6,10 @@ import com.gymiq.dto.response.PresenceResponse;
 import com.gymiq.service.PresenceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +17,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/presences")
@@ -39,8 +42,9 @@ public class PresenceController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<PresenceResponse>> findAll() {
-        return ResponseEntity.ok(presenceService.findAll());
+    public ResponseEntity<Page<PresenceResponse>> findAll(
+            @PageableDefault(size = 10, sort = "checkInAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(presenceService.findAll(pageable));
     }
 
     @GetMapping("/{id}")
@@ -51,14 +55,17 @@ public class PresenceController {
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','STUDENT')")
-    public ResponseEntity<List<PresenceResponse>> findByStudent(@PathVariable Integer studentId) {
-        return ResponseEntity.ok(presenceService.findByStudent(studentId));
+    public ResponseEntity<Page<PresenceResponse>> findByStudent(
+            @PathVariable Integer studentId,
+            @PageableDefault(size = 10, sort = "checkInAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(presenceService.findByStudent(studentId, pageable));
     }
 
     @GetMapping("/date/{date}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<PresenceResponse>> findByDate(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(presenceService.findByDate(date));
+    public ResponseEntity<Page<PresenceResponse>> findByDate(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @PageableDefault(size = 10, sort = "checkInAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(presenceService.findByDate(date, pageable));
     }
 }

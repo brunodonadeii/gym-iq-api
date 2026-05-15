@@ -12,6 +12,8 @@ import com.gymiq.repository.PaymentRepository;
 import com.gymiq.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,11 +53,9 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findAll() {
-        return paymentRepository.findAll()
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+    public Page<PaymentResponse> findAll(Pageable pageable) {
+        return paymentRepository.findAll(pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -64,35 +64,29 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findByEnrollment(Integer enrollmentId) {
+    public Page<PaymentResponse> findByEnrollment(Integer enrollmentId, Pageable pageable) {
         if (!enrollmentRepository.existsById(enrollmentId)) {
             throw new ResourceNotFoundException("Matricula nao encontrada: " + enrollmentId);
         }
 
-        return paymentRepository.findByEnrollmentEnrollmentId(enrollmentId)
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+        return paymentRepository.findByEnrollmentEnrollmentId(enrollmentId, pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findByStudent(Integer studentId) {
+    public Page<PaymentResponse> findByStudent(Integer studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
 
-        return paymentRepository.findByEnrollmentStudentStudentId(studentId)
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+        return paymentRepository.findByEnrollmentStudentStudentId(studentId, pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findOverdue() {
-        return paymentRepository.findByStatus(PaymentStatus.OVERDUE)
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+    public Page<PaymentResponse> findOverdue(Pageable pageable) {
+        return paymentRepository.findByStatus(PaymentStatus.OVERDUE, pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional

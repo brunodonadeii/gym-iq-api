@@ -11,11 +11,11 @@ import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -63,19 +63,15 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponse> findAll() {
-        return studentRepository.findAll()
-                .stream()
-                .map(StudentResponse::fromEntity)
-                .toList();
+    public Page<StudentResponse> findAll(Pageable pageable) {
+        return studentRepository.findAll(pageable)
+                .map(StudentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponse> search(String term) {
-        return studentRepository.searchByTerm(term)
-                .stream()
-                .map(StudentResponse::fromEntity)
-                .toList();
+    public Page<StudentResponse> search(String term, Pageable pageable) {
+        return studentRepository.searchByTerm(term, pageable)
+                .map(StudentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)

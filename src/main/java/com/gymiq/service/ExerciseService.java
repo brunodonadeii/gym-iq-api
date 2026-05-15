@@ -8,10 +8,10 @@ import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -37,27 +37,21 @@ public class ExerciseService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExerciseResponse> findActive() {
-        return exerciseRepository.findByActiveTrueOrderByNameAsc()
-                .stream()
-                .map(ExerciseResponse::fromEntity)
-                .toList();
+    public Page<ExerciseResponse> findActive(Pageable pageable) {
+        return exerciseRepository.findByActiveTrue(pageable)
+                .map(ExerciseResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<ExerciseResponse> findAll() {
-        return exerciseRepository.findAll()
-                .stream()
-                .map(ExerciseResponse::fromEntity)
-                .toList();
+    public Page<ExerciseResponse> findAll(Pageable pageable) {
+        return exerciseRepository.findAll(pageable)
+                .map(ExerciseResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<ExerciseResponse> search(String term) {
-        return exerciseRepository.searchByTerm(term)
-                .stream()
-                .map(ExerciseResponse::fromEntity)
-                .toList();
+    public Page<ExerciseResponse> search(String term, Pageable pageable) {
+        return exerciseRepository.searchByTerm(term, pageable)
+                .map(ExerciseResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)

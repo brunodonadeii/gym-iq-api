@@ -5,12 +5,14 @@ import com.gymiq.dto.response.WorkoutSheetExerciseResponse;
 import com.gymiq.service.WorkoutSheetExerciseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,9 +31,10 @@ public class WorkoutSheetExerciseController {
 
     @GetMapping("/api/workout-sheets/{workoutSheetId}/exercises")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
-    public ResponseEntity<List<WorkoutSheetExerciseResponse>> findByWorkoutSheet(
-            @PathVariable Integer workoutSheetId) {
-        return ResponseEntity.ok(workoutSheetExerciseService.findByWorkoutSheet(workoutSheetId));
+    public ResponseEntity<Page<WorkoutSheetExerciseResponse>> findByWorkoutSheet(
+            @PathVariable Integer workoutSheetId,
+            @PageableDefault(size = 10, sort = "executionOrder", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetExerciseService.findByWorkoutSheet(workoutSheetId, pageable));
     }
 
     @PutMapping("/api/workout-sheet-exercises/{id}")

@@ -2,6 +2,8 @@ package com.gymiq.repository;
 
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +16,7 @@ import java.util.Optional;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer> {
 
-    List<Enrollment> findByStudentStudentId(Integer studentId);
+    Page<Enrollment> findByStudentStudentId(Integer studentId, Pageable pageable);
 
     List<Enrollment> findByStatus(EnrollmentStatus status);
 

@@ -18,6 +18,8 @@ import com.gymiq.repository.RetentionAlertRepository;
 import com.gymiq.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,23 +97,19 @@ public class RetentionAlertService {
     }
 
     @Transactional(readOnly = true)
-    public List<RetentionAlertResponse> findOpenAlerts() {
-        return retentionAlertRepository.findByStatusOrderByRiskScoreDescUpdatedAtDesc(AlertStatus.OPEN)
-                .stream()
-                .map(RetentionAlertResponse::fromEntity)
-                .toList();
+    public Page<RetentionAlertResponse> findOpenAlerts(Pageable pageable) {
+        return retentionAlertRepository.findByStatus(AlertStatus.OPEN, pageable)
+                .map(RetentionAlertResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<RetentionAlertResponse> findByStudent(Integer studentId) {
+    public Page<RetentionAlertResponse> findByStudent(Integer studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
 
-        return retentionAlertRepository.findByStudentStudentIdOrderByUpdatedAtDesc(studentId)
-                .stream()
-                .map(RetentionAlertResponse::fromEntity)
-                .toList();
+        return retentionAlertRepository.findByStudentStudentId(studentId, pageable)
+                .map(RetentionAlertResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
