@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -130,19 +129,6 @@ public class PaymentService {
         log.info("Status do pagamento id={} alterado para {}", id, newStatus);
 
         return PaymentResponse.fromEntity(payment);
-    }
-
-    @Transactional
-    public List<PaymentResponse> refreshOverdue() {
-        List<Payment> overduePayments = paymentRepository
-                .findByStatusAndDueDateBefore(PaymentStatus.PENDING, LocalDate.now());
-
-        overduePayments.forEach(payment -> payment.setStatus(PaymentStatus.OVERDUE));
-        paymentRepository.saveAll(overduePayments);
-
-        return overduePayments.stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
     }
 
     private Payment findEntityById(Integer id) {
