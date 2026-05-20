@@ -43,6 +43,6 @@ public class Plan {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "plan", fetch = FetchType.LAZY)
     private List<Enrollment> enrollments;
 }

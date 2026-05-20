@@ -58,8 +58,8 @@ public class PlanController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        planService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        planService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

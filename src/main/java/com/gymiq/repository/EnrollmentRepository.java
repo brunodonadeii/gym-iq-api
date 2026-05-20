@@ -24,6 +24,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
 
     boolean existsByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
 
+    boolean existsByPlanPlanId(Integer planId);
+
     @Query("SELECT e FROM Enrollment e WHERE e.status = 'ACTIVE' " +
             "AND e.endDate BETWEEN :today AND :limit")
     List<Enrollment> findExpiringBetween(@Param("today") LocalDate today,

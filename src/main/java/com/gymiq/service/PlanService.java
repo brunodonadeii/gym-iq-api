@@ -5,6 +5,7 @@ import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Plan;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
+import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,14 +14,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PlanService {
 
     private final PlanRepository planRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Transactional
     public PlanResponse create(CreatePlanRequest request) {
@@ -79,11 +79,15 @@ public class PlanService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void delete(Integer id) {
         Plan plan = findEntityById(id);
-        plan.setActive(false);
-        planRepository.save(plan);
-        log.info("Plan deactivated: id={}", id);
+
+        if (enrollmentRepository.existsByPlanPlanId(id)) {
+            throw new BusinessException("NÃ£o Ã© possÃ­vel excluir um plano vinculado a matrÃ­culas");
+        }
+
+        planRepository.delete(plan);
+        log.info("Plan deleted: id={}", id);
     }
 
     public Plan findEntityById(Integer id) {
