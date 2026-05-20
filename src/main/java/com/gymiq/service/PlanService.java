@@ -90,6 +90,22 @@ public class PlanService {
         log.info("Plan deleted: id={}", id);
     }
 
+    @Transactional
+    public void deactivate(Integer id) {
+        Plan plan = findEntityById(id);
+        plan.setActive(false);
+        planRepository.save(plan);
+        log.info("Plan deactivated: id={}", id);
+    }
+
+    @Transactional
+    public void activate(Integer id) {
+        Plan plan = findEntityById(id);
+        plan.setActive(true);
+        planRepository.save(plan);
+        log.info("Plan activated: id={}", id);
+    }
+
     public Plan findEntityById(Integer id) {
         return planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado: " + id));
