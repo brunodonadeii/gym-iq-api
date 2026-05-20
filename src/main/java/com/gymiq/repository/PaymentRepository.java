@@ -19,6 +19,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
 
     List<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId);
 
+    List<Payment> findByEnrollmentEnrollmentIdOrderByDueDateDesc(Integer enrollmentId);
+
     Page<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId, Pageable pageable);
 
     List<Payment> findByEnrollmentStudentStudentId(Integer studentId);

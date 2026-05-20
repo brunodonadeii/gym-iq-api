@@ -37,6 +37,12 @@ public class EnrollmentController {
                 .body(enrollmentService.enroll(request));
     }
 
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<EnrollmentResponse> findById(@PathVariable Integer id) {
+        return ResponseEntity.ok(enrollmentService.findById(id));
+    }
+
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<EnrollmentResponse>> findByStudent(

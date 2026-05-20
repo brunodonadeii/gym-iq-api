@@ -9,6 +9,7 @@ import com.gymiq.entity.Plan;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
+import com.gymiq.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,7 @@ public class EnrollmentService {
     private final StudentService studentService;
     private final PlanService planService;
     private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
 
 
     @Transactional(readOnly = true)
@@ -68,7 +70,12 @@ public class EnrollmentService {
         log.info("Matrícula criada: id={}, aluno={}, plano={}, fim={}",
                 enrollment.getEnrollmentId(), student.getStudentId(), plan.getName(), end);
 
-        return EnrollmentResponse.fromEntity(enrollment);
+        return buildResponseWithPayments(enrollment);
+    }
+
+    @Transactional(readOnly = true)
+    public EnrollmentResponse findById(Integer enrollmentId) {
+        return buildResponseWithPayments(findEntityById(enrollmentId));
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +89,7 @@ public class EnrollmentService {
     public EnrollmentResponse findActiveByStudent(Integer studentId) {
         return enrollmentRepository
                 .findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
-                .map(EnrollmentResponse::fromEntity)
+                .map(this::buildResponseWithPayments)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Nenhuma matrícula ativa encontrada para o aluno: " + studentId));
     }
@@ -97,7 +104,7 @@ public class EnrollmentService {
         enrollmentRepository.save(enrollment);
         log.info("Status da matrícula id={} alterado para {}", enrollmentId, newStatus);
 
-        return EnrollmentResponse.fromEntity(enrollment);
+        return buildResponseWithPayments(enrollment);
     }
 
     @Transactional
@@ -138,12 +145,18 @@ public class EnrollmentService {
                 newPlan.getName(),
                 end);
 
-        return EnrollmentResponse.fromEntity(newEnrollment);
+        return buildResponseWithPayments(newEnrollment);
     }
 
     private Enrollment findEntityById(Integer id) {
         return enrollmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Matrícula não encontrada: " + id));
+    }
+
+    private EnrollmentResponse buildResponseWithPayments(Enrollment enrollment) {
+        return EnrollmentResponse.fromEntity(
+                enrollment,
+                paymentRepository.findByEnrollmentEnrollmentIdOrderByDueDateDesc(enrollment.getEnrollmentId()));
     }
 
     private void validateStatusTransition(EnrollmentStatus current, EnrollmentStatus next) {
