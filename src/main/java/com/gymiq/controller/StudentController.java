@@ -16,6 +16,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -63,8 +64,14 @@ public class StudentController {
         return ResponseEntity.ok(addressLookupService.lookupByZipCode(zipCode));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentResponse> findMe(Authentication authentication) {
+        return ResponseEntity.ok(studentService.findByAuthenticatedEmail(authentication.getName()));
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<StudentResponse> findById(@PathVariable Integer id) {
         return ResponseEntity.ok(studentService.findById(id));
     }

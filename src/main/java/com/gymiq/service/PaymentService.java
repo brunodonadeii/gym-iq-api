@@ -83,6 +83,16 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
+    public Page<PaymentResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
+        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+                .getStudentId();
+
+        return paymentRepository.findByEnrollmentStudentStudentId(studentId, pageable)
+                .map(PaymentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
     public Page<PaymentResponse> findOverdue(Pageable pageable) {
         return paymentRepository.findByStatus(PaymentStatus.OVERDUE, pageable)
                 .map(PaymentResponse::fromEntity);

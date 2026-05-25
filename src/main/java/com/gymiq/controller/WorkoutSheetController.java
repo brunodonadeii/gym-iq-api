@@ -12,6 +12,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,14 +36,32 @@ public class WorkoutSheetController {
         return ResponseEntity.ok(workoutSheetService.findAll(pageable));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Page<WorkoutSheetResponse>> findMine(
+            Authentication authentication,
+            @RequestParam(defaultValue = "true") boolean onlyActive,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByAuthenticatedStudent(
+                authentication.getName(), onlyActive, pageable));
+    }
+
+    @GetMapping("/instructor/me")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<Page<WorkoutSheetResponse>> findMineAsInstructor(
+            Authentication authentication,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByAuthenticatedInstructor(authentication.getName(), pageable));
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetResponse> findById(@PathVariable Integer id) {
         return ResponseEntity.ok(workoutSheetService.findById(id));
     }
 
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<Page<WorkoutSheetResponse>> findByStudent(
             @PathVariable Integer studentId,
             @RequestParam(defaultValue = "true") boolean onlyActive,

@@ -62,6 +62,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/jobs/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/presences/self-check-in").permitAll()
 
 
                 .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
@@ -89,6 +90,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/enrollments/**").hasAnyRole("ADMIN", "RECEPTION")
 
                 .requestMatchers(HttpMethod.GET,  "/api/payments").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/payments/me").hasRole("STUDENT")
                 .requestMatchers(HttpMethod.GET,  "/api/payments/**").hasAnyRole("ADMIN", "RECEPTION")
                 .requestMatchers(HttpMethod.PATCH, "/api/payments/**").hasAnyRole("ADMIN", "RECEPTION")
 
@@ -98,8 +100,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,  "/api/instructors/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/instructors/**").hasRole("ADMIN")
 
-                .requestMatchers(HttpMethod.POST, "/api/presences").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
-                .requestMatchers(HttpMethod.GET,  "/api/presences/student/**").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
+                .requestMatchers(HttpMethod.POST, "/api/presences").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/presences/me").hasRole("STUDENT")
+                .requestMatchers(HttpMethod.GET,  "/api/presences/student/**").hasAnyRole("ADMIN", "RECEPTION")
                 .requestMatchers(HttpMethod.GET,  "/api/presences/**").hasAnyRole("ADMIN", "RECEPTION")
                 .requestMatchers(HttpMethod.PATCH, "/api/presences/**").hasAnyRole("ADMIN", "RECEPTION")
 

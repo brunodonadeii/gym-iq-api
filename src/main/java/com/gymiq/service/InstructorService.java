@@ -73,6 +73,11 @@ public class InstructorService {
         return InstructorResponse.fromEntity(findEntityById(id));
     }
 
+    @Transactional(readOnly = true)
+    public InstructorResponse findByAuthenticatedEmail(String email) {
+        return InstructorResponse.fromEntity(findEntityByAuthenticatedEmail(email));
+    }
+
     @Transactional
     public InstructorResponse update(Integer id, CreateInstructorRequest request) {
         Instructor instructor = findEntityById(id);
@@ -112,5 +117,9 @@ public class InstructorService {
     public Instructor findEntityById(Integer id) {
         return instructorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + id));
+    }
+    public Instructor findEntityByAuthenticatedEmail(String email) {
+        return instructorRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"));
     }
 }

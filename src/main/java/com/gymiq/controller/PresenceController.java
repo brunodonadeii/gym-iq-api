@@ -2,6 +2,7 @@ package com.gymiq.controller;
 
 import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
+import com.gymiq.dto.request.SelfCheckInRequest;
 import com.gymiq.dto.response.PresenceResponse;
 import com.gymiq.service.PresenceService;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -26,10 +28,16 @@ public class PresenceController {
     private final PresenceService presenceService;
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<PresenceResponse> checkIn(
             @Valid @RequestBody CreatePresenceRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(presenceService.checkIn(request));
+    }
+
+    @PostMapping("/self-check-in")
+    public ResponseEntity<PresenceResponse> selfCheckIn(
+            @Valid @RequestBody SelfCheckInRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(presenceService.selfCheckIn(request));
     }
 
     @PatchMapping("/{id}/checkout")
@@ -47,6 +55,14 @@ public class PresenceController {
         return ResponseEntity.ok(presenceService.findAll(pageable));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Page<PresenceResponse>> findMine(
+            Authentication authentication,
+            @PageableDefault(size = 10, sort = "checkInAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(presenceService.findByAuthenticatedStudent(authentication.getName(), pageable));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<PresenceResponse> findById(@PathVariable Integer id) {
@@ -54,7 +70,7 @@ public class PresenceController {
     }
 
     @GetMapping("/student/{studentId}")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PresenceResponse>> findByStudent(
             @PathVariable Integer studentId,
             @PageableDefault(size = 10, sort = "checkInAt", direction = Sort.Direction.DESC) Pageable pageable) {

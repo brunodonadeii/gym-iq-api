@@ -86,12 +86,25 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
+        Student student = studentService.findEntityByAuthenticatedEmail(email);
+        return enrollmentRepository.findByStudentStudentId(student.getStudentId(), pageable)
+                .map(EnrollmentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
     public EnrollmentResponse findActiveByStudent(Integer studentId) {
         return enrollmentRepository
                 .findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
                 .map(this::buildResponseWithPayments)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Nenhuma matrícula ativa encontrada para o aluno: " + studentId));
+    }
+
+    @Transactional(readOnly = true)
+    public EnrollmentResponse findActiveByAuthenticatedStudent(String email) {
+        Student student = studentService.findEntityByAuthenticatedEmail(email);
+        return findActiveByStudent(student.getStudentId());
     }
 
     @Transactional

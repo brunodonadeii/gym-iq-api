@@ -89,10 +89,29 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByAuthenticatedStudent(String email, boolean onlyActive, Pageable pageable) {
+        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+                .getStudentId();
+
+        return findByStudent(studentId, onlyActive, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public Page<WorkoutSheetResponse> findByInstructor(Integer instructorId, Pageable pageable) {
         if (!instructorRepository.existsById(instructorId)) {
             throw new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId);
         }
+
+        return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
+                .map(WorkoutSheetResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
+        Integer instructorId = instructorRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"))
+                .getInstructorId();
 
         return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
                 .map(WorkoutSheetResponse::fromEntity);

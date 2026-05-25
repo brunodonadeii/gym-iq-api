@@ -30,6 +30,12 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
 
     Optional<Student> findByUserUserId(Integer userId);
 
+    @EntityGraph(attributePaths = "user")
+    Optional<Student> findByUserEmailIgnoreCase(String email);
+
+    @EntityGraph(attributePaths = "user")
+    Optional<Student> findByCpfOrUserEmailIgnoreCase(String cpf, String email);
+
     @Query("SELECT s FROM Student s JOIN s.user u WHERE " +
             "LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
             "s.cpf LIKE CONCAT('%', :term, '%') OR " +

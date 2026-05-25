@@ -2,6 +2,7 @@ package com.gymiq.service;
 
 import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
+import com.gymiq.dto.request.SelfCheckInRequest;
 import com.gymiq.dto.response.PresenceResponse;
 import com.gymiq.entity.Presence;
 import com.gymiq.entity.Student;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,12 +28,32 @@ public class PresenceService {
 
     private final PresenceRepository presenceRepository;
     private final StudentRepository studentRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public PresenceResponse checkIn(CreatePresenceRequest request) {
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + request.getStudentId()));
 
+        return createPresence(student, request.getCheckInAt(), request.getNotes());
+    }
+
+    @Transactional
+    public PresenceResponse selfCheckIn(SelfCheckInRequest request) {
+        String identifier = request.getIdentifier().trim();
+
+        Student student = studentRepository
+                .findByCpfOrUserEmailIgnoreCase(identifier, identifier)
+                .orElseThrow(() -> new BusinessException("Identificador ou senha invalidos"));
+
+        if (!passwordEncoder.matches(request.getPassword(), student.getUser().getPasswordHash())) {
+            throw new BusinessException("Identificador ou senha invalidos");
+        }
+
+        return createPresence(student, LocalDateTime.now(), request.getNotes());
+    }
+
+    private PresenceResponse createPresence(Student student, LocalDateTime requestedCheckInAt, String notes) {
         if (Boolean.FALSE.equals(student.getUser().getActive())) {
             throw new BusinessException("Nao e possivel registrar presenca para aluno inativo");
         }
@@ -39,14 +61,12 @@ public class PresenceService {
         presenceRepository.findByStudentStudentIdAndCheckOutAtIsNull(student.getStudentId())
                 .ifPresent(p -> { throw new BusinessException("Aluno ja possui check-in aberto"); });
 
-        LocalDateTime checkInAt = request.getCheckInAt() != null
-                ? request.getCheckInAt()
-                : LocalDateTime.now();
+        LocalDateTime checkInAt = requestedCheckInAt != null ? requestedCheckInAt : LocalDateTime.now();
 
         Presence presence = Presence.builder()
                 .student(student)
                 .checkInAt(checkInAt)
-                .notes(request.getNotes())
+                .notes(notes)
                 .build();
 
         presenceRepository.save(presence);
@@ -97,6 +117,16 @@ public class PresenceService {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
+
+        return presenceRepository.findByStudentStudentId(studentId, pageable)
+                .map(PresenceResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PresenceResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
+        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+                .getStudentId();
 
         return presenceRepository.findByStudentStudentId(studentId, pageable)
                 .map(PresenceResponse::fromEntity);

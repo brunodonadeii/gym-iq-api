@@ -14,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -39,6 +40,14 @@ public class PaymentController {
             @PathVariable Integer enrollmentId,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(paymentService.findByEnrollment(enrollmentId, pageable));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Page<PaymentResponse>> findMine(
+            Authentication authentication,
+            @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(paymentService.findByAuthenticatedStudent(authentication.getName(), pageable));
     }
 
     @GetMapping("/student/{studentId}")

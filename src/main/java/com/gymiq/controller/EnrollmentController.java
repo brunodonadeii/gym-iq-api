@@ -13,6 +13,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -37,6 +38,20 @@ public class EnrollmentController {
                 .body(enrollmentService.enroll(request));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Page<EnrollmentResponse>> findMine(
+            Authentication authentication,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(enrollmentService.findByAuthenticatedStudent(authentication.getName(), pageable));
+    }
+
+    @GetMapping("/me/active")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<EnrollmentResponse> findMyActive(Authentication authentication) {
+        return ResponseEntity.ok(enrollmentService.findActiveByAuthenticatedStudent(authentication.getName()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<EnrollmentResponse> findById(@PathVariable Integer id) {
@@ -52,7 +67,7 @@ public class EnrollmentController {
     }
 
     @GetMapping("/student/{studentId}/active")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<EnrollmentResponse> findActiveByStudent(
             @PathVariable Integer studentId) {
         return ResponseEntity.ok(enrollmentService.findActiveByStudent(studentId));

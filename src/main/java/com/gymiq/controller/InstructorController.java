@@ -12,6 +12,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,8 +44,14 @@ public class InstructorController {
         return ResponseEntity.ok(instructorService.search(q, pageable));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<InstructorResponse> findMe(Authentication authentication) {
+        return ResponseEntity.ok(instructorService.findByAuthenticatedEmail(authentication.getName()));
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<InstructorResponse> findById(@PathVariable Integer id) {
         return ResponseEntity.ok(instructorService.findById(id));
     }

@@ -88,6 +88,11 @@ public class StudentService {
         return StudentResponse.fromEntity(findEntityById(id));
     }
 
+    @Transactional(readOnly = true)
+    public StudentResponse findByAuthenticatedEmail(String email) {
+        return StudentResponse.fromEntity(findEntityByAuthenticatedEmail(email));
+    }
+
     @Transactional
     public StudentResponse update(Integer id, UpdateStudentRequest request) {
         Student student = findEntityById(id);
@@ -143,5 +148,9 @@ public class StudentService {
     public Student findEntityById(Integer id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + id));
+    }
+    public Student findEntityByAuthenticatedEmail(String email) {
+        return studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"));
     }
 }
