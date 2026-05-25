@@ -32,7 +32,7 @@ public class PlanService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .monthlyPrice(request.getMonthlyPrice())
-                .durationDays(request.getDurationDays())
+                .durationMonths(request.getDurationMonths())
                 .active(true)
                 .build();
 
@@ -71,7 +71,7 @@ public class PlanService {
         plan.setName(request.getName());
         plan.setDescription(request.getDescription());
         plan.setMonthlyPrice(request.getMonthlyPrice());
-        plan.setDurationDays(request.getDurationDays());
+        plan.setDurationMonths(request.getDurationMonths());
 
         planRepository.save(plan);
         log.info("Plan updated: id={}", id);

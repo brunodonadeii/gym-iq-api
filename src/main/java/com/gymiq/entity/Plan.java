@@ -32,8 +32,8 @@ public class Plan {
     @Column(name = "monthly_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal monthlyPrice;
 
-    @Column(name = "duration_days", nullable = false)
-    private Integer durationDays;
+    @Column(name = "duration_months", nullable = false)
+    private Integer durationMonths;
 
     @Column(name = "active", nullable = false)
     @Builder.Default

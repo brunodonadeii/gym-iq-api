@@ -54,7 +54,7 @@ public class EnrollmentService {
         }
 
         LocalDate start = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
-        LocalDate end = start.plusDays(plan.getDurationDays());
+        LocalDate end = start.plusMonths(plan.getDurationMonths());
 
         Enrollment enrollment = Enrollment.builder()
                 .student(student)
@@ -140,7 +140,7 @@ public class EnrollmentService {
         enrollmentRepository.save(oldEnrollment);
 
         LocalDate start = LocalDate.now();
-        LocalDate end = start.plusDays(newPlan.getDurationDays());
+        LocalDate end = start.plusMonths(newPlan.getDurationMonths());
 
         Enrollment newEnrollment = Enrollment.builder()
                 .student(oldEnrollment.getStudent())
