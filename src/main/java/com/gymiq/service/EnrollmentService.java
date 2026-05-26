@@ -24,6 +24,8 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class EnrollmentService {
 
+    private static final int MONTHLY_PLAN_DURATION_MONTHS = 1;
+
     private final EnrollmentRepository enrollmentRepository;
     private final StudentService studentService;
     private final PlanService planService;
@@ -54,7 +56,7 @@ public class EnrollmentService {
         }
 
         LocalDate start = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
-        LocalDate end = start.plusMonths(plan.getDurationMonths());
+        LocalDate end = calculateEndDate(start, plan);
 
         Enrollment enrollment = Enrollment.builder()
                 .student(student)
@@ -140,7 +142,7 @@ public class EnrollmentService {
         enrollmentRepository.save(oldEnrollment);
 
         LocalDate start = LocalDate.now();
-        LocalDate end = start.plusMonths(newPlan.getDurationMonths());
+        LocalDate end = calculateEndDate(start, newPlan);
 
         Enrollment newEnrollment = Enrollment.builder()
                 .student(oldEnrollment.getStudent())
@@ -170,6 +172,17 @@ public class EnrollmentService {
         return EnrollmentResponse.fromEntity(
                 enrollment,
                 paymentRepository.findByEnrollmentEnrollmentIdOrderByDueDateDesc(enrollment.getEnrollmentId()));
+    }
+
+    private LocalDate calculateEndDate(LocalDate startDate, Plan plan) {
+        if (isMonthlyPlan(plan)) {
+            return null;
+        }
+        return startDate.plusMonths(plan.getDurationMonths());
+    }
+
+    private boolean isMonthlyPlan(Plan plan) {
+        return MONTHLY_PLAN_DURATION_MONTHS == plan.getDurationMonths();
     }
 
     private void validateStatusTransition(EnrollmentStatus current, EnrollmentStatus next) {
