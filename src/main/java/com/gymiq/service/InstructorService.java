@@ -8,6 +8,7 @@ import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.InstructorRepository;
 import com.gymiq.repository.UserRepository;
+import com.gymiq.repository.WorkoutSheetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,7 @@ public class InstructorService {
 
     private final InstructorRepository instructorRepository;
     private final UserRepository userRepository;
+    private final WorkoutSheetRepository workoutSheetRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -107,11 +109,35 @@ public class InstructorService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public InstructorResponse deactivate(Integer id) {
         Instructor instructor = findEntityById(id);
         instructor.getUser().setActive(false);
         instructorRepository.save(instructor);
         log.info("Instructor deactivated: id={}", id);
+        return InstructorResponse.fromEntity(instructor);
+    }
+
+    @Transactional
+    public InstructorResponse activate(Integer id) {
+        Instructor instructor = findEntityById(id);
+        instructor.getUser().setActive(true);
+        instructorRepository.save(instructor);
+        log.info("Instructor activated: id={}", id);
+        return InstructorResponse.fromEntity(instructor);
+    }
+
+    @Transactional
+    public void delete(Integer id) {
+        Instructor instructor = findEntityById(id);
+
+        if (workoutSheetRepository.existsByInstructorInstructorId(id)) {
+            throw new BusinessException("Nao e possivel excluir um instrutor vinculado a fichas de treino");
+        }
+
+        User user = instructor.getUser();
+        instructorRepository.delete(instructor);
+        userRepository.delete(user);
+        log.info("Instructor deleted: id={}", id);
     }
 
     public Instructor findEntityById(Integer id) {
