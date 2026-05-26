@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,14 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
     Page<Enrollment> findByStudentStudentId(Integer studentId, Pageable pageable);
 
     List<Enrollment> findByStatus(EnrollmentStatus status);
+
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
+            WHERE e.status = :status
+              AND e.student.user.active = true
+            """)
+    long countDistinctStudentsByStatus(@Param("status") EnrollmentStatus status);
 
     Optional<Enrollment> findByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
 
@@ -30,4 +39,18 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
             "AND e.endDate BETWEEN :today AND :limit")
     List<Enrollment> findExpiringBetween(@Param("today") LocalDate today,
                                          @Param("limit") LocalDate limit);
+
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
+            WHERE e.status = 'ACTIVE'
+              AND e.student.user.active = true
+              AND NOT EXISTS (
+                    SELECT p.presenceId
+                    FROM Presence p
+                    WHERE p.student = e.student
+                      AND p.checkInAt >= :limitDate
+              )
+            """)
+    long countActiveStudentsWithoutCheckInSince(@Param("limitDate") LocalDateTime limitDate);
 }

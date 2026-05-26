@@ -126,6 +126,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/retention-alerts/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/retention-alerts/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/api/retention-alerts/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/dashboard/**").hasRole("ADMIN")
 
                 .anyRequest().authenticated()
             )
