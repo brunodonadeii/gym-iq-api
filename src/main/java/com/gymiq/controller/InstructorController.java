@@ -64,10 +64,22 @@ public class InstructorController {
         return ResponseEntity.ok(instructorService.update(id, request));
     }
 
+    @PatchMapping("/{id}/inactive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InstructorResponse> deactivate(@PathVariable Integer id) {
+        return ResponseEntity.ok(instructorService.deactivate(id));
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InstructorResponse> activate(@PathVariable Integer id) {
+        return ResponseEntity.ok(instructorService.activate(id));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        instructorService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        instructorService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

@@ -42,6 +42,6 @@ public class Instructor {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "instructor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "instructor", fetch = FetchType.LAZY)
     private List<WorkoutSheet> workoutSheets;
 }
