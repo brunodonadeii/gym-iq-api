@@ -4,6 +4,7 @@ import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,8 +18,34 @@ import java.util.Optional;
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer> {
 
+    @Override
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
+    Page<Enrollment> findAll(Pageable pageable);
+
+    @Override
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
+    Optional<Enrollment> findById(Integer id);
+
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
     Page<Enrollment> findByStudentStudentId(Integer studentId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
     List<Enrollment> findByStatus(EnrollmentStatus status);
 
     long countByStatus(EnrollmentStatus status);
@@ -31,6 +58,11 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
             """)
     long countDistinctStudentsByStatus(@Param("status") EnrollmentStatus status);
 
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
     Optional<Enrollment> findByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
 
     boolean existsByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
