@@ -64,7 +64,6 @@ public class WorkoutSheetExerciseService {
         item.setExercise(exercise);
         item.setSets(request.getSets());
         item.setRepetitions(request.getRepetitions());
-        item.setLoadKg(request.getLoadKg());
         item.setRestSeconds(request.getRestSeconds());
         item.setExecutionOrder(request.getExecutionOrder());
         item.setNotes(request.getNotes());
@@ -132,7 +131,6 @@ public class WorkoutSheetExerciseService {
                 .exercise(exercise)
                 .sets(request.getSets())
                 .repetitions(request.getRepetitions())
-                .loadKg(request.getLoadKg())
                 .restSeconds(request.getRestSeconds())
                 .executionOrder(request.getExecutionOrder())
                 .notes(request.getNotes())

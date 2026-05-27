@@ -199,7 +199,6 @@ public class WorkoutSheetService {
                 .exercise(exercise)
                 .sets(request.getSets())
                 .repetitions(request.getRepetitions())
-                .loadKg(request.getLoadKg())
                 .restSeconds(request.getRestSeconds())
                 .executionOrder(request.getExecutionOrder())
                 .notes(request.getNotes())
