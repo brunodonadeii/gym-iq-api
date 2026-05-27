@@ -46,7 +46,7 @@ public class PaymentJobService {
                     .map(payment -> payment.getDueDate().plusMonths(1))
                     .orElse(enrollment.getStartDate());
 
-            while (!nextDueDate.isAfter(today) && !nextDueDate.isAfter(enrollment.getEndDate())) {
+            while (!nextDueDate.isAfter(today) && isWithinEnrollmentPeriod(enrollment, nextDueDate)) {
                 if (!paymentRepository.existsByEnrollmentEnrollmentIdAndDueDate(
                         enrollment.getEnrollmentId(), nextDueDate)) {
                     createMonthlyPayment(enrollment, nextDueDate);
@@ -71,6 +71,10 @@ public class PaymentJobService {
                 .build();
 
         paymentRepository.save(payment);
+    }
+
+    private boolean isWithinEnrollmentPeriod(Enrollment enrollment, LocalDate dueDate) {
+        return enrollment.getEndDate() == null || !dueDate.isAfter(enrollment.getEndDate());
     }
 
     private PaymentStatus resolveInitialStatus(LocalDate dueDate) {
