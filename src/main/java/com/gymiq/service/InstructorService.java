@@ -1,6 +1,7 @@
 package com.gymiq.service;
 
 import com.gymiq.dto.request.CreateInstructorRequest;
+import com.gymiq.dto.request.InstructorStatusFilter;
 import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.entity.Instructor;
 import com.gymiq.entity.User;
@@ -62,14 +63,22 @@ public class InstructorService {
     }
 
     @Transactional(readOnly = true)
-    public Page<InstructorResponse> findAll(Pageable pageable) {
-        return instructorRepository.findAll(pageable)
+    public Page<InstructorResponse> findAll(InstructorStatusFilter status, Pageable pageable) {
+        return findByStatus(status, pageable)
                 .map(InstructorResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<InstructorResponse> search(String term, Pageable pageable) {
-        return instructorRepository.searchByTerm(term, pageable)
+    public Page<InstructorResponse> search(String term, InstructorStatusFilter status, Pageable pageable) {
+        InstructorStatusFilter resolvedStatus = resolveStatus(status);
+
+        Page<Instructor> instructors = switch (resolvedStatus) {
+            case ACTIVE -> instructorRepository.searchByTermAndUserActive(term, true, pageable);
+            case INACTIVE -> instructorRepository.searchByTermAndUserActive(term, false, pageable);
+            case ALL -> instructorRepository.searchByTerm(term, pageable);
+        };
+
+        return instructors
                 .map(InstructorResponse::fromEntity);
     }
 
@@ -154,5 +163,19 @@ public class InstructorService {
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
         return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
+    }
+
+    private Page<Instructor> findByStatus(InstructorStatusFilter status, Pageable pageable) {
+        InstructorStatusFilter resolvedStatus = resolveStatus(status);
+
+        return switch (resolvedStatus) {
+            case ACTIVE -> instructorRepository.findByUserActive(true, pageable);
+            case INACTIVE -> instructorRepository.findByUserActive(false, pageable);
+            case ALL -> instructorRepository.findAll(pageable);
+        };
+    }
+
+    private InstructorStatusFilter resolveStatus(InstructorStatusFilter status) {
+        return status != null ? status : InstructorStatusFilter.ACTIVE;
     }
 }

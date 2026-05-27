@@ -1,6 +1,7 @@
 package com.gymiq.controller;
 
 import com.gymiq.dto.request.CreateInstructorRequest;
+import com.gymiq.dto.request.InstructorStatusFilter;
 import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.service.InstructorService;
 import jakarta.validation.Valid;
@@ -32,16 +33,18 @@ public class InstructorController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<InstructorResponse>> findAll(
+            @RequestParam(required = false, defaultValue = "ACTIVE") InstructorStatusFilter status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(instructorService.findAll(pageable));
+        return ResponseEntity.ok(instructorService.findAll(status, pageable));
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<InstructorResponse>> search(
             @RequestParam String q,
+            @RequestParam(required = false, defaultValue = "ACTIVE") InstructorStatusFilter status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(instructorService.search(q, pageable));
+        return ResponseEntity.ok(instructorService.search(q, status, pageable));
     }
 
     @GetMapping("/me")

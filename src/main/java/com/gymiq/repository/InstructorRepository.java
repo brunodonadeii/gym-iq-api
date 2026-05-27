@@ -14,11 +14,18 @@ import java.util.Optional;
 @Repository
 public interface InstructorRepository extends JpaRepository<Instructor, Integer> {
 
+    @Override
+    @EntityGraph(attributePaths = "user")
+    Page<Instructor> findAll(Pageable pageable);
+
     Optional<Instructor> findByCref(String cref);
 
     boolean existsByCref(String cref);
 
     Optional<Instructor> findByUserUserId(Integer userId);
+
+    @EntityGraph(attributePaths = "user")
+    Page<Instructor> findByUserActive(Boolean active, Pageable pageable);
 
     @EntityGraph(attributePaths = "user")
     Optional<Instructor> findByUserEmailIgnoreCase(String email);
@@ -28,5 +35,17 @@ public interface InstructorRepository extends JpaRepository<Instructor, Integer>
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
             "LOWER(i.cref) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
             "LOWER(i.specialty) LIKE LOWER(CONCAT('%', :term, '%'))")
+    @EntityGraph(attributePaths = "user")
     Page<Instructor> searchByTerm(@Param("term") String term, Pageable pageable);
+
+    @Query("SELECT i FROM Instructor i JOIN i.user u WHERE u.active = :active AND (" +
+            "LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
+            "LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
+            "LOWER(i.cref) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
+            "LOWER(i.specialty) LIKE LOWER(CONCAT('%', :term, '%')))")
+    @EntityGraph(attributePaths = "user")
+    Page<Instructor> searchByTermAndUserActive(
+            @Param("term") String term,
+            @Param("active") Boolean active,
+            Pageable pageable);
 }
