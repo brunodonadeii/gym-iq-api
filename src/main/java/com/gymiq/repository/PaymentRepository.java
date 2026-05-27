@@ -5,6 +5,7 @@ import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,18 +19,69 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Integer> {
 
+    @Override
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    Page<Payment> findAll(Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     List<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     List<Payment> findByEnrollmentEnrollmentIdOrderByDueDateDesc(Integer enrollmentId);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     Page<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     List<Payment> findByEnrollmentStudentStudentId(Integer studentId);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     Page<Payment> findByEnrollmentStudentStudentId(Integer studentId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     List<Payment> findByStatus(PaymentStatus status);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
 
     List<Payment> findByStatusAndDueDateBefore(PaymentStatus status, LocalDate date);
