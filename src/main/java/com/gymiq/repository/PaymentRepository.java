@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +33,19 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
 
     List<Payment> findByStatusAndDueDateBefore(PaymentStatus status, LocalDate date);
+
+    long countByStatusAndDueDateBetween(PaymentStatus status, LocalDate startDate, LocalDate endDate);
+
+    @Query("""
+            SELECT SUM(p.amount)
+            FROM Payment p
+            WHERE p.status = :status
+              AND p.dueDate BETWEEN :startDate AND :endDate
+            """)
+    BigDecimal sumAmountByStatusAndDueDateBetween(
+            @Param("status") PaymentStatus status,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
     boolean existsByEnrollmentEnrollmentIdAndDueDate(Integer enrollmentId, LocalDate dueDate);
 
