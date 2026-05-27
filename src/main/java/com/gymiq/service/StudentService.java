@@ -1,6 +1,8 @@
 package com.gymiq.service;
 
 import com.gymiq.dto.request.CreateStudentRequest;
+import com.gymiq.dto.request.UpdateStudentRequest;
+import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
@@ -10,6 +12,9 @@ import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +29,12 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final StudentDataService studentDataService;
 
     @Transactional
     public StudentResponse create(CreateStudentRequest request) {
+        studentDataService.validateCpf(request.getCpf());
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
         }
@@ -50,7 +58,7 @@ public class StudentService {
                 .birthDate(request.getBirthDate())
                 .phone(request.getPhone())
                 .zipCode(request.getZipCode())
-                .address(request.getAddress())
+                .address(studentDataService.resolveAddress(request.getZipCode(), request.getAddress()))
                 .build();
         studentRepository.save(student);
 
@@ -59,19 +67,20 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponse> findAll() {
-        return studentRepository.findAll()
-                .stream()
-                .map(StudentResponse::fromEntity)
-                .toList();
+    public Page<StudentResponse> findAll(Pageable pageable) {
+        return studentRepository.findAll(pageable)
+                .map(StudentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponse> search(String term) {
-        return studentRepository.searchByTerm(term)
-                .stream()
-                .map(StudentResponse::fromEntity)
-                .toList();
+    public Page<StudentResponse> search(String term, Pageable pageable) {
+        return studentRepository.searchByTerm(term, pageable)
+                .map(StudentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentOptionResponse> findOptions(String term) {
+        return studentRepository.findOptions(term, PageRequest.of(0, 20));
     }
 
     @Transactional(readOnly = true)
@@ -79,30 +88,49 @@ public class StudentService {
         return StudentResponse.fromEntity(findEntityById(id));
     }
 
+    @Transactional(readOnly = true)
+    public StudentResponse findByAuthenticatedEmail(String email) {
+        return StudentResponse.fromEntity(findEntityByAuthenticatedEmail(email));
+    }
+
     @Transactional
-    public StudentResponse update(Integer id, CreateStudentRequest request) {
+    public StudentResponse update(Integer id, UpdateStudentRequest request) {
         Student student = findEntityById(id);
         User user = student.getUser();
 
-        userRepository.findByEmail(request.getEmail())
-                .filter(u -> !u.getUserId().equals(user.getUserId()))
-                .ifPresent(u -> { throw new BusinessException("E-mail já usado por outro usuário"); });
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            userRepository.findByEmail(request.getEmail())
+                    .filter(u -> !u.getUserId().equals(user.getUserId()))
+                    .ifPresent(u -> { throw new BusinessException("E-mail já usado por outro usuário"); });
+            user.setEmail(request.getEmail());
+        }
 
-        studentRepository.findByCpf(request.getCpf())
-                .filter(s -> !s.getStudentId().equals(id))
-                .ifPresent(s -> { throw new BusinessException("CPF já usado por outro aluno"); });
+        if (request.getCpf() != null && !request.getCpf().isBlank()) {
+            studentDataService.validateCpf(request.getCpf());
+            studentRepository.findByCpf(request.getCpf())
+                    .filter(s -> !s.getStudentId().equals(id))
+                    .ifPresent(s -> { throw new BusinessException("CPF já usado por outro aluno"); });
+            student.setCpf(request.getCpf());
+        }
 
-        user.setName(request.getName());
-        user.setEmail(request.getEmail());
+        if (request.getName() != null && !request.getName().isBlank()) {
+            user.setName(request.getName());
+        }
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
-
-        student.setCpf(request.getCpf());
-        student.setBirthDate(request.getBirthDate());
-        student.setPhone(request.getPhone());
-        student.setZipCode(request.getZipCode());
-        student.setAddress(request.getAddress());
+        if (request.getBirthDate() != null) {
+            student.setBirthDate(request.getBirthDate());
+        }
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            student.setPhone(request.getPhone());
+        }
+        if (request.getZipCode() != null) {
+            student.setZipCode(request.getZipCode());
+        }
+        if (request.getAddress() != null || request.getZipCode() != null) {
+            student.setAddress(studentDataService.resolveAddress(request.getZipCode(), request.getAddress()));
+        }
 
         studentRepository.save(student);
         log.info("Student updated: id={}", id);
@@ -120,5 +148,9 @@ public class StudentService {
     public Student findEntityById(Integer id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + id));
+    }
+    public Student findEntityByAuthenticatedEmail(String email) {
+        return studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"));
     }
 }

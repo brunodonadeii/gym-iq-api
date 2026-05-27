@@ -9,22 +9,35 @@ import com.gymiq.entity.Plan;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
+import com.gymiq.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EnrollmentService {
 
+    private static final int MONTHLY_PLAN_DURATION_MONTHS = 1;
+
     private final EnrollmentRepository enrollmentRepository;
     private final StudentService studentService;
     private final PlanService planService;
+    private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
+
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findAll(Pageable pageable) {
+        return enrollmentRepository.findAll(pageable)
+                .map(EnrollmentResponse::fromEntity);
+    }
 
     @Transactional
     public EnrollmentResponse enroll(EnrollStudentRequest request) {
@@ -43,7 +56,7 @@ public class EnrollmentService {
         }
 
         LocalDate start = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
-        LocalDate end = start.plusDays(plan.getDurationDays());
+        LocalDate end = calculateEndDate(start, plan);
 
         Enrollment enrollment = Enrollment.builder()
                 .student(student)
@@ -54,28 +67,46 @@ public class EnrollmentService {
                 .build();
 
         enrollmentRepository.save(enrollment);
+
+        paymentService.createFirstPaymentForEnrollment(enrollment);
         log.info("Matrícula criada: id={}, aluno={}, plano={}, fim={}",
                 enrollment.getEnrollmentId(), student.getStudentId(), plan.getName(), end);
 
-        return EnrollmentResponse.fromEntity(enrollment);
+        return buildResponseWithPayments(enrollment);
     }
 
     @Transactional(readOnly = true)
-    public List<EnrollmentResponse> findByStudent(Integer studentId) {
+    public EnrollmentResponse findById(Integer enrollmentId) {
+        return buildResponseWithPayments(findEntityById(enrollmentId));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findByStudent(Integer studentId, Pageable pageable) {
         studentService.findEntityById(studentId);
-        return enrollmentRepository.findByStudentStudentId(studentId)
-                .stream()
-                .map(EnrollmentResponse::fromEntity)
-                .toList();
+        return enrollmentRepository.findByStudentStudentId(studentId, pageable)
+                .map(EnrollmentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
+        Student student = studentService.findEntityByAuthenticatedEmail(email);
+        return enrollmentRepository.findByStudentStudentId(student.getStudentId(), pageable)
+                .map(EnrollmentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
     public EnrollmentResponse findActiveByStudent(Integer studentId) {
         return enrollmentRepository
                 .findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
-                .map(EnrollmentResponse::fromEntity)
+                .map(this::buildResponseWithPayments)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Nenhuma matrícula ativa encontrada para o aluno: " + studentId));
+    }
+
+    @Transactional(readOnly = true)
+    public EnrollmentResponse findActiveByAuthenticatedStudent(String email) {
+        Student student = studentService.findEntityByAuthenticatedEmail(email);
+        return findActiveByStudent(student.getStudentId());
     }
 
     @Transactional
@@ -88,7 +119,7 @@ public class EnrollmentService {
         enrollmentRepository.save(enrollment);
         log.info("Status da matrícula id={} alterado para {}", enrollmentId, newStatus);
 
-        return EnrollmentResponse.fromEntity(enrollment);
+        return buildResponseWithPayments(enrollment);
     }
 
     @Transactional
@@ -111,7 +142,7 @@ public class EnrollmentService {
         enrollmentRepository.save(oldEnrollment);
 
         LocalDate start = LocalDate.now();
-        LocalDate end = start.plusDays(newPlan.getDurationDays());
+        LocalDate end = calculateEndDate(start, newPlan);
 
         Enrollment newEnrollment = Enrollment.builder()
                 .student(oldEnrollment.getStudent())
@@ -122,18 +153,36 @@ public class EnrollmentService {
                 .build();
 
         enrollmentRepository.save(newEnrollment);
+        paymentService.createFirstPaymentForEnrollment(newEnrollment);
         log.info("Matrícula renovada: nova id={}, aluno={}, plano={}, fim={}",
                 newEnrollment.getEnrollmentId(),
                 oldEnrollment.getStudent().getStudentId(),
                 newPlan.getName(),
                 end);
 
-        return EnrollmentResponse.fromEntity(newEnrollment);
+        return buildResponseWithPayments(newEnrollment);
     }
 
     private Enrollment findEntityById(Integer id) {
         return enrollmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Matrícula não encontrada: " + id));
+    }
+
+    private EnrollmentResponse buildResponseWithPayments(Enrollment enrollment) {
+        return EnrollmentResponse.fromEntity(
+                enrollment,
+                paymentRepository.findByEnrollmentEnrollmentIdOrderByDueDateDesc(enrollment.getEnrollmentId()));
+    }
+
+    private LocalDate calculateEndDate(LocalDate startDate, Plan plan) {
+        if (isMonthlyPlan(plan)) {
+            return null;
+        }
+        return startDate.plusMonths(plan.getDurationMonths());
+    }
+
+    private boolean isMonthlyPlan(Plan plan) {
+        return MONTHLY_PLAN_DURATION_MONTHS == plan.getDurationMonths();
     }
 
     private void validateStatusTransition(EnrollmentStatus current, EnrollmentStatus next) {

@@ -6,19 +6,29 @@ import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.service.EnrollmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("/api/enrollments")
+@RequestMapping({"/api/enrollments"})
 @RequiredArgsConstructor
 public class EnrollmentController {
 
     private final EnrollmentService enrollmentService;
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<Page<EnrollmentResponse>> findAll(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(enrollmentService.findAll(pageable));
+    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
@@ -28,15 +38,36 @@ public class EnrollmentController {
                 .body(enrollmentService.enroll(request));
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Page<EnrollmentResponse>> findMine(
+            Authentication authentication,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(enrollmentService.findByAuthenticatedStudent(authentication.getName(), pageable));
+    }
+
+    @GetMapping("/me/active")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<EnrollmentResponse> findMyActive(Authentication authentication) {
+        return ResponseEntity.ok(enrollmentService.findActiveByAuthenticatedStudent(authentication.getName()));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<EnrollmentResponse> findById(@PathVariable Integer id) {
+        return ResponseEntity.ok(enrollmentService.findById(id));
+    }
+
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<EnrollmentResponse>> findByStudent(
-            @PathVariable Integer studentId) {
-        return ResponseEntity.ok(enrollmentService.findByStudent(studentId));
+    public ResponseEntity<Page<EnrollmentResponse>> findByStudent(
+            @PathVariable Integer studentId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(enrollmentService.findByStudent(studentId, pageable));
     }
 
     @GetMapping("/student/{studentId}/active")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','STUDENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<EnrollmentResponse> findActiveByStudent(
             @PathVariable Integer studentId) {
         return ResponseEntity.ok(enrollmentService.findActiveByStudent(studentId));

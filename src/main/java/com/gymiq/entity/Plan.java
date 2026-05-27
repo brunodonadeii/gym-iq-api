@@ -26,14 +26,14 @@ public class Plan {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description")
     private String description;
 
     @Column(name = "monthly_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal monthlyPrice;
 
-    @Column(name = "duration_days", nullable = false)
-    private Integer durationDays;
+    @Column(name = "duration_months", nullable = false)
+    private Integer durationMonths;
 
     @Column(name = "active", nullable = false)
     @Builder.Default
@@ -43,6 +43,6 @@ public class Plan {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "plan", fetch = FetchType.LAZY)
     private List<Enrollment> enrollments;
 }

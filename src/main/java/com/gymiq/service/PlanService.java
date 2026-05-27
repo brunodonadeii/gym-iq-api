@@ -5,13 +5,14 @@ import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Plan;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
+import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -19,6 +20,7 @@ import java.util.List;
 public class PlanService {
 
     private final PlanRepository planRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Transactional
     public PlanResponse create(CreatePlanRequest request) {
@@ -30,7 +32,7 @@ public class PlanService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .monthlyPrice(request.getMonthlyPrice())
-                .durationDays(request.getDurationDays())
+                .durationMonths(request.getDurationMonths())
                 .active(true)
                 .build();
 
@@ -40,19 +42,15 @@ public class PlanService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlanResponse> findActive() {
-        return planRepository.findByActiveTrue()
-                .stream()
-                .map(PlanResponse::fromEntity)
-                .toList();
+    public Page<PlanResponse> findActive(Pageable pageable) {
+        return planRepository.findByActiveTrue(pageable)
+                .map(PlanResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PlanResponse> findAll() {
-        return planRepository.findAll()
-                .stream()
-                .map(PlanResponse::fromEntity)
-                .toList();
+    public Page<PlanResponse> findAll(Pageable pageable) {
+        return planRepository.findAll(pageable)
+                .map(PlanResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -73,11 +71,23 @@ public class PlanService {
         plan.setName(request.getName());
         plan.setDescription(request.getDescription());
         plan.setMonthlyPrice(request.getMonthlyPrice());
-        plan.setDurationDays(request.getDurationDays());
+        plan.setDurationMonths(request.getDurationMonths());
 
         planRepository.save(plan);
         log.info("Plan updated: id={}", id);
         return PlanResponse.fromEntity(plan);
+    }
+
+    @Transactional
+    public void delete(Integer id) {
+        Plan plan = findEntityById(id);
+
+        if (enrollmentRepository.existsByPlanPlanId(id)) {
+            throw new BusinessException("NÃ£o Ã© possÃ­vel excluir um plano vinculado a matrÃ­culas");
+        }
+
+        planRepository.delete(plan);
+        log.info("Plan deleted: id={}", id);
     }
 
     @Transactional
@@ -86,6 +96,14 @@ public class PlanService {
         plan.setActive(false);
         planRepository.save(plan);
         log.info("Plan deactivated: id={}", id);
+    }
+
+    @Transactional
+    public void activate(Integer id) {
+        Plan plan = findEntityById(id);
+        plan.setActive(true);
+        planRepository.save(plan);
+        log.info("Plan activated: id={}", id);
     }
 
     public Plan findEntityById(Integer id) {

@@ -12,6 +12,9 @@ import java.util.List;
 @Table(name = "student",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_student_cpf", columnNames = "cpf")
+        },
+        indexes = {
+                @Index(name = "idx_student_user_id", columnList = "user_id")
         })
 @Getter
 @Setter
@@ -51,4 +54,13 @@ public class Student {
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Enrollment> enrollments;
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Presence> presences;
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<WorkoutSheet> workoutSheets;
+
+    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<RetentionAlert> retentionAlerts;
 }

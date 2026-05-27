@@ -1,0 +1,94 @@
+package com.gymiq.controller;
+
+import com.gymiq.dto.request.CreateWorkoutSheetRequest;
+import com.gymiq.dto.response.WorkoutSheetResponse;
+import com.gymiq.service.WorkoutSheetService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/workout-sheets")
+@RequiredArgsConstructor
+public class WorkoutSheetController {
+
+    private final WorkoutSheetService workoutSheetService;
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<WorkoutSheetResponse> create(
+            @Valid @RequestBody CreateWorkoutSheetRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(workoutSheetService.create(request));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<Page<WorkoutSheetResponse>> findAll(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findAll(pageable));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Page<WorkoutSheetResponse>> findMine(
+            Authentication authentication,
+            @RequestParam(defaultValue = "true") boolean onlyActive,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByAuthenticatedStudent(
+                authentication.getName(), onlyActive, pageable));
+    }
+
+    @GetMapping("/instructor/me")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<Page<WorkoutSheetResponse>> findMineAsInstructor(
+            Authentication authentication,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByAuthenticatedInstructor(authentication.getName(), pageable));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<WorkoutSheetResponse> findById(@PathVariable Integer id) {
+        return ResponseEntity.ok(workoutSheetService.findById(id));
+    }
+
+    @GetMapping("/student/{studentId}")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<Page<WorkoutSheetResponse>> findByStudent(
+            @PathVariable Integer studentId,
+            @RequestParam(defaultValue = "true") boolean onlyActive,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByStudent(studentId, onlyActive, pageable));
+    }
+
+    @GetMapping("/instructor/{instructorId}")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<Page<WorkoutSheetResponse>> findByInstructor(
+            @PathVariable Integer instructorId,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetService.findByInstructor(instructorId, pageable));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<WorkoutSheetResponse> update(
+            @PathVariable Integer id,
+            @Valid @RequestBody CreateWorkoutSheetRequest request) {
+        return ResponseEntity.ok(workoutSheetService.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
+        workoutSheetService.deactivate(id);
+        return ResponseEntity.noContent().build();
+    }
+}

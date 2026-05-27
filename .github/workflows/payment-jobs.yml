@@ -1,0 +1,39 @@
+name: Payment Jobs
+
+on:
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-payment-jobs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wake up Render service
+        run: |
+          for i in {1..20}; do
+            STATUS=$(curl -s -o /tmp/health.txt -w "%{http_code}" https://gym-iq-api.onrender.com/api/health)
+            echo "Wake attempt $i - HTTP $STATUS"
+
+            if [ "$STATUS" = "200" ]; then
+              cat /tmp/health.txt
+              exit 0
+            fi
+
+            sleep 15
+          done
+
+          echo "Render service did not wake up in time"
+          cat /tmp/health.txt || true
+          exit 1
+
+      - name: Refresh overdue payments
+        run: |
+          curl -f -X POST https://gym-iq-api.onrender.com/api/jobs/payments/refresh-overdue \
+            -H "X-Job-Secret: ${{ secrets.JOBS_SECRET }}"
+
+      - name: Generate monthly payments
+        run: |
+          curl -f -X POST https://gym-iq-api.onrender.com/api/jobs/payments/generate-monthly \
+            -H "X-Job-Secret: ${{ secrets.JOBS_SECRET }}"
