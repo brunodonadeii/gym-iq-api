@@ -25,7 +25,7 @@ public class PlanService {
     @Transactional
     public PlanResponse create(CreatePlanRequest request) {
         if (planRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new BusinessException("Já existe um plano com o nome: " + request.getName());
+            throw new BusinessException("Ja existe um plano com o nome: " + request.getName());
         }
 
         Plan plan = Plan.builder()
@@ -66,7 +66,9 @@ public class PlanService {
                 .filter(p -> p.getName().equalsIgnoreCase(request.getName())
                         && !p.getPlanId().equals(id))
                 .findFirst()
-                .ifPresent(p -> { throw new BusinessException("Nome já usado por outro plano"); });
+                .ifPresent(p -> {
+                    throw new BusinessException("Nome ja usado por outro plano");
+                });
 
         plan.setName(request.getName());
         plan.setDescription(request.getDescription());
@@ -82,8 +84,15 @@ public class PlanService {
     public void delete(Integer id) {
         Plan plan = findEntityById(id);
 
+        if (Boolean.TRUE.equals(plan.getActive())) {
+            plan.setActive(false);
+            planRepository.save(plan);
+            log.info("Plan deactivated by delete request: id={}", id);
+            return;
+        }
+
         if (enrollmentRepository.existsByPlanPlanId(id)) {
-            throw new BusinessException("NÃ£o Ã© possÃ­vel excluir um plano vinculado a matrÃ­culas");
+            throw new BusinessException("Nao e possivel excluir fisicamente um plano vinculado a matriculas");
         }
 
         planRepository.delete(plan);
@@ -108,6 +117,6 @@ public class PlanService {
 
     public Plan findEntityById(Integer id) {
         return planRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Plano nao encontrado: " + id));
     }
 }
