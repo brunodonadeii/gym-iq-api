@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -72,13 +73,17 @@ public class RetentionAlertService {
 
     @Transactional
     public List<RetentionAlertResponse> generateForActiveStudents() {
-        return enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE)
+        List<RetentionAlertResponse> generatedAlerts = new ArrayList<>();
+
+        enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE)
                 .stream()
                 .map(Enrollment::getStudent)
+                .filter(student -> Boolean.TRUE.equals(student.getUser().getActive()))
                 .map(Student::getStudentId)
                 .distinct()
-                .map(this::generateForStudent)
-                .toList();
+                .forEach(studentId -> generateAlertSafely(studentId, generatedAlerts));
+
+        return generatedAlerts;
     }
 
     @Transactional
@@ -91,9 +96,9 @@ public class RetentionAlertService {
 
         log.info("Generating retention alerts for {} student(s) with overdue payments", studentIds.size());
 
-        return studentIds.stream()
-                .map(this::generateForStudent)
-                .toList();
+        List<RetentionAlertResponse> generatedAlerts = new ArrayList<>();
+        studentIds.forEach(studentId -> generateAlertSafely(studentId, generatedAlerts));
+        return generatedAlerts;
     }
 
     @Transactional(readOnly = true)
@@ -230,5 +235,13 @@ public class RetentionAlertService {
         alert.setOverduePayments(overduePayments);
         alert.setMessage(message);
         alert.setResolvedAt(null);
+    }
+
+    private void generateAlertSafely(Integer studentId, List<RetentionAlertResponse> generatedAlerts) {
+        try {
+            generatedAlerts.add(generateForStudent(studentId));
+        } catch (BusinessException | ResourceNotFoundException ex) {
+            log.warn("Retention alert skipped for student={} reason={}", studentId, ex.getMessage());
+        }
     }
 }
