@@ -24,4 +24,7 @@ public class CreateUserRequest {
 
     @NotNull(message = "Perfil e obrigatorio")
     private Role role;
+
+    @NotNull(message = "Aceite LGPD e obrigatorio")
+    private Boolean lgpdAccepted;
 }

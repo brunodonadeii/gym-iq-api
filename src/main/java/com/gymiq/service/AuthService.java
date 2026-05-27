@@ -16,8 +16,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,7 +33,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuario nao encontrado"));
 
         String token = jwtUtil.generateToken(
                 user.getEmail(),
@@ -61,21 +59,5 @@ public class AuthService {
         StudentResponse student = studentService.create(request);
         log.info("Novo aluno registrado via auth: {} (id={})", student.getEmail(), student.getStudentId());
         return student;
-    }
-
-    @Transactional
-    public void registerLgpdAcceptance(Integer userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado: " + userId));
-
-        if (user.getLgpdAccepted()) {
-            throw new BusinessException("LGPD já aceita para este usuário");
-        }
-
-        user.setLgpdAccepted(true);
-        user.setLgpdAcceptedAt(LocalDateTime.now());
-        userRepository.save(user);
-
-        log.info("LGPD aceita pelo usuário id={} em {}", userId, user.getLgpdAcceptedAt());
     }
 }

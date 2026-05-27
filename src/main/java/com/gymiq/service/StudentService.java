@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -48,7 +49,8 @@ public class StudentService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(User.Role.STUDENT)
                 .active(true)
-                .lgpdAccepted(false)
+                .lgpdAccepted(request.getLgpdAccepted())
+                .lgpdAcceptedAt(resolveLgpdAcceptedAt(request.getLgpdAccepted()))
                 .build();
         userRepository.save(user);
 
@@ -152,5 +154,9 @@ public class StudentService {
     public Student findEntityByAuthenticatedEmail(String email) {
         return studentRepository.findByUserEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"));
+    }
+
+    private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
+        return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
     }
 }
