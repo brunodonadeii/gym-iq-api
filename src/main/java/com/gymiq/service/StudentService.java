@@ -4,10 +4,12 @@ import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
+import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
+import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,9 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,6 +32,8 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final PasswordEncoder passwordEncoder;
     private final StudentDataService studentDataService;
 
     @Transactional
@@ -137,9 +143,36 @@ public class StudentService {
     @Transactional
     public void deactivate(Integer id) {
         Student student = findEntityById(id);
+        cancelActiveEnrollmentIfPresent(student);
         student.getUser().setActive(false);
         studentRepository.save(student);
         log.info("Student deactivated: id={}", id);
+    }
+
+    @Transactional
+    public StudentResponse anonymize(Integer id) {
+        Student student = findEntityById(id);
+        User user = student.getUser();
+
+        if (Boolean.TRUE.equals(user.getActive())) {
+            throw new BusinessException("Aluno precisa estar inativo antes da anonimização");
+        }
+
+        cancelActiveEnrollmentIfPresent(student);
+
+        user.setName("Aluno anonimizado #" + student.getStudentId());
+        user.setEmail(buildAnonymizedEmail(student));
+        user.setPasswordHash("{anonymized}");
+
+        student.setCpf(buildAnonymizedCpf(student));
+        student.setBirthDate(LocalDate.of(1900, 1, 1));
+        student.setPhone("ANONYMIZED");
+        student.setZipCode(null);
+        student.setAddress(null);
+
+        studentRepository.save(student);
+        log.info("Student anonymized: id={}", id);
+        return StudentResponse.fromEntity(student);
     }
 
     public Student findEntityById(Integer id) {
@@ -153,5 +186,28 @@ public class StudentService {
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
         return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
+    }
+
+    private void cancelActiveEnrollmentIfPresent(Student student) {
+        enrollmentRepository.findByStudentStudentIdAndStatus(student.getStudentId(), EnrollmentStatus.ACTIVE)
+                .ifPresent(enrollment -> {
+                    enrollment.setStatus(EnrollmentStatus.CANCELED);
+                    enrollmentRepository.save(enrollment);
+                    log.info("Active enrollment canceled during student deactivation/anonymization: enrollmentId={}, studentId={}",
+                            enrollment.getEnrollmentId(), student.getStudentId());
+                });
+    }
+
+    private String buildAnonymizedEmail(Student student) {
+        return "anonymized.student." + student.getStudentId() + "." + student.getUser().getUserId() + "@deleted.local";
+    }
+
+    private String buildAnonymizedCpf(Student student) {
+        long numericCpf = 10_000_000_000L + student.getStudentId();
+        String digits = String.format("%011d", numericCpf);
+        return digits.substring(0, 3) + "." +
+                digits.substring(3, 6) + "." +
+                digits.substring(6, 9) + "-" +
+                digits.substring(9, 11);
     }
 }

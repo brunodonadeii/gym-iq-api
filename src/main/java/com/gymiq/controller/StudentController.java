@@ -84,10 +84,16 @@ public class StudentController {
         return ResponseEntity.ok(studentService.update(id, request));
     }
 
-    @DeleteMapping("/{id}")
+    @PatchMapping("/{id}/inactive")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
         studentService.deactivate(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/anonymize")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<StudentResponse> anonymize(@PathVariable Integer id) {
+        return ResponseEntity.ok(studentService.anonymize(id));
     }
 }
