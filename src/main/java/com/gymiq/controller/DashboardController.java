@@ -1,6 +1,7 @@
 package com.gymiq.controller;
 
 import com.gymiq.dto.response.FinancialDashboardResponse;
+import com.gymiq.dto.response.OperationsDashboardResponse;
 import com.gymiq.dto.response.RetentionDashboardResponse;
 import com.gymiq.service.DashboardService;
 import lombok.RequiredArgsConstructor;
@@ -27,5 +28,11 @@ public class DashboardController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FinancialDashboardResponse> getFinancialDashboard() {
         return ResponseEntity.ok(dashboardService.getFinancialDashboard());
+    }
+
+    @GetMapping("/operations")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OperationsDashboardResponse> getOperationsDashboard() {
+        return ResponseEntity.ok(dashboardService.getOperationsDashboard());
     }
 }

@@ -1,6 +1,7 @@
 package com.gymiq.service;
 
 import com.gymiq.dto.response.FinancialDashboardResponse;
+import com.gymiq.dto.response.OperationsDashboardResponse;
 import com.gymiq.dto.response.RetentionAlertResponse;
 import com.gymiq.dto.response.RetentionDashboardResponse;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
@@ -9,7 +10,9 @@ import com.gymiq.entity.RetentionAlert.AlertStatus;
 import com.gymiq.entity.RetentionAlert.RiskLevel;
 import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.PaymentRepository;
+import com.gymiq.repository.PresenceRepository;
 import com.gymiq.repository.RetentionAlertRepository;
+import com.gymiq.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,6 +35,8 @@ public class DashboardService {
     private final RetentionAlertRepository retentionAlertRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final PaymentRepository paymentRepository;
+    private final PresenceRepository presenceRepository;
+    private final StudentRepository studentRepository;
 
     @Transactional(readOnly = true)
     public RetentionDashboardResponse getRetentionDashboard() {
@@ -78,6 +83,29 @@ public class DashboardService {
                 .pendingPaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.PENDING, startDate, endDate))
                 .overduePaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.OVERDUE, startDate, endDate))
                 .defaultRate(calculateDefaultRate(overdueAmount, projectedRevenue))
+                .generatedAt(LocalDateTime.now())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public OperationsDashboardResponse getOperationsDashboard() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfToday = today.atStartOfDay();
+        LocalDateTime startOfTomorrow = today.plusDays(1).atStartOfDay();
+        LocalDateTime startOfMonth = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime startOfNextMonth = today.plusMonths(1).withDayOfMonth(1).atStartOfDay();
+
+        return OperationsDashboardResponse.builder()
+                .checkInsToday(presenceRepository.countCheckInsBetween(startOfToday, startOfTomorrow))
+                .openCheckIns(presenceRepository.countByCheckOutAtIsNull())
+                .activeEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.ACTIVE))
+                .suspendedEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.SUSPENDED))
+                .canceledEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.CANCELED))
+                .enrollmentsExpiringInNext7Days(enrollmentRepository.countByStatusAndEndDateBetween(
+                        EnrollmentStatus.ACTIVE,
+                        today,
+                        today.plusDays(7)))
+                .newStudentsCurrentMonth(studentRepository.countCreatedBetween(startOfMonth, startOfNextMonth))
                 .generatedAt(LocalDateTime.now())
                 .build();
     }

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +36,16 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
 
     @EntityGraph(attributePaths = "user")
     Optional<Student> findByCpfOrUserEmailIgnoreCase(String cpf, String email);
+
+    @Query("""
+            SELECT COUNT(s)
+            FROM Student s
+            WHERE s.createdAt >= :startDate
+              AND s.createdAt < :endDate
+            """)
+    long countCreatedBetween(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
     @Query("SELECT s FROM Student s JOIN s.user u WHERE " +
             "LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%')) OR " +

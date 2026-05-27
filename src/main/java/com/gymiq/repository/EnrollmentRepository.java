@@ -21,6 +21,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
 
     List<Enrollment> findByStatus(EnrollmentStatus status);
 
+    long countByStatus(EnrollmentStatus status);
+
     @Query("""
             SELECT COUNT(DISTINCT e.student.studentId)
             FROM Enrollment e
@@ -39,6 +41,17 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
             "AND e.endDate BETWEEN :today AND :limit")
     List<Enrollment> findExpiringBetween(@Param("today") LocalDate today,
                                          @Param("limit") LocalDate limit);
+
+    @Query("""
+            SELECT COUNT(e)
+            FROM Enrollment e
+            WHERE e.status = :status
+              AND e.endDate BETWEEN :startDate AND :endDate
+            """)
+    long countByStatusAndEndDateBetween(
+            @Param("status") EnrollmentStatus status,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
     @Query("""
             SELECT COUNT(DISTINCT e.student.studentId)
