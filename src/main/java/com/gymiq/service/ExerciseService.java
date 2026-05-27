@@ -6,6 +6,7 @@ import com.gymiq.entity.Exercise;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
+import com.gymiq.repository.WorkoutSheetExerciseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExerciseService {
 
     private final ExerciseRepository exerciseRepository;
+    private final WorkoutSheetExerciseRepository workoutSheetExerciseRepository;
 
     @Transactional
     public ExerciseResponse create(CreateExerciseRequest request) {
@@ -74,11 +76,15 @@ public class ExerciseService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void delete(Integer id) {
         Exercise exercise = findEntityById(id);
-        exercise.setActive(false);
-        exerciseRepository.save(exercise);
-        log.info("Exercise deactivated: id={}", id);
+
+        if (workoutSheetExerciseRepository.existsByExerciseExerciseId(id)) {
+            throw new BusinessException("Nao e possivel excluir um exercicio vinculado a fichas de treino");
+        }
+
+        exerciseRepository.delete(exercise);
+        log.info("Exercise deleted: id={}", id);
     }
 
     public Exercise findEntityById(Integer id) {

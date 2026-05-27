@@ -14,4 +14,6 @@ public interface WorkoutSheetExerciseRepository extends JpaRepository<WorkoutShe
     List<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetIdOrderByExecutionOrderAsc(Integer workoutSheetId);
 
     Page<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetId(Integer workoutSheetId, Pageable pageable);
+
+    boolean existsByExerciseExerciseId(Integer exerciseId);
 }

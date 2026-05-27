@@ -66,8 +66,8 @@ public class ExerciseController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        exerciseService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        exerciseService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }
