@@ -130,6 +130,10 @@ public class EnrollmentService {
             throw new BusinessException("Não é possível renovar uma matrícula cancelada");
         }
 
+        if (oldEnrollment.getEndDate() == null) {
+            throw new BusinessException("Matricula mensal recorrente nao precisa de renovacao");
+        }
+
         Plan newPlan = newPlanId != null
                 ? planService.findEntityById(newPlanId)
                 : oldEnrollment.getPlan();
