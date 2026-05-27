@@ -190,10 +190,6 @@ public class WorkoutSheetService {
         Exercise exercise = exerciseRepository.findById(request.getExerciseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + request.getExerciseId()));
 
-        if (Boolean.FALSE.equals(exercise.getActive())) {
-            throw new BusinessException("Exercicio inativo nao pode ser usado em ficha de treino: " + exercise.getName());
-        }
-
         return WorkoutSheetExercise.builder()
                 .workoutSheet(workoutSheet)
                 .exercise(exercise)

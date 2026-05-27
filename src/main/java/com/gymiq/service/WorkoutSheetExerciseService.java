@@ -31,7 +31,7 @@ public class WorkoutSheetExerciseService {
     @Transactional
     public WorkoutSheetExerciseResponse addExercise(Integer workoutSheetId, CreateWorkoutSheetExerciseRequest request) {
         WorkoutSheet workoutSheet = findActiveWorkoutSheet(workoutSheetId);
-        Exercise exercise = findActiveExercise(request.getExerciseId());
+        Exercise exercise = findExercise(request.getExerciseId());
         ensureOrderIsAvailable(workoutSheetId, request.getExecutionOrder(), null);
 
         WorkoutSheetExercise item = buildWorkoutSheetExercise(workoutSheet, exercise, request);
@@ -55,7 +55,7 @@ public class WorkoutSheetExerciseService {
     @Transactional
     public WorkoutSheetExerciseResponse update(Integer id, CreateWorkoutSheetExerciseRequest request) {
         WorkoutSheetExercise item = findEntityById(id);
-        Exercise exercise = findActiveExercise(request.getExerciseId());
+        Exercise exercise = findExercise(request.getExerciseId());
         Integer workoutSheetId = item.getWorkoutSheet().getWorkoutSheetId();
 
         ensureWorkoutSheetIsActive(item.getWorkoutSheet());
@@ -94,14 +94,9 @@ public class WorkoutSheetExerciseService {
         return workoutSheet;
     }
 
-    private Exercise findActiveExercise(Integer exerciseId) {
-        Exercise exercise = exerciseRepository.findById(exerciseId)
+    private Exercise findExercise(Integer exerciseId) {
+        return exerciseRepository.findById(exerciseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + exerciseId));
-
-        if (Boolean.FALSE.equals(exercise.getActive())) {
-            throw new BusinessException("Exercicio inativo nao pode ser usado em ficha de treino: " + exercise.getName());
-        }
-        return exercise;
     }
 
     private void ensureWorkoutSheetIsActive(WorkoutSheet workoutSheet) {

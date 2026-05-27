@@ -30,14 +30,14 @@ public class ExerciseController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR','STUDENT')")
-    public ResponseEntity<Page<ExerciseResponse>> findActive(
+    public ResponseEntity<Page<ExerciseResponse>> findAll(
             @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(exerciseService.findActive(pageable));
+        return ResponseEntity.ok(exerciseService.findAll(pageable));
     }
 
     @GetMapping("/all")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Page<ExerciseResponse>> findAll(
+    public ResponseEntity<Page<ExerciseResponse>> findAllForAdmin(
             @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(exerciseService.findAll(pageable));
     }

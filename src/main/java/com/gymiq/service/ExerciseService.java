@@ -30,18 +30,11 @@ public class ExerciseService {
                 .name(request.getName())
                 .muscleGroup(request.getMuscleGroup())
                 .description(request.getDescription())
-                .active(true)
                 .build();
 
         exerciseRepository.save(exercise);
         log.info("Exercise created: id={}, name={}", exercise.getExerciseId(), exercise.getName());
         return ExerciseResponse.fromEntity(exercise);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<ExerciseResponse> findActive(Pageable pageable) {
-        return exerciseRepository.findByActiveTrue(pageable)
-                .map(ExerciseResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
