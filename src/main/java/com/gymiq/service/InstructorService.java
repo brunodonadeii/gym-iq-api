@@ -2,6 +2,7 @@ package com.gymiq.service;
 
 import com.gymiq.dto.request.CreateInstructorRequest;
 import com.gymiq.dto.request.InstructorStatusFilter;
+import com.gymiq.dto.request.UpdateInstructorRequest;
 import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.entity.Instructor;
 import com.gymiq.entity.User;
@@ -93,7 +94,7 @@ public class InstructorService {
     }
 
     @Transactional
-    public InstructorResponse update(Integer id, CreateInstructorRequest request) {
+    public InstructorResponse update(Integer id, UpdateInstructorRequest request) {
         Instructor instructor = findEntityById(id);
         User user = instructor.getUser();
 
@@ -107,8 +108,12 @@ public class InstructorService {
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setLgpdAccepted(request.getLgpdAccepted());
+        if (Boolean.TRUE.equals(request.getLgpdAccepted()) && user.getLgpdAcceptedAt() == null) {
+            user.setLgpdAcceptedAt(LocalDateTime.now());
+        }
+        if (Boolean.FALSE.equals(request.getLgpdAccepted())) {
+            user.setLgpdAcceptedAt(null);
         }
 
         instructor.setCref(request.getCref());

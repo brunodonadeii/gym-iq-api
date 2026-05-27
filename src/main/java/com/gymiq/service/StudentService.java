@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +28,6 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final StudentDataService studentDataService;
 
     @Transactional
@@ -117,9 +115,6 @@ public class StudentService {
 
         if (request.getName() != null && !request.getName().isBlank()) {
             user.setName(request.getName());
-        }
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
         if (request.getBirthDate() != null) {
             student.setBirthDate(request.getBirthDate());

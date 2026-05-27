@@ -2,6 +2,7 @@ package com.gymiq.controller;
 
 import com.gymiq.dto.request.CreateInstructorRequest;
 import com.gymiq.dto.request.InstructorStatusFilter;
+import com.gymiq.dto.request.UpdateInstructorRequest;
 import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.service.InstructorService;
 import jakarta.validation.Valid;
@@ -63,7 +64,7 @@ public class InstructorController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InstructorResponse> update(
             @PathVariable Integer id,
-            @Valid @RequestBody CreateInstructorRequest request) {
+            @Valid @RequestBody UpdateInstructorRequest request) {
         return ResponseEntity.ok(instructorService.update(id, request));
     }
 
