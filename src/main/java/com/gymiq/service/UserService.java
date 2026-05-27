@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -33,7 +35,8 @@ public class UserService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .active(true)
-                .lgpdAccepted(false)
+                .lgpdAccepted(request.getLgpdAccepted())
+                .lgpdAcceptedAt(resolveLgpdAcceptedAt(request.getLgpdAccepted()))
                 .build();
 
         userRepository.save(user);
@@ -46,5 +49,9 @@ public class UserService {
         if (role == User.Role.STUDENT || role == User.Role.INSTRUCTOR) {
             throw new BusinessException("Use as rotas especificas para criar alunos ou instrutores");
         }
+    }
+
+    private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
+        return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
     }
 }

@@ -37,4 +37,7 @@ public class CreateStudentRequest {
     private String zipCode;
 
     private String address;
+
+    @NotNull(message = "Aceite LGPD e obrigatorio")
+    private Boolean lgpdAccepted;
 }

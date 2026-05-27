@@ -1,4 +1,4 @@
-name: Payment Jobs
+name: Daily Jobs
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-payment-jobs:
+  run-daily-jobs:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,4 +36,9 @@ jobs:
       - name: Generate monthly payments
         run: |
           curl -f -X POST https://gym-iq-api.onrender.com/api/jobs/payments/generate-monthly \
+            -H "X-Job-Secret: ${{ secrets.JOBS_SECRET }}"
+
+      - name: Generate retention alerts
+        run: |
+          curl -f -X POST https://gym-iq-api.onrender.com/api/jobs/retention/generate-active-students \
             -H "X-Job-Secret: ${{ secrets.JOBS_SECRET }}"
