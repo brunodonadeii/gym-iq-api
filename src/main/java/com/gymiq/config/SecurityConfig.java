@@ -68,7 +68,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/presences/self-check-in").permitAll()
 
 
+                .requestMatchers(HttpMethod.GET, "/api/users/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
 
 
                 .requestMatchers(HttpMethod.POST, "/api/students").hasAnyRole("ADMIN", "RECEPTION")
