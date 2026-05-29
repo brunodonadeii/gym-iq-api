@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,11 +40,17 @@ public class WorkoutSheetService {
 
     @Transactional
     public WorkoutSheetResponse create(CreateWorkoutSheetRequest request) {
+        return create(request, null, true);
+    }
+
+    @Transactional
+    public WorkoutSheetResponse create(CreateWorkoutSheetRequest request, String authenticatedEmail, boolean admin) {
         validateDates(request);
         validateExerciseOrders(request.getExercises());
 
         Student student = findActiveStudent(request.getStudentId());
         Instructor instructor = findActiveInstructor(request.getInstructorId());
+        ensureInstructorCanManage(instructor, authenticatedEmail, admin);
 
         WorkoutSheet workoutSheet = WorkoutSheet.builder()
                 .student(student)
@@ -76,6 +83,13 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
+    public WorkoutSheetResponse findById(Integer id, String authenticatedEmail, boolean admin) {
+        WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
+        return WorkoutSheetResponse.fromEntity(workoutSheet);
+    }
+
+    @Transactional(readOnly = true)
     public Page<WorkoutSheetResponse> findByStudent(Integer studentId, boolean onlyActive, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
@@ -84,6 +98,30 @@ public class WorkoutSheetService {
         Page<WorkoutSheet> workoutSheets = onlyActive
                 ? workoutSheetRepository.findByStudentStudentIdAndActiveTrue(studentId, pageable)
                 : workoutSheetRepository.findByStudentStudentId(studentId, pageable);
+
+        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByStudent(
+            Integer studentId,
+            boolean onlyActive,
+            Pageable pageable,
+            String authenticatedEmail,
+            boolean admin) {
+        if (!studentRepository.existsById(studentId)) {
+            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+        }
+
+        if (admin) {
+            return findByStudent(studentId, onlyActive, pageable);
+        }
+
+        Page<WorkoutSheet> workoutSheets = onlyActive
+                ? workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCaseAndActiveTrue(
+                        studentId, authenticatedEmail, pageable)
+                : workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCase(
+                        studentId, authenticatedEmail, pageable);
 
         return workoutSheets.map(WorkoutSheetResponse::fromEntity);
     }
@@ -108,6 +146,21 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByInstructor(
+            Integer instructorId,
+            Pageable pageable,
+            String authenticatedEmail,
+            boolean admin) {
+        Instructor instructor = instructorRepository.findById(instructorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId));
+
+        ensureInstructorCanManage(instructor, authenticatedEmail, admin);
+
+        return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
+                .map(WorkoutSheetResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
     public Page<WorkoutSheetResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
         Integer instructorId = instructorRepository.findByUserEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"))
@@ -119,12 +172,24 @@ public class WorkoutSheetService {
 
     @Transactional
     public WorkoutSheetResponse update(Integer id, CreateWorkoutSheetRequest request) {
+        return update(id, request, null, true);
+    }
+
+    @Transactional
+    public WorkoutSheetResponse update(
+            Integer id,
+            CreateWorkoutSheetRequest request,
+            String authenticatedEmail,
+            boolean admin) {
         validateDates(request);
         validateExerciseOrders(request.getExercises());
 
         WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
+
         Student student = findActiveStudent(request.getStudentId());
         Instructor instructor = findActiveInstructor(request.getInstructorId());
+        ensureInstructorCanManage(instructor, authenticatedEmail, admin);
 
         workoutSheet.setStudent(student);
         workoutSheet.setInstructor(instructor);
@@ -143,7 +208,13 @@ public class WorkoutSheetService {
 
     @Transactional
     public void deactivate(Integer id) {
+        deactivate(id, null, true);
+    }
+
+    @Transactional
+    public void deactivate(Integer id, String authenticatedEmail, boolean admin) {
         WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
         workoutSheet.setActive(false);
         workoutSheetRepository.save(workoutSheet);
         log.info("Workout sheet deactivated: id={}", id);
@@ -172,6 +243,17 @@ public class WorkoutSheetService {
             throw new BusinessException("Instrutor inativo nao pode criar ficha de treino");
         }
         return instructor;
+    }
+
+    private void ensureInstructorCanManage(Instructor instructor, String authenticatedEmail, boolean admin) {
+        if (admin) {
+            return;
+        }
+
+        if (authenticatedEmail == null
+                || !instructor.getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            throw new AccessDeniedException("Instrutor nao tem permissao para acessar esta ficha");
+        }
     }
 
     private List<WorkoutSheetExercise> buildExerciseItems(

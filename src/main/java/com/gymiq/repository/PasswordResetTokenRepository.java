@@ -4,6 +4,7 @@ import com.gymiq.entity.PasswordResetToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,4 +16,6 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
     Optional<PasswordResetToken> findTopByUserUserIdAndUsedFalseOrderByCreatedAtDesc(Integer userId);
 
     List<PasswordResetToken> findByUserUserIdAndUsedFalse(Integer userId);
+
+    long deleteByExpiresAtBefore(LocalDateTime dateTime);
 }

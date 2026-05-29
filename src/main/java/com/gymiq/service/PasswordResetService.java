@@ -8,6 +8,7 @@ import com.gymiq.entity.User;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.repository.PasswordResetTokenRepository;
 import com.gymiq.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -32,7 +34,6 @@ import java.util.HexFormat;
 public class PasswordResetService {
 
     private static final int TOKEN_BYTES = 32;
-    private static final long RESEND_COOLDOWN_MINUTES = 15;
     private static final String GENERIC_RESET_MESSAGE =
             "Se o e-mail estiver cadastrado, enviaremos instrucoes para redefinir a senha.";
 
@@ -48,27 +49,47 @@ public class PasswordResetService {
     @Value("${gymiq.password-reset.expiration-minutes:30}")
     private long expirationMinutes;
 
+    @Value("${gymiq.password-reset.resend-cooldown-minutes:15}")
+    private long resendCooldownMinutes;
+
     @Value("${gymiq.mail.from:}")
     private String mailFrom;
+
+    @PostConstruct
+    void validateConfiguration() {
+        if (resetPasswordFrontendUrl == null || resetPasswordFrontendUrl.isBlank()) {
+            throw new IllegalStateException("gymiq.password-reset.frontend-url deve ser configurado");
+        }
+        if (expirationMinutes <= 0) {
+            throw new IllegalStateException("gymiq.password-reset.expiration-minutes deve ser maior que zero");
+        }
+        if (resendCooldownMinutes <= 0) {
+            throw new IllegalStateException("gymiq.password-reset.resend-cooldown-minutes deve ser maior que zero");
+        }
+    }
 
     @Transactional
     public MessageResponse requestPasswordReset(ForgotPasswordRequest request) {
         String email = request.getEmail().trim();
+        LocalDateTime now = LocalDateTime.now();
+
+        deleteExpiredTokens(now);
 
         userRepository.findByEmailIgnoreCase(email)
                 .filter(user -> Boolean.TRUE.equals(user.getActive()))
-                .ifPresent(this::createTokenAndSendEmail);
+                .ifPresent(user -> createTokenAndSendEmail(user, now));
 
         return buildMessage(GENERIC_RESET_MESSAGE);
     }
 
     @Transactional
     public MessageResponse resetPassword(ResetPasswordRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+        deleteExpiredTokens(now);
+
         PasswordResetToken resetToken = passwordResetTokenRepository
                 .findByTokenHashAndUsedFalse(hashToken(request.getToken().trim()))
                 .orElseThrow(() -> new BusinessException("Token invalido ou expirado"));
-
-        LocalDateTime now = LocalDateTime.now();
 
         if (resetToken.isExpired(now)) {
             throw new BusinessException("Token invalido ou expirado");
@@ -80,6 +101,10 @@ public class PasswordResetService {
             throw new BusinessException("Usuario inativo");
         }
 
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new BusinessException("Nova senha deve ser diferente da senha atual");
+        }
+
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         markTokenAsUsed(resetToken, now);
         invalidateOtherOpenTokens(user, resetToken, now);
@@ -89,9 +114,7 @@ public class PasswordResetService {
         return buildMessage("Senha alterada com sucesso.");
     }
 
-    private void createTokenAndSendEmail(User user) {
-        LocalDateTime now = LocalDateTime.now();
-
+    private void createTokenAndSendEmail(User user, LocalDateTime now) {
         if (hasRecentOpenResetRequest(user, now)) {
             log.info("Solicitacao de redefinicao ignorada por cooldown para usuario id={}", user.getUserId());
             return;
@@ -118,12 +141,12 @@ public class PasswordResetService {
                 .findTopByUserUserIdAndUsedFalseOrderByCreatedAtDesc(user.getUserId())
                 .map(PasswordResetToken::getCreatedAt)
                 .filter(createdAt -> createdAt != null)
-                .map(createdAt -> createdAt.isAfter(now.minusMinutes(RESEND_COOLDOWN_MINUTES)))
+                .map(createdAt -> createdAt.isAfter(now.minusMinutes(resendCooldownMinutes)))
                 .orElse(false);
     }
 
     private void sendResetEmail(User user, String rawToken) {
-        String resetLink = resetPasswordFrontendUrl + "?token=" + rawToken;
+        String resetLink = buildResetLink(rawToken);
 
         SimpleMailMessage message = new SimpleMailMessage();
         if (mailFrom != null && !mailFrom.isBlank()) {
@@ -148,6 +171,20 @@ public class PasswordResetService {
         } catch (MailException ex) {
             log.error("Falha ao enviar e-mail de redefinicao de senha para usuario id={}", user.getUserId(), ex);
             throw new BusinessException("Nao foi possivel enviar o e-mail de redefinicao de senha");
+        }
+    }
+
+    private String buildResetLink(String rawToken) {
+        return UriComponentsBuilder.fromUriString(resetPasswordFrontendUrl)
+                .queryParam("token", rawToken)
+                .build()
+                .toUriString();
+    }
+
+    private void deleteExpiredTokens(LocalDateTime now) {
+        long deletedTokens = passwordResetTokenRepository.deleteByExpiresAtBefore(now);
+        if (deletedTokens > 0) {
+            log.info("Tokens expirados de redefinicao de senha removidos: {}", deletedTokens);
         }
     }
 

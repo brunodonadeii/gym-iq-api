@@ -25,8 +25,12 @@ public class WorkoutSheetController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetResponse> create(
+            Authentication authentication,
             @Valid @RequestBody CreateWorkoutSheetRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(workoutSheetService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(workoutSheetService.create(
+                request,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN")));
     }
 
     @GetMapping
@@ -56,39 +60,70 @@ public class WorkoutSheetController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<WorkoutSheetResponse> findById(@PathVariable Integer id) {
-        return ResponseEntity.ok(workoutSheetService.findById(id));
+    public ResponseEntity<WorkoutSheetResponse> findById(
+            @PathVariable Integer id,
+            Authentication authentication) {
+        return ResponseEntity.ok(workoutSheetService.findById(
+                id,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN")));
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<Page<WorkoutSheetResponse>> findByStudent(
             @PathVariable Integer studentId,
+            Authentication authentication,
             @RequestParam(defaultValue = "true") boolean onlyActive,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(workoutSheetService.findByStudent(studentId, onlyActive, pageable));
+        return ResponseEntity.ok(workoutSheetService.findByStudent(
+                studentId,
+                onlyActive,
+                pageable,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN")));
     }
 
     @GetMapping("/instructor/{instructorId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<Page<WorkoutSheetResponse>> findByInstructor(
             @PathVariable Integer instructorId,
+            Authentication authentication,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(workoutSheetService.findByInstructor(instructorId, pageable));
+        return ResponseEntity.ok(workoutSheetService.findByInstructor(
+                instructorId,
+                pageable,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN")));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetResponse> update(
             @PathVariable Integer id,
+            Authentication authentication,
             @Valid @RequestBody CreateWorkoutSheetRequest request) {
-        return ResponseEntity.ok(workoutSheetService.update(id, request));
+        return ResponseEntity.ok(workoutSheetService.update(
+                id,
+                request,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN")));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        workoutSheetService.deactivate(id);
+    public ResponseEntity<Void> deactivate(
+            @PathVariable Integer id,
+            Authentication authentication) {
+        workoutSheetService.deactivate(
+                id,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN"));
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_" + role));
     }
 }

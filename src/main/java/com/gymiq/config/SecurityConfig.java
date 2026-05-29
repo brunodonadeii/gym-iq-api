@@ -113,7 +113,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/api/presences/**").hasAnyRole("ADMIN", "RECEPTION")
 
                 .requestMatchers(HttpMethod.POST, "/api/exercises").hasAnyRole("ADMIN", "INSTRUCTOR")
-                .requestMatchers(HttpMethod.GET,  "/api/exercises/all").hasAnyRole("ADMIN", "INSTRUCTOR")
                 .requestMatchers(HttpMethod.GET,  "/api/exercises/**").hasAnyRole("ADMIN", "RECEPTION", "INSTRUCTOR", "STUDENT")
                 .requestMatchers(HttpMethod.GET,  "/api/exercises").hasAnyRole("ADMIN", "RECEPTION", "INSTRUCTOR", "STUDENT")
                 .requestMatchers(HttpMethod.PUT,  "/api/exercises/**").hasAnyRole("ADMIN", "INSTRUCTOR")

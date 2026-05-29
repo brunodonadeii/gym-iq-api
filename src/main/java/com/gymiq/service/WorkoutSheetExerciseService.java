@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +31,17 @@ public class WorkoutSheetExerciseService {
 
     @Transactional
     public WorkoutSheetExerciseResponse addExercise(Integer workoutSheetId, CreateWorkoutSheetExerciseRequest request) {
+        return addExercise(workoutSheetId, request, null, true);
+    }
+
+    @Transactional
+    public WorkoutSheetExerciseResponse addExercise(
+            Integer workoutSheetId,
+            CreateWorkoutSheetExerciseRequest request,
+            String authenticatedEmail,
+            boolean admin) {
         WorkoutSheet workoutSheet = findActiveWorkoutSheet(workoutSheetId);
+        ensureInstructorCanManage(workoutSheet, authenticatedEmail, admin);
         Exercise exercise = findExercise(request.getExerciseId());
         ensureOrderIsAvailable(workoutSheetId, request.getExecutionOrder(), null);
 
@@ -44,9 +55,22 @@ public class WorkoutSheetExerciseService {
 
     @Transactional(readOnly = true)
     public Page<WorkoutSheetExerciseResponse> findByWorkoutSheet(Integer workoutSheetId, Pageable pageable) {
-        if (!workoutSheetRepository.existsById(workoutSheetId)) {
-            throw new ResourceNotFoundException("Ficha de treino nao encontrada: " + workoutSheetId);
-        }
+        findWorkoutSheet(workoutSheetId);
+
+        return workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
+                .map(WorkoutSheetExerciseResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetExerciseResponse> findByWorkoutSheet(
+            Integer workoutSheetId,
+            Pageable pageable,
+            String authenticatedEmail,
+            boolean admin,
+            boolean instructor,
+            boolean student) {
+        WorkoutSheet workoutSheet = findWorkoutSheet(workoutSheetId);
+        ensureCanViewWorkoutSheet(workoutSheet, authenticatedEmail, admin, instructor, student);
 
         return workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
                 .map(WorkoutSheetExerciseResponse::fromEntity);
@@ -54,11 +78,21 @@ public class WorkoutSheetExerciseService {
 
     @Transactional
     public WorkoutSheetExerciseResponse update(Integer id, CreateWorkoutSheetExerciseRequest request) {
+        return update(id, request, null, true);
+    }
+
+    @Transactional
+    public WorkoutSheetExerciseResponse update(
+            Integer id,
+            CreateWorkoutSheetExerciseRequest request,
+            String authenticatedEmail,
+            boolean admin) {
         WorkoutSheetExercise item = findEntityById(id);
         Exercise exercise = findExercise(request.getExerciseId());
         Integer workoutSheetId = item.getWorkoutSheet().getWorkoutSheetId();
 
         ensureWorkoutSheetIsActive(item.getWorkoutSheet());
+        ensureInstructorCanManage(item.getWorkoutSheet(), authenticatedEmail, admin);
         ensureOrderIsAvailable(workoutSheetId, request.getExecutionOrder(), id);
 
         item.setExercise(exercise);
@@ -75,8 +109,14 @@ public class WorkoutSheetExerciseService {
 
     @Transactional
     public void delete(Integer id) {
+        delete(id, null, true);
+    }
+
+    @Transactional
+    public void delete(Integer id, String authenticatedEmail, boolean admin) {
         WorkoutSheetExercise item = findEntityById(id);
         ensureWorkoutSheetIsActive(item.getWorkoutSheet());
+        ensureInstructorCanManage(item.getWorkoutSheet(), authenticatedEmail, admin);
         workoutSheetExerciseRepository.delete(item);
         log.info("Workout sheet exercise deleted: id={}", id);
     }
@@ -87,11 +127,15 @@ public class WorkoutSheetExerciseService {
     }
 
     private WorkoutSheet findActiveWorkoutSheet(Integer workoutSheetId) {
-        WorkoutSheet workoutSheet = workoutSheetRepository.findById(workoutSheetId)
-                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino nao encontrada: " + workoutSheetId));
+        WorkoutSheet workoutSheet = findWorkoutSheet(workoutSheetId);
 
         ensureWorkoutSheetIsActive(workoutSheet);
         return workoutSheet;
+    }
+
+    private WorkoutSheet findWorkoutSheet(Integer workoutSheetId) {
+        return workoutSheetRepository.findById(workoutSheetId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino nao encontrada: " + workoutSheetId));
     }
 
     private Exercise findExercise(Integer exerciseId) {
@@ -102,6 +146,38 @@ public class WorkoutSheetExerciseService {
     private void ensureWorkoutSheetIsActive(WorkoutSheet workoutSheet) {
         if (Boolean.FALSE.equals(workoutSheet.getActive())) {
             throw new BusinessException("Ficha de treino inativa nao pode ser alterada");
+        }
+    }
+
+    private void ensureCanViewWorkoutSheet(
+            WorkoutSheet workoutSheet,
+            String authenticatedEmail,
+            boolean admin,
+            boolean instructor,
+            boolean student) {
+        if (admin) {
+            return;
+        }
+
+        if (instructor && workoutSheet.getInstructor().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            return;
+        }
+
+        if (student && workoutSheet.getStudent().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            return;
+        }
+
+        throw new AccessDeniedException("Usuario nao tem permissao para acessar esta ficha");
+    }
+
+    private void ensureInstructorCanManage(WorkoutSheet workoutSheet, String authenticatedEmail, boolean admin) {
+        if (admin) {
+            return;
+        }
+
+        if (authenticatedEmail == null
+                || !workoutSheet.getInstructor().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            throw new AccessDeniedException("Instrutor nao tem permissao para alterar esta ficha");
         }
     }
 
