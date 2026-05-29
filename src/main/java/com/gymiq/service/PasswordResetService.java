@@ -32,6 +32,7 @@ import java.util.HexFormat;
 public class PasswordResetService {
 
     private static final int TOKEN_BYTES = 32;
+    private static final long RESEND_COOLDOWN_MINUTES = 15;
     private static final String GENERIC_RESET_MESSAGE =
             "Se o e-mail estiver cadastrado, enviaremos instrucoes para redefinir a senha.";
 
@@ -90,6 +91,12 @@ public class PasswordResetService {
 
     private void createTokenAndSendEmail(User user) {
         LocalDateTime now = LocalDateTime.now();
+
+        if (hasRecentOpenResetRequest(user, now)) {
+            log.info("Solicitacao de redefinicao ignorada por cooldown para usuario id={}", user.getUserId());
+            return;
+        }
+
         String rawToken = generateToken();
 
         invalidateOpenTokens(user, now);
@@ -104,6 +111,15 @@ public class PasswordResetService {
         passwordResetTokenRepository.save(resetToken);
         sendResetEmail(user, rawToken);
         log.info("Token de redefinicao de senha criado para usuario id={}", user.getUserId());
+    }
+
+    private boolean hasRecentOpenResetRequest(User user, LocalDateTime now) {
+        return passwordResetTokenRepository
+                .findTopByUserUserIdAndUsedFalseOrderByCreatedAtDesc(user.getUserId())
+                .map(PasswordResetToken::getCreatedAt)
+                .filter(createdAt -> createdAt != null)
+                .map(createdAt -> createdAt.isAfter(now.minusMinutes(RESEND_COOLDOWN_MINUTES)))
+                .orElse(false);
     }
 
     private void sendResetEmail(User user, String rawToken) {
