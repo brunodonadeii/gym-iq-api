@@ -23,7 +23,9 @@ public class RetentionAlertController {
     @PostMapping("/student/{studentId}/generate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<RetentionAlertResponse> generateForStudent(@PathVariable Integer studentId) {
-        return ResponseEntity.ok(retentionAlertService.generateForStudent(studentId));
+        return retentionAlertService.generateForStudent(studentId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/generate-active-students")

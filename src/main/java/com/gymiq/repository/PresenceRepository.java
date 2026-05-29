@@ -18,7 +18,9 @@ public interface PresenceRepository extends JpaRepository<Presence, Integer> {
 
     Optional<Presence> findByStudentStudentIdAndCheckOutAtIsNull(Integer studentId);
 
-    Optional<Presence> findFirstByStudentStudentIdOrderByCheckInAtDesc(Integer studentId);
+    Optional<Presence> findFirstByStudentStudentIdAndCheckInAtGreaterThanEqualOrderByCheckInAtDesc(
+            Integer studentId,
+            LocalDateTime startDate);
 
     Page<Presence> findByCheckInAtBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
 
