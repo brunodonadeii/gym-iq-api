@@ -1,3 +1,4 @@
 .env
 # ignorar compilacoes locais do maven 
-target/ *.jar
+target/
+*.jar
