@@ -1,0 +1,3 @@
+-- Baseline for the existing GymIQ database schema.
+-- This migration intentionally does not change tables.
+-- Future database changes must be added as new versioned migrations.
