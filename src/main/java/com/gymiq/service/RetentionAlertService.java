@@ -35,9 +35,22 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RetentionAlertService {
 
+    private static final int INACTIVITY_THRESHOLD_LOW = 8;
+    private static final int INACTIVITY_THRESHOLD_MEDIUM = 15;
+    private static final int INACTIVITY_THRESHOLD_HIGH = 30;
+
+    private static final int INACTIVITY_SCORE_LOW = 20;
+    private static final int INACTIVITY_SCORE_MEDIUM = 35;
+    private static final int INACTIVITY_SCORE_HIGH = 50;
+
+    private static final int POINTS_PER_OVERDUE_PAYMENT = 20;
+
     private static final int MAX_RISK_SCORE = 100;
-    private static final int MAX_INACTIVITY_SCORE = 50;
     private static final int MAX_PAYMENT_SCORE = 50;
+
+    private static final int RISK_THRESHOLD_MEDIUM = 30;
+    private static final int RISK_THRESHOLD_HIGH = 60;
+    private static final int RISK_THRESHOLD_CRITICAL = 80;
 
     private final RetentionAlertRepository retentionAlertRepository;
     private final StudentRepository studentRepository;
@@ -198,7 +211,7 @@ public class RetentionAlertService {
 
     private Integer calculateRiskScore(Integer inactiveDays, Integer overduePayments) {
         int inactivityScore = calculateInactivityScore(inactiveDays);
-        int paymentScore = Math.min(overduePayments * 20, MAX_PAYMENT_SCORE);
+        int paymentScore = Math.min(overduePayments * POINTS_PER_OVERDUE_PAYMENT, MAX_PAYMENT_SCORE);
         return Math.min(inactivityScore + paymentScore, MAX_RISK_SCORE);
     }
 
@@ -207,26 +220,26 @@ public class RetentionAlertService {
     }
 
     private Integer calculateInactivityScore(Integer inactiveDays) {
-        if (inactiveDays >= 30) {
-            return MAX_INACTIVITY_SCORE;
+        if (inactiveDays >= INACTIVITY_THRESHOLD_HIGH) {
+            return INACTIVITY_SCORE_HIGH;
         }
-        if (inactiveDays >= 15) {
-            return 35;
+        if (inactiveDays >= INACTIVITY_THRESHOLD_MEDIUM) {
+            return INACTIVITY_SCORE_MEDIUM;
         }
-        if (inactiveDays >= 8) {
-            return 20;
+        if (inactiveDays >= INACTIVITY_THRESHOLD_LOW) {
+            return INACTIVITY_SCORE_LOW;
         }
         return 0;
     }
 
     private RiskLevel resolveRiskLevel(Integer riskScore) {
-        if (riskScore >= 80) {
+        if (riskScore >= RISK_THRESHOLD_CRITICAL) {
             return RiskLevel.CRITICAL;
         }
-        if (riskScore >= 60) {
+        if (riskScore >= RISK_THRESHOLD_HIGH) {
             return RiskLevel.HIGH;
         }
-        if (riskScore >= 30) {
+        if (riskScore >= RISK_THRESHOLD_MEDIUM) {
             return RiskLevel.MEDIUM;
         }
         return RiskLevel.LOW;
