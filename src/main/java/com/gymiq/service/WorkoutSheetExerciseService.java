@@ -1,10 +1,13 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.response.WorkoutSheetExerciseResponse;
 import com.gymiq.entity.Exercise;
 import com.gymiq.entity.WorkoutSheet;
 import com.gymiq.entity.WorkoutSheetExercise;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
@@ -35,6 +38,7 @@ public class WorkoutSheetExerciseService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.ADD_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Adicionou exercicio na ficha")
     public WorkoutSheetExerciseResponse addExercise(
             Integer workoutSheetId,
             CreateWorkoutSheetExerciseRequest request,
@@ -82,6 +86,7 @@ public class WorkoutSheetExerciseService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Atualizou exercicio da ficha")
     public WorkoutSheetExerciseResponse update(
             Integer id,
             CreateWorkoutSheetExerciseRequest request,
@@ -113,6 +118,7 @@ public class WorkoutSheetExerciseService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Removeu exercicio da ficha")
     public void delete(Integer id, String authenticatedEmail, boolean admin) {
         WorkoutSheetExercise item = findEntityById(id);
         ensureWorkoutSheetIsActive(item.getWorkoutSheet());

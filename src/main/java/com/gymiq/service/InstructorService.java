@@ -1,11 +1,14 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateInstructorRequest;
 import com.gymiq.dto.request.InstructorStatusFilter;
 import com.gymiq.dto.request.UpdateInstructorRequest;
 import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.entity.Instructor;
 import com.gymiq.entity.User;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.InstructorRepository;
@@ -32,6 +35,7 @@ public class InstructorService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Criou instrutor")
     public InstructorResponse create(CreateInstructorRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
@@ -94,6 +98,7 @@ public class InstructorService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Atualizou instrutor")
     public InstructorResponse update(Integer id, UpdateInstructorRequest request) {
         Instructor instructor = findEntityById(id);
         User user = instructor.getUser();
@@ -126,6 +131,7 @@ public class InstructorService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Inativou instrutor")
     public InstructorResponse deactivate(Integer id) {
         Instructor instructor = findEntityById(id);
         instructor.getUser().setActive(false);
@@ -135,6 +141,7 @@ public class InstructorService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.ACTIVATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Ativou instrutor")
     public InstructorResponse activate(Integer id) {
         Instructor instructor = findEntityById(id);
         instructor.getUser().setActive(true);
@@ -144,6 +151,7 @@ public class InstructorService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Excluiu instrutor")
     public void delete(Integer id) {
         Instructor instructor = findEntityById(id);
 

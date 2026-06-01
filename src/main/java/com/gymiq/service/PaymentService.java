@@ -1,10 +1,13 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.PayPaymentRequest;
 import com.gymiq.dto.response.PaymentResponse;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Payment.PaymentStatus;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
@@ -99,6 +102,7 @@ public class PaymentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.PAY_PAYMENT, resourceType = ResourceType.PAYMENT, description = "Quitou pagamento")
     public PaymentResponse pay(Integer id, PayPaymentRequest request) {
         Payment payment = findEntityById(id);
         PayPaymentRequest payRequest = request != null ? request : new PayPaymentRequest();
@@ -124,6 +128,7 @@ public class PaymentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.CHANGE_PAYMENT_STATUS, resourceType = ResourceType.PAYMENT, description = "Alterou status do pagamento")
     public PaymentResponse changeStatus(Integer id, PaymentStatus newStatus) {
         Payment payment = findEntityById(id);
 

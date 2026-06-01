@@ -1,9 +1,12 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateUserRequest;
 import com.gymiq.dto.request.UpdateUserRequest;
 import com.gymiq.dto.response.UserResponse;
 import com.gymiq.entity.User;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.UserRepository;
@@ -37,6 +40,7 @@ public class UserService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_USER, resourceType = ResourceType.USER, description = "Criou usuario administrativo")
     public UserResponse createAdministrativeUser(CreateUserRequest request) {
         validateAdministrativeRole(request.getRole());
 
@@ -61,6 +65,7 @@ public class UserService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_USER, resourceType = ResourceType.USER, description = "Atualizou usuario administrativo")
     public UserResponse updateAdministrativeUser(Integer id, UpdateUserRequest request) {
         validateAdministrativeRole(request.getRole());
 
@@ -89,6 +94,7 @@ public class UserService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE_USER, resourceType = ResourceType.USER, description = "Excluiu usuario administrativo")
     public void deleteAdministrativeUser(Integer id) {
         User user = findAdministrativeUser(id);
         userRepository.delete(user);

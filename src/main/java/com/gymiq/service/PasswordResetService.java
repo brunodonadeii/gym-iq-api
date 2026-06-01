@@ -1,10 +1,13 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.ForgotPasswordRequest;
 import com.gymiq.dto.request.ResetPasswordRequest;
 import com.gymiq.dto.response.MessageResponse;
 import com.gymiq.entity.PasswordResetToken;
 import com.gymiq.entity.User;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.repository.PasswordResetTokenRepository;
 import com.gymiq.repository.UserRepository;
@@ -69,6 +72,7 @@ public class PasswordResetService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.PASSWORD_RESET_REQUESTED, resourceType = ResourceType.USER, description = "Solicitou redefinicao de senha")
     public MessageResponse requestPasswordReset(ForgotPasswordRequest request) {
         String email = request.getEmail().trim();
         LocalDateTime now = LocalDateTime.now();
@@ -83,6 +87,7 @@ public class PasswordResetService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.PASSWORD_CHANGED, resourceType = ResourceType.USER, description = "Redefiniu senha")
     public MessageResponse resetPassword(ResetPasswordRequest request) {
         LocalDateTime now = LocalDateTime.now();
         deleteExpiredTokens(now);

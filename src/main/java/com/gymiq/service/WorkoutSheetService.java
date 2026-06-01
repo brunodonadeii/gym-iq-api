@@ -1,5 +1,6 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.request.CreateWorkoutSheetRequest;
 import com.gymiq.dto.response.WorkoutSheetResponse;
@@ -8,6 +9,8 @@ import com.gymiq.entity.Instructor;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.WorkoutSheet;
 import com.gymiq.entity.WorkoutSheetExercise;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
@@ -44,6 +47,7 @@ public class WorkoutSheetService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Criou ficha de treino")
     public WorkoutSheetResponse create(CreateWorkoutSheetRequest request, String authenticatedEmail, boolean admin) {
         validateDates(request);
         validateExerciseOrders(request.getExercises());
@@ -176,6 +180,7 @@ public class WorkoutSheetService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Atualizou ficha de treino")
     public WorkoutSheetResponse update(
             Integer id,
             CreateWorkoutSheetRequest request,
@@ -212,6 +217,7 @@ public class WorkoutSheetService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Inativou ficha de treino")
     public void deactivate(Integer id, String authenticatedEmail, boolean admin) {
         WorkoutSheet workoutSheet = findEntityById(id);
         ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);

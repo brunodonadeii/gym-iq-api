@@ -1,5 +1,6 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.response.RetentionAlertResponse;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
@@ -9,6 +10,8 @@ import com.gymiq.entity.RetentionAlert;
 import com.gymiq.entity.RetentionAlert.AlertStatus;
 import com.gymiq.entity.RetentionAlert.RiskLevel;
 import com.gymiq.entity.Student;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
@@ -59,6 +62,7 @@ public class RetentionAlertService {
     private final PaymentRepository paymentRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.GENERATE_RETENTION_ALERT, resourceType = ResourceType.STUDENT, description = "Processou geracao de alerta de retencao para aluno")
     public Optional<RetentionAlertResponse> generateForStudent(Integer studentId) {
         Student student = findActiveStudent(studentId);
         Enrollment activeEnrollment = findActiveEnrollment(studentId);
@@ -94,6 +98,7 @@ public class RetentionAlertService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.GENERATE_RETENTION_ALERTS, resourceType = ResourceType.JOB, description = "Processou alertas para alunos ativos")
     public List<RetentionAlertResponse> generateForActiveStudents() {
         List<RetentionAlertResponse> generatedAlerts = new ArrayList<>();
 
@@ -109,6 +114,7 @@ public class RetentionAlertService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.GENERATE_RETENTION_ALERTS, resourceType = ResourceType.JOB, description = "Processou alertas para alunos inadimplentes")
     public List<RetentionAlertResponse> generateForOverdueStudents() {
         List<Integer> studentIds = paymentRepository.findActiveStudentIdsWithOverduePayments(
                 EnrollmentStatus.ACTIVE,
@@ -145,6 +151,7 @@ public class RetentionAlertService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.RESOLVE_RETENTION_ALERT, resourceType = ResourceType.RETENTION_ALERT, description = "Resolveu alerta de retencao")
     public RetentionAlertResponse resolve(Integer id) {
         RetentionAlert alert = findEntityById(id);
 

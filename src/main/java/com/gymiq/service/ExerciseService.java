@@ -1,8 +1,11 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateExerciseRequest;
 import com.gymiq.dto.response.ExerciseResponse;
 import com.gymiq.entity.Exercise;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
@@ -23,6 +26,7 @@ public class ExerciseService {
     private final WorkoutSheetExerciseRepository workoutSheetExerciseRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_EXERCISE, resourceType = ResourceType.EXERCISE, description = "Criou exercicio")
     public ExerciseResponse create(CreateExerciseRequest request) {
         ensureNameIsAvailable(request.getName(), null);
 
@@ -55,6 +59,7 @@ public class ExerciseService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_EXERCISE, resourceType = ResourceType.EXERCISE, description = "Atualizou exercicio")
     public ExerciseResponse update(Integer id, CreateExerciseRequest request) {
         Exercise exercise = findEntityById(id);
         ensureNameIsAvailable(request.getName(), id);
@@ -69,6 +74,7 @@ public class ExerciseService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE_EXERCISE, resourceType = ResourceType.EXERCISE, description = "Excluiu exercicio")
     public void delete(Integer id) {
         Exercise exercise = findEntityById(id);
 

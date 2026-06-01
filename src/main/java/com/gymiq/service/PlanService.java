@@ -1,8 +1,11 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreatePlanRequest;
 import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Plan;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
@@ -23,6 +26,7 @@ public class PlanService {
     private final EnrollmentRepository enrollmentRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_PLAN, resourceType = ResourceType.PLAN, description = "Criou plano")
     public PlanResponse create(CreatePlanRequest request) {
         if (planRepository.existsByNameIgnoreCase(request.getName())) {
             throw new BusinessException("Ja existe um plano com o nome: " + request.getName());
@@ -59,6 +63,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_PLAN, resourceType = ResourceType.PLAN, description = "Atualizou plano")
     public PlanResponse update(Integer id, CreatePlanRequest request) {
         Plan plan = findEntityById(id);
 
@@ -81,6 +86,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE_PLAN, resourceType = ResourceType.PLAN, description = "Excluiu ou inativou plano")
     public void delete(Integer id) {
         Plan plan = findEntityById(id);
 
@@ -100,6 +106,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_PLAN, resourceType = ResourceType.PLAN, description = "Inativou plano")
     public void deactivate(Integer id) {
         Plan plan = findEntityById(id);
         plan.setActive(false);
@@ -108,6 +115,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.ACTIVATE_PLAN, resourceType = ResourceType.PLAN, description = "Ativou plano")
     public void activate(Integer id) {
         Plan plan = findEntityById(id);
         plan.setActive(true);

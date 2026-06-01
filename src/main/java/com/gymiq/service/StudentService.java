@@ -1,5 +1,6 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.StudentOptionResponse;
@@ -7,6 +8,8 @@ import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
@@ -37,6 +40,7 @@ public class StudentService {
     private final StudentDataService studentDataService;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Criou aluno")
     public StudentResponse create(CreateStudentRequest request) {
         studentDataService.validateCpf(request.getCpf());
 
@@ -100,6 +104,7 @@ public class StudentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Atualizou dados do aluno")
     public StudentResponse update(Integer id, UpdateStudentRequest request) {
         Student student = findEntityById(id);
         User user = student.getUser();
@@ -141,6 +146,7 @@ public class StudentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Inativou aluno")
     public void deactivate(Integer id) {
         Student student = findEntityById(id);
         cancelActiveEnrollmentIfPresent(student);
@@ -150,6 +156,7 @@ public class StudentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.ANONYMIZE_STUDENT, resourceType = ResourceType.STUDENT, description = "Anonimizou aluno")
     public StudentResponse anonymize(Integer id) {
         Student student = findEntityById(id);
         User user = student.getUser();

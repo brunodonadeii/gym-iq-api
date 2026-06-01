@@ -1,11 +1,14 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
 import com.gymiq.dto.request.SelfCheckInRequest;
 import com.gymiq.dto.response.PresenceResponse;
 import com.gymiq.entity.Presence;
 import com.gymiq.entity.Student;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.PresenceRepository;
@@ -31,6 +34,7 @@ public class PresenceService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
+    @Auditable(action = AuditAction.CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou check-in")
     public PresenceResponse checkIn(CreatePresenceRequest request) {
         Student student = studentRepository.findById(request.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + request.getStudentId()));
@@ -39,6 +43,7 @@ public class PresenceService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.SELF_CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou auto check-in")
     public PresenceResponse selfCheckIn(SelfCheckInRequest request) {
         String identifier = request.getIdentifier().trim();
 
@@ -75,6 +80,7 @@ public class PresenceService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.CHECK_OUT, resourceType = ResourceType.PRESENCE, description = "Registrou check-out")
     public PresenceResponse checkOut(Integer id, CheckOutPresenceRequest request) {
         Presence presence = findEntityById(id);
         CheckOutPresenceRequest checkOutRequest = request != null ? request : new CheckOutPresenceRequest();

@@ -1,11 +1,14 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.EnrollStudentRequest;
 import com.gymiq.dto.response.EnrollmentResponse;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Plan;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
@@ -40,6 +43,7 @@ public class EnrollmentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Criou matricula")
     public EnrollmentResponse enroll(EnrollStudentRequest request) {
         Student student = studentService.findEntityById(request.getStudentId());
         Plan plan = planService.findEntityById(request.getPlanId());
@@ -110,6 +114,7 @@ public class EnrollmentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_ENROLLMENT_STATUS, resourceType = ResourceType.ENROLLMENT, description = "Alterou status da matricula")
     public EnrollmentResponse changeStatus(Integer enrollmentId, EnrollmentStatus newStatus) {
         Enrollment enrollment = findEntityById(enrollmentId);
 
@@ -123,6 +128,7 @@ public class EnrollmentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.RENEW_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Renovou matricula")
     public EnrollmentResponse renew(Integer enrollmentId, Integer newPlanId) {
         Enrollment oldEnrollment = findEntityById(enrollmentId);
 
