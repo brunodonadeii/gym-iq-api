@@ -1,17 +1,21 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreatePlanRequest;
 import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Plan;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
+import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -19,18 +23,20 @@ import java.util.List;
 public class PlanService {
 
     private final PlanRepository planRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_PLAN, resourceType = ResourceType.PLAN, description = "Criou plano")
     public PlanResponse create(CreatePlanRequest request) {
         if (planRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new BusinessException("Já existe um plano com o nome: " + request.getName());
+            throw new BusinessException("Ja existe um plano com o nome: " + request.getName());
         }
 
         Plan plan = Plan.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .monthlyPrice(request.getMonthlyPrice())
-                .durationDays(request.getDurationDays())
+                .durationMonths(request.getDurationMonths())
                 .active(true)
                 .build();
 
@@ -40,19 +46,15 @@ public class PlanService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlanResponse> findActive() {
-        return planRepository.findByActiveTrue()
-                .stream()
-                .map(PlanResponse::fromEntity)
-                .toList();
+    public Page<PlanResponse> findActive(Pageable pageable) {
+        return planRepository.findByActiveTrue(pageable)
+                .map(PlanResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PlanResponse> findAll() {
-        return planRepository.findAll()
-                .stream()
-                .map(PlanResponse::fromEntity)
-                .toList();
+    public Page<PlanResponse> findAll(Pageable pageable) {
+        return planRepository.findAll(pageable)
+                .map(PlanResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +63,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_PLAN, resourceType = ResourceType.PLAN, description = "Atualizou plano")
     public PlanResponse update(Integer id, CreatePlanRequest request) {
         Plan plan = findEntityById(id);
 
@@ -68,12 +71,14 @@ public class PlanService {
                 .filter(p -> p.getName().equalsIgnoreCase(request.getName())
                         && !p.getPlanId().equals(id))
                 .findFirst()
-                .ifPresent(p -> { throw new BusinessException("Nome já usado por outro plano"); });
+                .ifPresent(p -> {
+                    throw new BusinessException("Nome ja usado por outro plano");
+                });
 
         plan.setName(request.getName());
         plan.setDescription(request.getDescription());
         plan.setMonthlyPrice(request.getMonthlyPrice());
-        plan.setDurationDays(request.getDurationDays());
+        plan.setDurationMonths(request.getDurationMonths());
 
         planRepository.save(plan);
         log.info("Plan updated: id={}", id);
@@ -81,6 +86,27 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE_PLAN, resourceType = ResourceType.PLAN, description = "Excluiu ou inativou plano")
+    public void delete(Integer id) {
+        Plan plan = findEntityById(id);
+
+        if (Boolean.TRUE.equals(plan.getActive())) {
+            plan.setActive(false);
+            planRepository.save(plan);
+            log.info("Plan deactivated by delete request: id={}", id);
+            return;
+        }
+
+        if (enrollmentRepository.existsByPlanPlanId(id)) {
+            throw new BusinessException("Nao e possivel excluir fisicamente um plano vinculado a matriculas");
+        }
+
+        planRepository.delete(plan);
+        log.info("Plan deleted: id={}", id);
+    }
+
+    @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_PLAN, resourceType = ResourceType.PLAN, description = "Inativou plano")
     public void deactivate(Integer id) {
         Plan plan = findEntityById(id);
         plan.setActive(false);
@@ -88,8 +114,17 @@ public class PlanService {
         log.info("Plan deactivated: id={}", id);
     }
 
+    @Transactional
+    @Auditable(action = AuditAction.ACTIVATE_PLAN, resourceType = ResourceType.PLAN, description = "Ativou plano")
+    public void activate(Integer id) {
+        Plan plan = findEntityById(id);
+        plan.setActive(true);
+        planRepository.save(plan);
+        log.info("Plan activated: id={}", id);
+    }
+
     public Plan findEntityById(Integer id) {
         return planRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Plano nao encontrado: " + id));
     }
 }

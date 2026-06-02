@@ -3,8 +3,6 @@ package com.gymiq.dto.request;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
-import java.math.BigDecimal;
-
 @Data
 public class CreateWorkoutSheetExerciseRequest {
 
@@ -18,9 +16,6 @@ public class CreateWorkoutSheetExerciseRequest {
     @NotBlank(message = "Repeticoes e obrigatorio")
     @Size(max = 50, message = "Repeticoes deve ter no maximo 50 caracteres")
     private String repetitions;
-
-    @DecimalMin(value = "0.00", message = "Carga nao pode ser negativa")
-    private BigDecimal loadKg;
 
     @Min(value = 0, message = "Descanso nao pode ser negativo")
     private Integer restSeconds;

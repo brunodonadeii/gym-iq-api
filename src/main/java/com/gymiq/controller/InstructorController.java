@@ -1,16 +1,21 @@
 package com.gymiq.controller;
 
 import com.gymiq.dto.request.CreateInstructorRequest;
+import com.gymiq.dto.request.InstructorStatusFilter;
+import com.gymiq.dto.request.UpdateInstructorRequest;
 import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.service.InstructorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/instructors")
@@ -28,18 +33,29 @@ public class InstructorController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<InstructorResponse>> findAll() {
-        return ResponseEntity.ok(instructorService.findAll());
+    public ResponseEntity<Page<InstructorResponse>> findAll(
+            @RequestParam(required = false, defaultValue = "ACTIVE") InstructorStatusFilter status,
+            @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(instructorService.findAll(status, pageable));
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<List<InstructorResponse>> search(@RequestParam String q) {
-        return ResponseEntity.ok(instructorService.search(q));
+    public ResponseEntity<Page<InstructorResponse>> search(
+            @RequestParam String q,
+            @RequestParam(required = false, defaultValue = "ACTIVE") InstructorStatusFilter status,
+            @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(instructorService.search(q, status, pageable));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<InstructorResponse> findMe(Authentication authentication) {
+        return ResponseEntity.ok(instructorService.findByAuthenticatedEmail(authentication.getName()));
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<InstructorResponse> findById(@PathVariable Integer id) {
         return ResponseEntity.ok(instructorService.findById(id));
     }
@@ -48,14 +64,26 @@ public class InstructorController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InstructorResponse> update(
             @PathVariable Integer id,
-            @Valid @RequestBody CreateInstructorRequest request) {
+            @Valid @RequestBody UpdateInstructorRequest request) {
         return ResponseEntity.ok(instructorService.update(id, request));
+    }
+
+    @PatchMapping("/{id}/inactive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InstructorResponse> deactivate(@PathVariable Integer id) {
+        return ResponseEntity.ok(instructorService.deactivate(id));
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<InstructorResponse> activate(@PathVariable Integer id) {
+        return ResponseEntity.ok(instructorService.activate(id));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        instructorService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        instructorService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

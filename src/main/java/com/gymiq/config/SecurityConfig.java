@@ -61,7 +61,15 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/jobs/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/presences/self-check-in").permitAll()
+
+
+                .requestMatchers(HttpMethod.GET, "/api/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
 
 
                 .requestMatchers(HttpMethod.POST, "/api/students").hasAnyRole("ADMIN", "RECEPTION")
@@ -69,7 +77,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,  "/api/students/address-by-zip-code/**").hasAnyRole("ADMIN", "RECEPTION")
                 .requestMatchers(HttpMethod.GET,  "/api/students/**").hasAnyRole("ADMIN", "RECEPTION", "INSTRUCTOR", "STUDENT")
                 .requestMatchers(HttpMethod.PUT,  "/api/students/**").hasAnyRole("ADMIN", "RECEPTION")
-                .requestMatchers(HttpMethod.DELETE, "/api/students/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/api/students/**").hasRole("ADMIN")
 
 
                 .requestMatchers(HttpMethod.GET, "/api/plans").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
@@ -86,6 +94,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/enrollments/**").hasAnyRole("ADMIN", "RECEPTION")
 
                 .requestMatchers(HttpMethod.GET,  "/api/payments").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/payments/me").hasRole("STUDENT")
                 .requestMatchers(HttpMethod.GET,  "/api/payments/**").hasAnyRole("ADMIN", "RECEPTION")
                 .requestMatchers(HttpMethod.PATCH, "/api/payments/**").hasAnyRole("ADMIN", "RECEPTION")
 
@@ -95,13 +104,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT,  "/api/instructors/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/instructors/**").hasRole("ADMIN")
 
-                .requestMatchers(HttpMethod.POST, "/api/presences").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
-                .requestMatchers(HttpMethod.GET,  "/api/presences/student/**").hasAnyRole("ADMIN", "RECEPTION", "STUDENT")
+                .requestMatchers(HttpMethod.POST, "/api/presences").hasAnyRole("ADMIN", "RECEPTION")
+                .requestMatchers(HttpMethod.GET,  "/api/presences/me").hasRole("STUDENT")
+                .requestMatchers(HttpMethod.GET,  "/api/presences/student/**").hasAnyRole("ADMIN", "RECEPTION")
                 .requestMatchers(HttpMethod.GET,  "/api/presences/**").hasAnyRole("ADMIN", "RECEPTION")
                 .requestMatchers(HttpMethod.PATCH, "/api/presences/**").hasAnyRole("ADMIN", "RECEPTION")
 
                 .requestMatchers(HttpMethod.POST, "/api/exercises").hasAnyRole("ADMIN", "INSTRUCTOR")
-                .requestMatchers(HttpMethod.GET,  "/api/exercises/all").hasAnyRole("ADMIN", "INSTRUCTOR")
                 .requestMatchers(HttpMethod.GET,  "/api/exercises/**").hasAnyRole("ADMIN", "RECEPTION", "INSTRUCTOR", "STUDENT")
                 .requestMatchers(HttpMethod.GET,  "/api/exercises").hasAnyRole("ADMIN", "RECEPTION", "INSTRUCTOR", "STUDENT")
                 .requestMatchers(HttpMethod.PUT,  "/api/exercises/**").hasAnyRole("ADMIN", "INSTRUCTOR")
@@ -120,6 +129,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/retention-alerts/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/retention-alerts/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PATCH, "/api/retention-alerts/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/dashboard/**").hasRole("ADMIN")
 
                 .anyRequest().authenticated()
             )
@@ -155,10 +165,10 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
                 "http://localhost:3000",
-                "https://*.vercel.app"
+                "https://gym-iq-web.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Job-Secret"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

@@ -3,8 +3,6 @@ package com.gymiq.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
-
 @Entity
 @Table(name = "workout_sheet_exercise",
         uniqueConstraints = {
@@ -38,9 +36,6 @@ public class WorkoutSheetExercise {
 
     @Column(name = "repetitions", nullable = false, length = 50)
     private String repetitions;
-
-    @Column(name = "load_kg", precision = 6, scale = 2)
-    private BigDecimal loadKg;
 
     @Column(name = "rest_seconds")
     private Integer restSeconds;

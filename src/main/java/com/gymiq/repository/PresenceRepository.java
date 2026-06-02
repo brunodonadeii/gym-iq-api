@@ -1,21 +1,43 @@
 package com.gymiq.repository;
 
 import com.gymiq.entity.Presence;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface PresenceRepository extends JpaRepository<Presence, Integer> {
 
-    List<Presence> findByStudentStudentIdOrderByCheckInAtDesc(Integer studentId);
+    Page<Presence> findByStudentStudentId(Integer studentId, Pageable pageable);
 
     Optional<Presence> findByStudentStudentIdAndCheckOutAtIsNull(Integer studentId);
 
-    Optional<Presence> findFirstByStudentStudentIdOrderByCheckInAtDesc(Integer studentId);
+    boolean existsByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+            Integer studentId,
+            LocalDateTime startDate,
+            LocalDateTime endDate);
 
-    List<Presence> findByCheckInAtBetweenOrderByCheckInAtDesc(LocalDateTime start, LocalDateTime end);
+    Optional<Presence> findFirstByStudentStudentIdAndCheckInAtGreaterThanEqualOrderByCheckInAtDesc(
+            Integer studentId,
+            LocalDateTime startDate);
+
+    Page<Presence> findByCheckInAtBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(p)
+            FROM Presence p
+            WHERE p.checkInAt >= :startDate
+              AND p.checkInAt < :endDate
+            """)
+    long countCheckInsBetween(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    long countByCheckOutAtIsNull();
 }

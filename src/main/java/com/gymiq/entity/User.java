@@ -12,6 +12,10 @@ import java.time.LocalDateTime;
 @Table(name = "users",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_user_email", columnNames = "email")
+        },
+        indexes = {
+                @Index(name = "idx_user_name", columnList = "name"),
+                @Index(name = "idx_user_active", columnList = "active")
         })
 @Getter
 @Setter

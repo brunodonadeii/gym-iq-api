@@ -1,5 +1,6 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.request.CreateWorkoutSheetRequest;
 import com.gymiq.dto.response.WorkoutSheetResponse;
@@ -8,6 +9,8 @@ import com.gymiq.entity.Instructor;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.WorkoutSheet;
 import com.gymiq.entity.WorkoutSheetExercise;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
@@ -16,6 +19,9 @@ import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.WorkoutSheetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,11 +43,18 @@ public class WorkoutSheetService {
 
     @Transactional
     public WorkoutSheetResponse create(CreateWorkoutSheetRequest request) {
+        return create(request, null, true);
+    }
+
+    @Transactional
+    @Auditable(action = AuditAction.CREATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Criou ficha de treino")
+    public WorkoutSheetResponse create(CreateWorkoutSheetRequest request, String authenticatedEmail, boolean admin) {
         validateDates(request);
         validateExerciseOrders(request.getExercises());
 
         Student student = findActiveStudent(request.getStudentId());
         Instructor instructor = findActiveInstructor(request.getInstructorId());
+        ensureInstructorCanManage(instructor, authenticatedEmail, admin);
 
         WorkoutSheet workoutSheet = WorkoutSheet.builder()
                 .student(student)
@@ -63,11 +76,9 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutSheetResponse> findAll() {
-        return workoutSheetRepository.findAll()
-                .stream()
-                .map(WorkoutSheetResponse::fromEntity)
-                .toList();
+    public Page<WorkoutSheetResponse> findAll(Pageable pageable) {
+        return workoutSheetRepository.findAll(pageable)
+                .map(WorkoutSheetResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -76,40 +87,114 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutSheetResponse> findByStudent(Integer studentId, boolean onlyActive) {
+    public WorkoutSheetResponse findById(Integer id, String authenticatedEmail, boolean admin) {
+        WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
+        return WorkoutSheetResponse.fromEntity(workoutSheet);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByStudent(Integer studentId, boolean onlyActive, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
 
-        List<WorkoutSheet> workoutSheets = onlyActive
-                ? workoutSheetRepository.findByStudentStudentIdAndActiveTrueOrderByCreatedAtDesc(studentId)
-                : workoutSheetRepository.findByStudentStudentIdOrderByCreatedAtDesc(studentId);
+        Page<WorkoutSheet> workoutSheets = onlyActive
+                ? workoutSheetRepository.findByStudentStudentIdAndActiveTrue(studentId, pageable)
+                : workoutSheetRepository.findByStudentStudentId(studentId, pageable);
 
-        return workoutSheets.stream()
-                .map(WorkoutSheetResponse::fromEntity)
-                .toList();
+        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<WorkoutSheetResponse> findByInstructor(Integer instructorId) {
+    public Page<WorkoutSheetResponse> findByStudent(
+            Integer studentId,
+            boolean onlyActive,
+            Pageable pageable,
+            String authenticatedEmail,
+            boolean admin) {
+        if (!studentRepository.existsById(studentId)) {
+            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+        }
+
+        if (admin) {
+            return findByStudent(studentId, onlyActive, pageable);
+        }
+
+        Page<WorkoutSheet> workoutSheets = onlyActive
+                ? workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCaseAndActiveTrue(
+                        studentId, authenticatedEmail, pageable)
+                : workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCase(
+                        studentId, authenticatedEmail, pageable);
+
+        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByAuthenticatedStudent(String email, boolean onlyActive, Pageable pageable) {
+        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+                .getStudentId();
+
+        return findByStudent(studentId, onlyActive, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByInstructor(Integer instructorId, Pageable pageable) {
         if (!instructorRepository.existsById(instructorId)) {
             throw new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId);
         }
 
-        return workoutSheetRepository.findByInstructorInstructorIdOrderByCreatedAtDesc(instructorId)
-                .stream()
-                .map(WorkoutSheetResponse::fromEntity)
-                .toList();
+        return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
+                .map(WorkoutSheetResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByInstructor(
+            Integer instructorId,
+            Pageable pageable,
+            String authenticatedEmail,
+            boolean admin) {
+        Instructor instructor = instructorRepository.findById(instructorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId));
+
+        ensureInstructorCanManage(instructor, authenticatedEmail, admin);
+
+        return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
+                .map(WorkoutSheetResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
+        Integer instructorId = instructorRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"))
+                .getInstructorId();
+
+        return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
+                .map(WorkoutSheetResponse::fromEntity);
     }
 
     @Transactional
     public WorkoutSheetResponse update(Integer id, CreateWorkoutSheetRequest request) {
+        return update(id, request, null, true);
+    }
+
+    @Transactional
+    @Auditable(action = AuditAction.UPDATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Atualizou ficha de treino")
+    public WorkoutSheetResponse update(
+            Integer id,
+            CreateWorkoutSheetRequest request,
+            String authenticatedEmail,
+            boolean admin) {
         validateDates(request);
         validateExerciseOrders(request.getExercises());
 
         WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
+
         Student student = findActiveStudent(request.getStudentId());
         Instructor instructor = findActiveInstructor(request.getInstructorId());
+        ensureInstructorCanManage(instructor, authenticatedEmail, admin);
 
         workoutSheet.setStudent(student);
         workoutSheet.setInstructor(instructor);
@@ -128,7 +213,14 @@ public class WorkoutSheetService {
 
     @Transactional
     public void deactivate(Integer id) {
+        deactivate(id, null, true);
+    }
+
+    @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Inativou ficha de treino")
+    public void deactivate(Integer id, String authenticatedEmail, boolean admin) {
         WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
         workoutSheet.setActive(false);
         workoutSheetRepository.save(workoutSheet);
         log.info("Workout sheet deactivated: id={}", id);
@@ -159,6 +251,17 @@ public class WorkoutSheetService {
         return instructor;
     }
 
+    private void ensureInstructorCanManage(Instructor instructor, String authenticatedEmail, boolean admin) {
+        if (admin) {
+            return;
+        }
+
+        if (authenticatedEmail == null
+                || !instructor.getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            throw new AccessDeniedException("Instrutor nao tem permissao para acessar esta ficha");
+        }
+    }
+
     private List<WorkoutSheetExercise> buildExerciseItems(
             WorkoutSheet workoutSheet,
             List<CreateWorkoutSheetExerciseRequest> itemRequests) {
@@ -175,16 +278,11 @@ public class WorkoutSheetService {
         Exercise exercise = exerciseRepository.findById(request.getExerciseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + request.getExerciseId()));
 
-        if (Boolean.FALSE.equals(exercise.getActive())) {
-            throw new BusinessException("Exercicio inativo nao pode ser usado em ficha de treino: " + exercise.getName());
-        }
-
         return WorkoutSheetExercise.builder()
                 .workoutSheet(workoutSheet)
                 .exercise(exercise)
                 .sets(request.getSets())
                 .repetitions(request.getRepetitions())
-                .loadKg(request.getLoadKg())
                 .restSeconds(request.getRestSeconds())
                 .executionOrder(request.getExecutionOrder())
                 .notes(request.getNotes())

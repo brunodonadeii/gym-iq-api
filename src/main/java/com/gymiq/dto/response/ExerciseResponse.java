@@ -14,7 +14,6 @@ public class ExerciseResponse {
     private String name;
     private String muscleGroup;
     private String description;
-    private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -24,7 +23,6 @@ public class ExerciseResponse {
                 .name(exercise.getName())
                 .muscleGroup(exercise.getMuscleGroup())
                 .description(exercise.getDescription())
-                .active(exercise.getActive())
                 .createdAt(exercise.getCreatedAt())
                 .updatedAt(exercise.getUpdatedAt())
                 .build();

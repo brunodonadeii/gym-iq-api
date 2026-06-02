@@ -15,7 +15,7 @@ public class PlanResponse {
     private String name;
     private String description;
     private BigDecimal monthlyPrice;
-    private Integer durationDays;
+    private Integer durationMonths;
     private Boolean active;
     private LocalDateTime createdAt;
 
@@ -25,7 +25,7 @@ public class PlanResponse {
                 .name(plan.getName())
                 .description(plan.getDescription())
                 .monthlyPrice(plan.getMonthlyPrice())
-                .durationDays(plan.getDurationDays())
+                .durationMonths(plan.getDurationMonths())
                 .active(plan.getActive())
                 .createdAt(plan.getCreatedAt())
                 .build();

@@ -1,10 +1,13 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.PayPaymentRequest;
 import com.gymiq.dto.response.PaymentResponse;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Payment.PaymentStatus;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
@@ -12,12 +15,13 @@ import com.gymiq.repository.PaymentRepository;
 import com.gymiq.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -51,11 +55,9 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findAll() {
-        return paymentRepository.findAll()
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+    public Page<PaymentResponse> findAll(Pageable pageable) {
+        return paymentRepository.findAll(pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -64,38 +66,43 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findByEnrollment(Integer enrollmentId) {
+    public Page<PaymentResponse> findByEnrollment(Integer enrollmentId, Pageable pageable) {
         if (!enrollmentRepository.existsById(enrollmentId)) {
             throw new ResourceNotFoundException("Matricula nao encontrada: " + enrollmentId);
         }
 
-        return paymentRepository.findByEnrollmentEnrollmentId(enrollmentId)
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+        return paymentRepository.findByEnrollmentEnrollmentId(enrollmentId, pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findByStudent(Integer studentId) {
+    public Page<PaymentResponse> findByStudent(Integer studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
 
-        return paymentRepository.findByEnrollmentStudentStudentId(studentId)
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+        return paymentRepository.findByEnrollmentStudentStudentId(studentId, pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<PaymentResponse> findOverdue() {
-        return paymentRepository.findByStatus(PaymentStatus.OVERDUE)
-                .stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
+    public Page<PaymentResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
+        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+                .getStudentId();
+
+        return paymentRepository.findByEnrollmentStudentStudentId(studentId, pageable)
+                .map(PaymentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PaymentResponse> findOverdue(Pageable pageable) {
+        return paymentRepository.findByStatus(PaymentStatus.OVERDUE, pageable)
+                .map(PaymentResponse::fromEntity);
     }
 
     @Transactional
+    @Auditable(action = AuditAction.PAY_PAYMENT, resourceType = ResourceType.PAYMENT, description = "Quitou pagamento")
     public PaymentResponse pay(Integer id, PayPaymentRequest request) {
         Payment payment = findEntityById(id);
         PayPaymentRequest payRequest = request != null ? request : new PayPaymentRequest();
@@ -121,6 +128,7 @@ public class PaymentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.CHANGE_PAYMENT_STATUS, resourceType = ResourceType.PAYMENT, description = "Alterou status do pagamento")
     public PaymentResponse changeStatus(Integer id, PaymentStatus newStatus) {
         Payment payment = findEntityById(id);
 
@@ -136,19 +144,6 @@ public class PaymentService {
         log.info("Status do pagamento id={} alterado para {}", id, newStatus);
 
         return PaymentResponse.fromEntity(payment);
-    }
-
-    @Transactional
-    public List<PaymentResponse> refreshOverdue() {
-        List<Payment> overduePayments = paymentRepository
-                .findByStatusAndDueDateBefore(PaymentStatus.PENDING, LocalDate.now());
-
-        overduePayments.forEach(payment -> payment.setStatus(PaymentStatus.OVERDUE));
-        paymentRepository.saveAll(overduePayments);
-
-        return overduePayments.stream()
-                .map(PaymentResponse::fromEntity)
-                .toList();
     }
 
     private Payment findEntityById(Integer id) {

@@ -2,8 +2,12 @@ package com.gymiq.service;
 
 import com.gymiq.exception.BusinessException;
 import com.gymiq.integration.BrasilApiCpfClient;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -11,15 +15,37 @@ public class CpfValidationService {
 
     private final BrasilApiCpfClient brasilApiCpfClient;
 
+    @Value("${gymiq.cpf.validation-mode:LOCAL}")
+    private String validationMode;
+
+    @PostConstruct
+    void validateConfiguration() {
+        resolveValidationMode();
+    }
+
     public void validate(String cpf) {
+        CpfValidationMode mode = resolveValidationMode();
+
+        if (mode == CpfValidationMode.DISABLED) {
+            return;
+        }
+
         String normalizedCpf = normalizeCpf(cpf);
 
         if (!hasValidCheckDigits(normalizedCpf)) {
             throw new BusinessException("CPF invalido");
         }
 
-        if (!brasilApiCpfClient.exists(normalizedCpf)) {
-            throw new BusinessException("CPF não encontrado / não existente.");
+        if (mode == CpfValidationMode.EXTERNAL && !brasilApiCpfClient.exists(normalizedCpf)) {
+            throw new BusinessException("CPF nao encontrado / nao existente.");
+        }
+    }
+
+    private CpfValidationMode resolveValidationMode() {
+        try {
+            return CpfValidationMode.valueOf(validationMode.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("Modo de validacao de CPF invalido: " + validationMode);
         }
     }
 
@@ -51,5 +77,11 @@ public class CpfValidationService {
             throw new BusinessException("CPF deve conter 11 digitos");
         }
         return digits;
+    }
+
+    private enum CpfValidationMode {
+        LOCAL,
+        EXTERNAL,
+        DISABLED
     }
 }

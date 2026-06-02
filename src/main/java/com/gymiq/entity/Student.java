@@ -12,6 +12,9 @@ import java.util.List;
 @Table(name = "student",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_student_cpf", columnNames = "cpf")
+        },
+        indexes = {
+                @Index(name = "idx_student_user_id", columnList = "user_id")
         })
 @Getter
 @Setter

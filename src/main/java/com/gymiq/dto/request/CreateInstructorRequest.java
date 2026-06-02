@@ -28,4 +28,8 @@ public class CreateInstructorRequest {
 
     @Size(max = 100, message = "Especialidade deve ter no maximo 100 caracteres")
     private String specialty;
+
+    @NotNull(message = "Aceite LGPD e obrigatorio")
+    @AssertTrue(message = "E necessario aceitar os termos de LGPD para concluir o cadastro")
+    private Boolean lgpdAccepted;
 }

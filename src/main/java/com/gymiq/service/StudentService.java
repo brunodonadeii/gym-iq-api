@@ -1,20 +1,31 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
+import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
+import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
+import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -24,10 +35,12 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final EnrollmentRepository enrollmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final StudentDataService studentDataService;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Criou aluno")
     public StudentResponse create(CreateStudentRequest request) {
         studentDataService.validateCpf(request.getCpf());
 
@@ -44,7 +57,8 @@ public class StudentService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(User.Role.STUDENT)
                 .active(true)
-                .lgpdAccepted(false)
+                .lgpdAccepted(request.getLgpdAccepted())
+                .lgpdAcceptedAt(resolveLgpdAcceptedAt(request.getLgpdAccepted()))
                 .build();
         userRepository.save(user);
 
@@ -63,19 +77,20 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponse> findAll() {
-        return studentRepository.findAll()
-                .stream()
-                .map(StudentResponse::fromEntity)
-                .toList();
+    public Page<StudentResponse> findAll(Pageable pageable) {
+        return studentRepository.findAll(pageable)
+                .map(StudentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public List<StudentResponse> search(String term) {
-        return studentRepository.searchByTerm(term)
-                .stream()
-                .map(StudentResponse::fromEntity)
-                .toList();
+    public Page<StudentResponse> search(String term, Pageable pageable) {
+        return studentRepository.searchByTerm(term, pageable)
+                .map(StudentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentOptionResponse> findOptions(String term) {
+        return studentRepository.findOptions(term, PageRequest.of(0, 20));
     }
 
     @Transactional(readOnly = true)
@@ -83,7 +98,13 @@ public class StudentService {
         return StudentResponse.fromEntity(findEntityById(id));
     }
 
+    @Transactional(readOnly = true)
+    public StudentResponse findByAuthenticatedEmail(String email) {
+        return StudentResponse.fromEntity(findEntityByAuthenticatedEmail(email));
+    }
+
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Atualizou dados do aluno")
     public StudentResponse update(Integer id, UpdateStudentRequest request) {
         Student student = findEntityById(id);
         User user = student.getUser();
@@ -106,9 +127,6 @@ public class StudentService {
         if (request.getName() != null && !request.getName().isBlank()) {
             user.setName(request.getName());
         }
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        }
         if (request.getBirthDate() != null) {
             student.setBirthDate(request.getBirthDate());
         }
@@ -128,15 +146,75 @@ public class StudentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Inativou aluno")
     public void deactivate(Integer id) {
         Student student = findEntityById(id);
+        cancelActiveEnrollmentIfPresent(student);
         student.getUser().setActive(false);
         studentRepository.save(student);
         log.info("Student deactivated: id={}", id);
     }
 
+    @Transactional
+    @Auditable(action = AuditAction.ANONYMIZE_STUDENT, resourceType = ResourceType.STUDENT, description = "Anonimizou aluno")
+    public StudentResponse anonymize(Integer id) {
+        Student student = findEntityById(id);
+        User user = student.getUser();
+
+        if (Boolean.TRUE.equals(user.getActive())) {
+            throw new BusinessException("Aluno precisa estar inativo antes da anonimização");
+        }
+
+        cancelActiveEnrollmentIfPresent(student);
+
+        user.setName("Aluno anonimizado #" + student.getStudentId());
+        user.setEmail(buildAnonymizedEmail(student));
+        user.setPasswordHash("{anonymized}");
+
+        student.setCpf(buildAnonymizedCpf(student));
+        student.setBirthDate(LocalDate.of(1900, 1, 1));
+        student.setPhone("ANONYMIZED");
+        student.setZipCode(null);
+        student.setAddress(null);
+
+        studentRepository.save(student);
+        log.info("Student anonymized: id={}", id);
+        return StudentResponse.fromEntity(student);
+    }
+
     public Student findEntityById(Integer id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + id));
+    }
+    public Student findEntityByAuthenticatedEmail(String email) {
+        return studentRepository.findByUserEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"));
+    }
+
+    private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
+        return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
+    }
+
+    private void cancelActiveEnrollmentIfPresent(Student student) {
+        enrollmentRepository.findByStudentStudentIdAndStatus(student.getStudentId(), EnrollmentStatus.ACTIVE)
+                .ifPresent(enrollment -> {
+                    enrollment.setStatus(EnrollmentStatus.CANCELED);
+                    enrollmentRepository.save(enrollment);
+                    log.info("Active enrollment canceled during student deactivation/anonymization: enrollmentId={}, studentId={}",
+                            enrollment.getEnrollmentId(), student.getStudentId());
+                });
+    }
+
+    private String buildAnonymizedEmail(Student student) {
+        return "anonymized.student." + student.getStudentId() + "." + student.getUser().getUserId() + "@deleted.local";
+    }
+
+    private String buildAnonymizedCpf(Student student) {
+        long numericCpf = 10_000_000_000L + student.getStudentId();
+        String digits = String.format("%011d", numericCpf);
+        return digits.substring(0, 3) + "." +
+                digits.substring(3, 6) + "." +
+                digits.substring(6, 9) + "-" +
+                digits.substring(9, 11);
     }
 }
