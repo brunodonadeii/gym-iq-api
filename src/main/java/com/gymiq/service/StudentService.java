@@ -156,6 +156,16 @@ public class StudentService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.ACTIVATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Ativou aluno")
+    public StudentResponse activate(Integer id) {
+        Student student = findEntityById(id);
+        student.getUser().setActive(true);
+        studentRepository.save(student);
+        log.info("Student activated: id={}", id);
+        return StudentResponse.fromEntity(student);
+    }
+
+    @Transactional
     @Auditable(action = AuditAction.ANONYMIZE_STUDENT, resourceType = ResourceType.STUDENT, description = "Anonimizou aluno")
     public StudentResponse anonymize(Integer id) {
         Student student = findEntityById(id);

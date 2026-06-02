@@ -91,6 +91,12 @@ public class StudentController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{id}/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<StudentResponse> activate(@PathVariable Integer id) {
+        return ResponseEntity.ok(studentService.activate(id));
+    }
+
     @PatchMapping("/{id}/anonymize")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<StudentResponse> anonymize(@PathVariable Integer id) {
