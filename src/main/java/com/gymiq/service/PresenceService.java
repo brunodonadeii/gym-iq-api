@@ -23,11 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PresenceService {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final PresenceRepository presenceRepository;
     private final StudentRepository studentRepository;
@@ -55,7 +58,7 @@ public class PresenceService {
             throw new BusinessException("Identificador ou senha invalidos");
         }
 
-        return createPresence(student, LocalDateTime.now(), request.getNotes());
+        return createPresence(student, LocalDateTime.now(BUSINESS_ZONE), request.getNotes());
     }
 
     private PresenceResponse createPresence(Student student, LocalDateTime requestedCheckInAt, String notes) {
@@ -63,10 +66,11 @@ public class PresenceService {
             throw new BusinessException("Nao e possivel registrar presenca para aluno inativo");
         }
 
-        presenceRepository.findByStudentStudentIdAndCheckOutAtIsNull(student.getStudentId())
-                .ifPresent(p -> { throw new BusinessException("Aluno ja possui check-in aberto"); });
+        LocalDateTime checkInAt = requestedCheckInAt != null
+                ? requestedCheckInAt
+                : LocalDateTime.now(BUSINESS_ZONE);
 
-        LocalDateTime checkInAt = requestedCheckInAt != null ? requestedCheckInAt : LocalDateTime.now();
+        validateDailyCheckIn(student.getStudentId(), checkInAt);
 
         Presence presence = Presence.builder()
                 .student(student)
@@ -77,6 +81,18 @@ public class PresenceService {
         presenceRepository.save(presence);
         log.info("Presence check-in created: id={}, student={}", presence.getPresenceId(), student.getStudentId());
         return PresenceResponse.fromEntity(presence);
+    }
+
+    private void validateDailyCheckIn(Integer studentId, LocalDateTime checkInAt) {
+        LocalDateTime startOfDay = checkInAt.toLocalDate().atStartOfDay();
+        LocalDateTime startOfNextDay = checkInAt.toLocalDate().plusDays(1).atStartOfDay();
+
+        if (presenceRepository.existsByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+                studentId,
+                startOfDay,
+                startOfNextDay)) {
+            throw new BusinessException("Aluno ja possui check-in registrado hoje");
+        }
     }
 
     @Transactional
@@ -91,7 +107,7 @@ public class PresenceService {
 
         LocalDateTime checkOutAt = checkOutRequest.getCheckOutAt() != null
                 ? checkOutRequest.getCheckOutAt()
-                : LocalDateTime.now();
+                : LocalDateTime.now(BUSINESS_ZONE);
 
         if (checkOutAt.isBefore(presence.getCheckInAt())) {
             throw new BusinessException("Check-out nao pode ser anterior ao check-in");
