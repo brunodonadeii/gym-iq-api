@@ -256,4 +256,4 @@ Para executar testes:
 mvn test
 ```
 
-Atualmente o projeto possui teste de contexto Spring Boot. Recomenda-se evoluir a cobertura com testes de service, controller e regras criticas de matricula, pagamento, retencao, autenticacao e permissao.
+
