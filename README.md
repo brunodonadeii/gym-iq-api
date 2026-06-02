@@ -1,14 +1,14 @@
 # GymIQ — Backend
 
 Sistema de gestão de academia — TCC.
-Stack: Java 17 · Spring Boot 3.2 · MySQL 8 · JWT · Docker
+Stack: Java 17 · Spring Boot 3.2 · Postgress · JWT · Docker
 
 ---
 
 ## Pré-requisito
 
 Apenas o **Docker Desktop** instalado e rodando.
-Não precisa de Java, Maven ou MySQL na máquina.
+Não precisa de Java, Maven ou Postgress na máquina.
 
 ---
 
