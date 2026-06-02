@@ -1,5 +1,6 @@
 package com.gymiq.dto.request;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,5 +30,6 @@ public class UpdateInstructorRequest {
     private String specialty;
 
     @NotNull(message = "Aceite LGPD e obrigatorio")
+    @AssertTrue(message = "E necessario aceitar os termos de LGPD para concluir a atualizacao")
     private Boolean lgpdAccepted;
 }
