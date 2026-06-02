@@ -41,4 +41,4 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
             killall -9 java || true
-            nohup bash -c "set -a && source /home/ec2-user/.env && exec java -jar /home/ec2-user/gymiq-backend-0.0.1-SNAPSHOT.jar" > /home/ec2-user/app.log 2>&1 &
+            nohup bash -c "set -a && source /home/ec2-user/.env && exec java -Duser.timezone=America/Sao_Paulo -jar /home/ec2-user/gymiq-backend-0.0.1-SNAPSHOT.jar" > /home/ec2-user/app.log 2>&1 &
