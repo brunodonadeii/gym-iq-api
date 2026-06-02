@@ -19,18 +19,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final List<User.Role> ADMINISTRATIVE_ROLES = List.of(
+            User.Role.ADMIN,
+            User.Role.RECEPTION);
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(Pageable pageable) {
-        return userRepository.findAll(pageable)
+        return userRepository.findByRoleIn(ADMINISTRATIVE_ROLES, pageable)
                 .map(UserResponse::fromEntity);
     }
 
