@@ -43,6 +43,7 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
     private final JavaMailSender mailSender;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -79,7 +80,7 @@ public class PasswordResetService {
 
         deleteExpiredTokens(now);
 
-        userRepository.findByEmailIgnoreCase(email)
+        userRepository.findByEmailHash(personalDataProtectionService.emailHash(email))
                 .filter(user -> Boolean.TRUE.equals(user.getActive()))
                 .ifPresent(user -> createTokenAndSendEmail(user, now));
 

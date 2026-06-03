@@ -35,6 +35,7 @@ public class PresenceService {
     private final PresenceRepository presenceRepository;
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional
     @Auditable(action = AuditAction.CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou check-in")
@@ -49,9 +50,11 @@ public class PresenceService {
     @Auditable(action = AuditAction.SELF_CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou auto check-in")
     public PresenceResponse selfCheckIn(SelfCheckInRequest request) {
         String identifier = request.getIdentifier().trim();
+        String cpfHash = resolveCpfHash(identifier);
+        String emailHash = resolveEmailHash(identifier);
 
         Student student = studentRepository
-                .findByCpfOrUserEmailIgnoreCase(identifier, identifier)
+                .findByCpfHashOrUserEmailHash(cpfHash, emailHash)
                 .orElseThrow(() -> new BusinessException("Identificador ou senha invalidos"));
 
         if (!passwordEncoder.matches(request.getPassword(), student.getUser().getPasswordHash())) {
@@ -146,7 +149,7 @@ public class PresenceService {
 
     @Transactional(readOnly = true)
     public Page<PresenceResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
-        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+        Integer studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
                 .getStudentId();
 
@@ -166,5 +169,16 @@ public class PresenceService {
     private Presence findEntityById(Integer id) {
         return presenceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Presenca nao encontrada: " + id));
+    }
+
+    private String resolveCpfHash(String identifier) {
+        String digits = identifier == null ? "" : identifier.replaceAll("\\D", "");
+        return digits.length() == 11 ? personalDataProtectionService.cpfHash(identifier) : null;
+    }
+
+    private String resolveEmailHash(String identifier) {
+        return identifier != null && identifier.contains("@")
+                ? personalDataProtectionService.emailHash(identifier)
+                : null;
     }
 }

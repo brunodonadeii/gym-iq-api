@@ -28,6 +28,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final StudentService studentService;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional(readOnly = true)
     @Auditable(action = AuditAction.LOGIN, resourceType = ResourceType.USER, description = "Realizou login")
@@ -36,7 +37,7 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailHash(personalDataProtectionService.emailHash(request.getEmail()))
                 .orElseThrow(() -> new BusinessException("Usuario nao encontrado"));
 
         String token = jwtUtil.generateToken(

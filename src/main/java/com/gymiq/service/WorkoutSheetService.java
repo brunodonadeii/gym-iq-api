@@ -40,6 +40,7 @@ public class WorkoutSheetService {
     private final StudentRepository studentRepository;
     private final InstructorRepository instructorRepository;
     private final ExerciseRepository exerciseRepository;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional
     public WorkoutSheetResponse create(CreateWorkoutSheetRequest request) {
@@ -122,17 +123,17 @@ public class WorkoutSheetService {
         }
 
         Page<WorkoutSheet> workoutSheets = onlyActive
-                ? workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCaseAndActiveTrue(
-                        studentId, authenticatedEmail, pageable)
-                : workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCase(
-                        studentId, authenticatedEmail, pageable);
+                ? workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailHashAndActiveTrue(
+                        studentId, personalDataProtectionService.emailHash(authenticatedEmail), pageable)
+                : workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailHash(
+                        studentId, personalDataProtectionService.emailHash(authenticatedEmail), pageable);
 
         return workoutSheets.map(WorkoutSheetResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
     public Page<WorkoutSheetResponse> findByAuthenticatedStudent(String email, boolean onlyActive, Pageable pageable) {
-        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+        Integer studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
                 .getStudentId();
 
@@ -166,7 +167,7 @@ public class WorkoutSheetService {
 
     @Transactional(readOnly = true)
     public Page<WorkoutSheetResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
-        Integer instructorId = instructorRepository.findByUserEmailIgnoreCase(email)
+        Integer instructorId = instructorRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"))
                 .getInstructorId();
 

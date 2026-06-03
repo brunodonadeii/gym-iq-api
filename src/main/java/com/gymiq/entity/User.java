@@ -1,5 +1,6 @@
 package com.gymiq.entity;
 
+import com.gymiq.entity.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,11 +12,12 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_user_email", columnNames = "email")
+                @UniqueConstraint(name = "uk_user_email_hash", columnNames = "email_hash")
         },
         indexes = {
                 @Index(name = "idx_user_name", columnList = "name"),
-                @Index(name = "idx_user_active", columnList = "active")
+                @Index(name = "idx_user_active", columnList = "active"),
+                @Index(name = "idx_user_email_hash", columnList = "email_hash")
         })
 @Getter
 @Setter
@@ -32,8 +34,12 @@ public class User {
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "email", nullable = false, length = 150)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "email", nullable = false, columnDefinition = "TEXT")
     private String email;
+
+    @Column(name = "email_hash", nullable = false, length = 64)
+    private String emailHash;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;

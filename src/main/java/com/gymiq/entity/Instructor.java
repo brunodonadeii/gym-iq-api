@@ -1,5 +1,6 @@
 package com.gymiq.entity;
 
+import com.gymiq.entity.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -32,7 +33,8 @@ public class Instructor {
     @Column(name = "cref", nullable = false, length = 20)
     private String cref;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "phone", nullable = false, columnDefinition = "TEXT")
     private String phone;
 
     @Column(name = "specialty", length = 100)

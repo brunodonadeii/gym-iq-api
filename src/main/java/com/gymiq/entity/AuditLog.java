@@ -1,5 +1,6 @@
 package com.gymiq.entity;
 
+import com.gymiq.entity.converter.EncryptedStringConverter;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import jakarta.persistence.Column;
@@ -42,7 +43,8 @@ public class AuditLog {
     @Column(name = "actor_user_id")
     private Integer actorUserId;
 
-    @Column(name = "actor_email", length = 150)
+    @jakarta.persistence.Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "actor_email", columnDefinition = "TEXT")
     private String actorEmail;
 
     @Column(name = "actor_role", length = 20)

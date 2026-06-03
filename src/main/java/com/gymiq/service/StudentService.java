@@ -15,6 +15,8 @@ import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.UserRepository;
+import com.gymiq.security.PersonalDataExposurePolicy;
+import com.gymiq.security.PersonalDataProtection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -38,22 +40,27 @@ public class StudentService {
     private final EnrollmentRepository enrollmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final StudentDataService studentDataService;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional
     @Auditable(action = AuditAction.CREATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Criou aluno")
     public StudentResponse create(CreateStudentRequest request) {
         studentDataService.validateCpf(request.getCpf());
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+        String cpfHash = personalDataProtectionService.cpfHash(request.getCpf());
+
+        if (userRepository.existsByEmailHash(emailHash)) {
+            throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
         }
-        if (studentRepository.existsByCpf(request.getCpf())) {
-            throw new BusinessException("CPF já cadastrado: " + request.getCpf());
+        if (studentRepository.existsByCpfHash(cpfHash)) {
+            throw new BusinessException("CPF ja cadastrado: " + request.getCpf());
         }
 
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
+                .emailHash(emailHash)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(User.Role.STUDENT)
                 .active(true)
@@ -65,6 +72,7 @@ public class StudentService {
         Student student = Student.builder()
                 .user(user)
                 .cpf(request.getCpf())
+                .cpfHash(cpfHash)
                 .birthDate(request.getBirthDate())
                 .phone(request.getPhone())
                 .zipCode(request.getZipCode())
@@ -84,13 +92,34 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public Page<StudentResponse> search(String term, Pageable pageable) {
-        return studentRepository.searchByTerm(term, pageable)
+        return studentRepository.searchByTerm(
+                        term,
+                        resolveEmailHashForSearch(term),
+                        resolveCpfHashForSearch(term),
+                        pageable)
                 .map(StudentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
     public List<StudentOptionResponse> findOptions(String term) {
-        return studentRepository.findOptions(term, PageRequest.of(0, 20));
+        List<StudentOptionResponse> options = studentRepository.findOptions(
+                term,
+                resolveEmailHashForSearch(term),
+                resolveCpfHashForSearch(term),
+                PageRequest.of(0, 20));
+
+        if (PersonalDataExposurePolicy.canViewFullStudentData()) {
+            return options;
+        }
+
+        return options.stream()
+                .map(option -> new StudentOptionResponse(
+                        option.getStudentId(),
+                        option.getName(),
+                        PersonalDataProtection.maskEmail(option.getEmail()),
+                        PersonalDataProtection.maskCpf(option.getCpf()),
+                        option.getName() + " - " + PersonalDataProtection.maskCpf(option.getCpf())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -110,18 +139,26 @@ public class StudentService {
         User user = student.getUser();
 
         if (request.getEmail() != null && !request.getEmail().isBlank()) {
-            userRepository.findByEmail(request.getEmail())
-                    .filter(u -> !u.getUserId().equals(user.getUserId()))
-                    .ifPresent(u -> { throw new BusinessException("E-mail já usado por outro usuário"); });
+            String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+            userRepository.findByEmailHash(emailHash)
+                    .filter(existingUser -> !existingUser.getUserId().equals(user.getUserId()))
+                    .ifPresent(existingUser -> {
+                        throw new BusinessException("E-mail ja usado por outro usuario");
+                    });
             user.setEmail(request.getEmail());
+            user.setEmailHash(emailHash);
         }
 
         if (request.getCpf() != null && !request.getCpf().isBlank()) {
             studentDataService.validateCpf(request.getCpf());
-            studentRepository.findByCpf(request.getCpf())
-                    .filter(s -> !s.getStudentId().equals(id))
-                    .ifPresent(s -> { throw new BusinessException("CPF já usado por outro aluno"); });
+            String cpfHash = personalDataProtectionService.cpfHash(request.getCpf());
+            studentRepository.findByCpfHash(cpfHash)
+                    .filter(existingStudent -> !existingStudent.getStudentId().equals(id))
+                    .ifPresent(existingStudent -> {
+                        throw new BusinessException("CPF ja usado por outro aluno");
+                    });
             student.setCpf(request.getCpf());
+            student.setCpfHash(cpfHash);
         }
 
         if (request.getName() != null && !request.getName().isBlank()) {
@@ -172,16 +209,21 @@ public class StudentService {
         User user = student.getUser();
 
         if (Boolean.TRUE.equals(user.getActive())) {
-            throw new BusinessException("Aluno precisa estar inativo antes da anonimização");
+            throw new BusinessException("Aluno precisa estar inativo antes da anonimizacao");
         }
 
         cancelActiveEnrollmentIfPresent(student);
 
+        String anonymizedEmail = buildAnonymizedEmail(student);
+        String anonymizedCpf = buildAnonymizedCpf(student);
+
         user.setName("Aluno anonimizado #" + student.getStudentId());
-        user.setEmail(buildAnonymizedEmail(student));
+        user.setEmail(anonymizedEmail);
+        user.setEmailHash(personalDataProtectionService.emailHash(anonymizedEmail));
         user.setPasswordHash("{anonymized}");
 
-        student.setCpf(buildAnonymizedCpf(student));
+        student.setCpf(anonymizedCpf);
+        student.setCpfHash(personalDataProtectionService.cpfHash(anonymizedCpf));
         student.setBirthDate(LocalDate.of(1900, 1, 1));
         student.setPhone("ANONYMIZED");
         student.setZipCode(null);
@@ -194,10 +236,11 @@ public class StudentService {
 
     public Student findEntityById(Integer id) {
         return studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + id));
     }
+
     public Student findEntityByAuthenticatedEmail(String email) {
-        return studentRepository.findByUserEmailIgnoreCase(email)
+        return studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"));
     }
 
@@ -226,5 +269,16 @@ public class StudentService {
                 digits.substring(3, 6) + "." +
                 digits.substring(6, 9) + "-" +
                 digits.substring(9, 11);
+    }
+
+    private String resolveEmailHashForSearch(String term) {
+        return term != null && term.contains("@")
+                ? personalDataProtectionService.emailHash(term)
+                : null;
+    }
+
+    private String resolveCpfHashForSearch(String term) {
+        String digits = term == null ? "" : term.replaceAll("\\D", "");
+        return digits.length() == 11 ? personalDataProtectionService.cpfHash(term) : null;
     }
 }

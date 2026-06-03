@@ -24,6 +24,7 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(AuditAction action, ResourceType resourceType, Integer resourceId, String description) {
@@ -59,7 +60,7 @@ public class AuditLogService {
             return ActorContext.empty();
         }
 
-        return userRepository.findByEmail(email)
+        return userRepository.findByEmailHash(personalDataProtectionService.emailHash(email))
                 .map(user -> new ActorContext(user.getUserId(), user.getEmail(), user.getRole().name()))
                 .orElseGet(() -> new ActorContext(null, email, resolveRole(authentication)));
     }

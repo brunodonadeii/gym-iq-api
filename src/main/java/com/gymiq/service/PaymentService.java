@@ -31,6 +31,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final StudentRepository studentRepository;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional
     public Payment createFirstPaymentForEnrollment(Enrollment enrollment) {
@@ -87,7 +88,7 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
-        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
+        Integer studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
                 .getStudentId();
 

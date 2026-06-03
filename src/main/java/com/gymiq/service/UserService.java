@@ -32,6 +32,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(Pageable pageable) {
@@ -49,13 +50,16 @@ public class UserService {
     public UserResponse createAdministrativeUser(CreateUserRequest request) {
         validateAdministrativeRole(request.getRole());
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+
+        if (userRepository.existsByEmailHash(emailHash)) {
             throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
         }
 
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
+                .emailHash(emailHash)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .active(true)
@@ -76,7 +80,9 @@ public class UserService {
 
         User user = findAdministrativeUser(id);
 
-        userRepository.findByEmailIgnoreCase(request.getEmail())
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+
+        userRepository.findByEmailHash(emailHash)
                 .filter(existingUser -> !existingUser.getUserId().equals(id))
                 .ifPresent(existingUser -> {
                     throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
@@ -84,6 +90,7 @@ public class UserService {
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
+        user.setEmailHash(emailHash);
         user.setRole(request.getRole());
         user.setLgpdAccepted(request.getLgpdAccepted());
         if (Boolean.TRUE.equals(request.getLgpdAccepted()) && user.getLgpdAcceptedAt() == null) {

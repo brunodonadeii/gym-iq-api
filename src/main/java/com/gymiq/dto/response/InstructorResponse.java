@@ -1,6 +1,8 @@
 package com.gymiq.dto.response;
 
 import com.gymiq.entity.Instructor;
+import com.gymiq.security.PersonalDataExposurePolicy;
+import com.gymiq.security.PersonalDataProtection;
 import lombok.Builder;
 import lombok.Data;
 
@@ -22,13 +24,15 @@ public class InstructorResponse {
     private LocalDateTime createdAt;
 
     public static InstructorResponse fromEntity(Instructor instructor) {
+        boolean fullDataAllowed = PersonalDataExposurePolicy.canViewFullInstructorData();
+
         return InstructorResponse.builder()
                 .instructorId(instructor.getInstructorId())
                 .userId(instructor.getUser().getUserId())
                 .name(instructor.getUser().getName())
-                .email(instructor.getUser().getEmail())
+                .email(fullDataAllowed ? instructor.getUser().getEmail() : PersonalDataProtection.maskEmail(instructor.getUser().getEmail()))
                 .cref(instructor.getCref())
-                .phone(instructor.getPhone())
+                .phone(fullDataAllowed ? instructor.getPhone() : PersonalDataProtection.maskPhone(instructor.getPhone()))
                 .specialty(instructor.getSpecialty())
                 .active(instructor.getUser().getActive())
                 .lgpdAccepted(instructor.getUser().getLgpdAccepted())

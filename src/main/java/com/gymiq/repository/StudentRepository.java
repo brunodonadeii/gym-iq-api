@@ -25,17 +25,17 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
     @EntityGraph(attributePaths = "user")
     Optional<Student> findById(Integer id);
 
-    Optional<Student> findByCpf(String cpf);
+    Optional<Student> findByCpfHash(String cpfHash);
 
-    boolean existsByCpf(String cpf);
+    boolean existsByCpfHash(String cpfHash);
 
     Optional<Student> findByUserUserId(Integer userId);
 
     @EntityGraph(attributePaths = "user")
-    Optional<Student> findByUserEmailIgnoreCase(String email);
+    Optional<Student> findByUserEmailHash(String emailHash);
 
     @EntityGraph(attributePaths = "user")
-    Optional<Student> findByCpfOrUserEmailIgnoreCase(String cpf, String email);
+    Optional<Student> findByCpfHashOrUserEmailHash(String cpfHash, String emailHash);
 
     @Query("""
             SELECT COUNT(s)
@@ -47,12 +47,20 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
-    @Query("SELECT s FROM Student s JOIN s.user u WHERE " +
-            "LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
-            "s.cpf LIKE CONCAT('%', :term, '%') OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%'))")
+    @Query("""
+            SELECT s
+            FROM Student s
+            JOIN s.user u
+            WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
+               OR (:cpfHash IS NOT NULL AND s.cpfHash = :cpfHash)
+               OR (:emailHash IS NOT NULL AND u.emailHash = :emailHash)
+            """)
     @EntityGraph(attributePaths = "user")
-    Page<Student> searchByTerm(@Param("term") String term, Pageable pageable);
+    Page<Student> searchByTerm(
+            @Param("term") String term,
+            @Param("emailHash") String emailHash,
+            @Param("cpfHash") String cpfHash,
+            Pageable pageable);
 
     @Query("""
             SELECT new com.gymiq.dto.response.StudentOptionResponse(
@@ -69,11 +77,15 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
                     :term IS NULL
                     OR :term = ''
                     OR LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
-                    OR s.cpf LIKE CONCAT('%', :term, '%')
-                    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%'))
+                    OR (:cpfHash IS NOT NULL AND s.cpfHash = :cpfHash)
+                    OR (:emailHash IS NOT NULL AND u.emailHash = :emailHash)
               )
             ORDER BY u.name ASC
             """)
-    List<StudentOptionResponse> findOptions(@Param("term") String term, Pageable pageable);
+    List<StudentOptionResponse> findOptions(
+            @Param("term") String term,
+            @Param("emailHash") String emailHash,
+            @Param("cpfHash") String cpfHash,
+            Pageable pageable);
 
 }

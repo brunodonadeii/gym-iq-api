@@ -4,6 +4,7 @@ import com.gymiq.entity.Exercise;
 import com.gymiq.entity.User;
 import com.gymiq.repository.ExerciseRepository;
 import com.gymiq.repository.UserRepository;
+import com.gymiq.service.PersonalDataProtectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -21,6 +22,7 @@ public class DataInitializer implements ApplicationRunner {
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -29,14 +31,18 @@ public class DataInitializer implements ApplicationRunner {
     }
 
     private void criarAdminSeNaoExistir() {
-        if (userRepository.existsByEmail("admin@gymiq.com")) {
+        String adminEmail = "admin@gymiq.com";
+        String adminEmailHash = personalDataProtectionService.emailHash(adminEmail);
+
+        if (userRepository.existsByEmailHash(adminEmailHash)) {
             log.info("Usuário admin já existe — seed ignorado.");
             return;
         }
 
         User admin = User.builder()
                 .name("Administrador GymIQ")
-                .email("admin@gymiq.com")
+                .email(adminEmail)
+                .emailHash(adminEmailHash)
                 .passwordHash(passwordEncoder.encode("gymiq@2026"))
                 .role(User.Role.ADMIN)
                 .active(true)

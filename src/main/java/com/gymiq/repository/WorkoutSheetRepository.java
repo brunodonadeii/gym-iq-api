@@ -13,14 +13,14 @@ public interface WorkoutSheetRepository extends JpaRepository<WorkoutSheet, Inte
 
     Page<WorkoutSheet> findByStudentStudentIdAndActiveTrue(Integer studentId, Pageable pageable);
 
-    Page<WorkoutSheet> findByStudentStudentIdAndInstructorUserEmailIgnoreCase(
+    Page<WorkoutSheet> findByStudentStudentIdAndInstructorUserEmailHash(
             Integer studentId,
-            String email,
+            String emailHash,
             Pageable pageable);
 
-    Page<WorkoutSheet> findByStudentStudentIdAndInstructorUserEmailIgnoreCaseAndActiveTrue(
+    Page<WorkoutSheet> findByStudentStudentIdAndInstructorUserEmailHashAndActiveTrue(
             Integer studentId,
-            String email,
+            String emailHash,
             Pageable pageable);
 
     Page<WorkoutSheet> findByInstructorInstructorId(Integer instructorId, Pageable pageable);

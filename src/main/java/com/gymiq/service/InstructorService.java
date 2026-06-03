@@ -33,11 +33,14 @@ public class InstructorService {
     private final UserRepository userRepository;
     private final WorkoutSheetRepository workoutSheetRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional
     @Auditable(action = AuditAction.CREATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Criou instrutor")
     public InstructorResponse create(CreateInstructorRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+
+        if (userRepository.existsByEmailHash(emailHash)) {
             throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
         }
         if (instructorRepository.existsByCref(request.getCref())) {
@@ -47,6 +50,7 @@ public class InstructorService {
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
+                .emailHash(emailHash)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(User.Role.INSTRUCTOR)
                 .active(true)
@@ -76,15 +80,15 @@ public class InstructorService {
     @Transactional(readOnly = true)
     public Page<InstructorResponse> search(String term, InstructorStatusFilter status, Pageable pageable) {
         InstructorStatusFilter resolvedStatus = resolveStatus(status);
+        String emailHash = resolveEmailHashForSearch(term);
 
         Page<Instructor> instructors = switch (resolvedStatus) {
-            case ACTIVE -> instructorRepository.searchByTermAndUserActive(term, true, pageable);
-            case INACTIVE -> instructorRepository.searchByTermAndUserActive(term, false, pageable);
-            case ALL -> instructorRepository.searchByTerm(term, pageable);
+            case ACTIVE -> instructorRepository.searchByTermAndUserActive(term, emailHash, true, pageable);
+            case INACTIVE -> instructorRepository.searchByTermAndUserActive(term, emailHash, false, pageable);
+            case ALL -> instructorRepository.searchByTerm(term, emailHash, pageable);
         };
 
-        return instructors
-                .map(InstructorResponse::fromEntity);
+        return instructors.map(InstructorResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -102,17 +106,23 @@ public class InstructorService {
     public InstructorResponse update(Integer id, UpdateInstructorRequest request) {
         Instructor instructor = findEntityById(id);
         User user = instructor.getUser();
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
 
-        userRepository.findByEmail(request.getEmail())
-                .filter(u -> !u.getUserId().equals(user.getUserId()))
-                .ifPresent(u -> { throw new BusinessException("E-mail ja usado por outro usuario"); });
+        userRepository.findByEmailHash(emailHash)
+                .filter(existingUser -> !existingUser.getUserId().equals(user.getUserId()))
+                .ifPresent(existingUser -> {
+                    throw new BusinessException("E-mail ja usado por outro usuario");
+                });
 
         instructorRepository.findByCref(request.getCref())
-                .filter(i -> !i.getInstructorId().equals(id))
-                .ifPresent(i -> { throw new BusinessException("CREF ja usado por outro instrutor"); });
+                .filter(existingInstructor -> !existingInstructor.getInstructorId().equals(id))
+                .ifPresent(existingInstructor -> {
+                    throw new BusinessException("CREF ja usado por outro instrutor");
+                });
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
+        user.setEmailHash(emailHash);
         user.setLgpdAccepted(request.getLgpdAccepted());
         if (Boolean.TRUE.equals(request.getLgpdAccepted()) && user.getLgpdAcceptedAt() == null) {
             user.setLgpdAcceptedAt(LocalDateTime.now());
@@ -169,8 +179,9 @@ public class InstructorService {
         return instructorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + id));
     }
+
     public Instructor findEntityByAuthenticatedEmail(String email) {
-        return instructorRepository.findByUserEmailIgnoreCase(email)
+        return instructorRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"));
     }
 
@@ -190,5 +201,11 @@ public class InstructorService {
 
     private InstructorStatusFilter resolveStatus(InstructorStatusFilter status) {
         return status != null ? status : InstructorStatusFilter.ACTIVE;
+    }
+
+    private String resolveEmailHashForSearch(String term) {
+        return term != null && term.contains("@")
+                ? personalDataProtectionService.emailHash(term)
+                : null;
     }
 }

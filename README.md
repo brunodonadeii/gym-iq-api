@@ -54,6 +54,9 @@ DB_PASSWORD=postgres
 JWT_SECRET=troque-por-uma-chave-segura-com-tamanho-suficiente
 JWT_EXPIRATION_MS=86400000
 
+PII_ENCRYPTION_KEY=troque-por-uma-chave-de-criptografia-com-32-caracteres-ou-mais
+PII_HASH_SECRET=troque-por-uma-chave-de-hash-com-32-caracteres-ou-mais
+
 SPRING_FLYWAY_ENABLED=true
 SPRING_JPA_HIBERNATE_DDL_AUTO=validate
 
@@ -78,6 +81,7 @@ RETENTION_GENERATE_ACTIVE_STUDENTS_CRON=0 0 4 * * *
 
 Observacoes:
 
+- `PII_ENCRYPTION_KEY` e `PII_HASH_SECRET` protegem dados pessoais como e-mail, CPF, telefone, endereco e data de nascimento.
 - `CPF_VALIDATION_MODE` aceita `LOCAL`, `EXTERNAL` ou `DISABLED`.
 - As variaveis de e-mail sao usadas no fluxo de recuperacao de senha.
 - Os crons dos jobs usam o formato do Spring com 6 campos: segundo, minuto, hora, dia, mes e dia da semana.
