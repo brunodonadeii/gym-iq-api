@@ -17,7 +17,6 @@ Não precisa de Java, Maven ou MySQL na máquina.
 ```bash
 # 1. Clone o repositório
 git clone <URL_DO_REPO>
-cd gymiq-backend
 
 # 2. Suba os containers (primeira vez ~3 min)
 docker compose up --build
