@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -41,7 +42,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse findById(Integer id) {
+    public UserResponse findById(UUID id) {
         return UserResponse.fromEntity(findAdministrativeUser(id));
     }
 
@@ -75,7 +76,7 @@ public class UserService {
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_USER, resourceType = ResourceType.USER, description = "Atualizou usuario administrativo")
-    public UserResponse updateAdministrativeUser(Integer id, UpdateUserRequest request) {
+    public UserResponse updateAdministrativeUser(UUID id, UpdateUserRequest request) {
         validateAdministrativeRole(request.getRole());
 
         User user = findAdministrativeUser(id);
@@ -107,7 +108,7 @@ public class UserService {
 
     @Transactional
     @Auditable(action = AuditAction.DELETE_USER, resourceType = ResourceType.USER, description = "Excluiu usuario administrativo")
-    public void deleteAdministrativeUser(Integer id) {
+    public void deleteAdministrativeUser(UUID id) {
         User user = findAdministrativeUser(id);
         userRepository.delete(user);
         log.info("Usuario administrativo removido: id={}, role={}", user.getUserId(), user.getRole());
@@ -119,7 +120,7 @@ public class UserService {
         }
     }
 
-    private User findAdministrativeUser(Integer id) {
+    private User findAdministrativeUser(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado: " + id));
 

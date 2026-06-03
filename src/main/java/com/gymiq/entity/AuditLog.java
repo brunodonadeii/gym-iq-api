@@ -20,6 +20,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "audit_log", indexes = {
@@ -41,7 +42,7 @@ public class AuditLog {
     private Long auditLogId;
 
     @Column(name = "actor_user_id")
-    private Integer actorUserId;
+    private UUID actorUserId;
 
     @jakarta.persistence.Convert(converter = EncryptedStringConverter.class)
     @Column(name = "actor_email", columnDefinition = "TEXT")
@@ -58,8 +59,8 @@ public class AuditLog {
     @Column(name = "resource_type", length = 40)
     private ResourceType resourceType;
 
-    @Column(name = "resource_id")
-    private Integer resourceId;
+    @Column(name = "resource_id", length = 100)
+    private String resourceId;
 
     @Column(name = "description", length = 500)
     private String description;

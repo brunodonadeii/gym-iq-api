@@ -8,13 +8,14 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
 public class StudentResponse {
 
     private Integer studentId;
-    private Integer userId;
+    private UUID userId;
     private String name;
     private String email;
     private String cpf;

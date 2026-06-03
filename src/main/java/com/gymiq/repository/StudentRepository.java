@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface StudentRepository extends JpaRepository<Student, Integer> {
@@ -29,7 +30,7 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
 
     boolean existsByCpfHash(String cpfHash);
 
-    Optional<Student> findByUserUserId(Integer userId);
+    Optional<Student> findByUserUserId(UUID userId);
 
     @EntityGraph(attributePaths = "user")
     Optional<Student> findByUserEmailHash(String emailHash);

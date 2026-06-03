@@ -7,13 +7,14 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
 public class InstructorResponse {
 
     private Integer instructorId;
-    private Integer userId;
+    private UUID userId;
     private String name;
     private String email;
     private String cref;

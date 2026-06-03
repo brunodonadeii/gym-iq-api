@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/audit-logs")
@@ -33,10 +34,10 @@ public class AuditLogController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AuditLogResponse>> filter(
-            @RequestParam(required = false) Integer actorUserId,
+            @RequestParam(required = false) UUID actorUserId,
             @RequestParam(required = false) AuditAction action,
             @RequestParam(required = false) ResourceType resourceType,
-            @RequestParam(required = false) Integer resourceId,
+            @RequestParam(required = false) String resourceId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -48,7 +49,7 @@ public class AuditLogController {
     @GetMapping("/actor/{actorUserId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AuditLogResponse>> findByActor(
-            @PathVariable Integer actorUserId,
+            @PathVariable UUID actorUserId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(auditLogRepository.findByActorUserId(actorUserId, pageable)
                 .map(AuditLogResponse::fromEntity));
@@ -58,7 +59,7 @@ public class AuditLogController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AuditLogResponse>> findByResource(
             @PathVariable ResourceType resourceType,
-            @PathVariable Integer resourceId,
+            @PathVariable String resourceId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(auditLogRepository
                 .findByResourceTypeAndResourceId(resourceType, resourceId, pageable)
@@ -66,10 +67,10 @@ public class AuditLogController {
     }
 
     private Specification<com.gymiq.entity.AuditLog> buildSpecification(
-            Integer actorUserId,
+            UUID actorUserId,
             AuditAction action,
             ResourceType resourceType,
-            Integer resourceId,
+            String resourceId,
             LocalDateTime from,
             LocalDateTime to) {
         return (root, query, criteriaBuilder) -> {

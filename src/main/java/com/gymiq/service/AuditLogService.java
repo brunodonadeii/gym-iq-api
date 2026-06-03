@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.UUID;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,7 @@ public class AuditLogService {
     private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(AuditAction action, ResourceType resourceType, Integer resourceId, String description) {
+    public void record(AuditAction action, ResourceType resourceType, String resourceId, String description) {
         try {
             ActorContext actor = resolveActor();
 
@@ -93,7 +95,7 @@ public class AuditLogService {
         return request.getRemoteAddr();
     }
 
-    private record ActorContext(Integer userId, String email, String role) {
+    private record ActorContext(UUID userId, String email, String role) {
         static ActorContext empty() {
             return new ActorContext(null, null, null);
         }

@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface InstructorRepository extends JpaRepository<Instructor, Integer> {
@@ -22,7 +23,7 @@ public interface InstructorRepository extends JpaRepository<Instructor, Integer>
 
     boolean existsByCref(String cref);
 
-    Optional<Instructor> findByUserUserId(Integer userId);
+    Optional<Instructor> findByUserUserId(UUID userId);
 
     @EntityGraph(attributePaths = "user")
     Page<Instructor> findByUserActive(Boolean active, Pageable pageable);
