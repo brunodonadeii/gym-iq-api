@@ -23,6 +23,11 @@ public interface PresenceRepository extends JpaRepository<Presence, Integer> {
             LocalDateTime startDate,
             LocalDateTime endDate);
 
+    long countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+            Integer studentId,
+            LocalDateTime startDate,
+            LocalDateTime endDate);
+
     Optional<Presence> findFirstByStudentStudentIdAndCheckInAtGreaterThanEqualOrderByCheckInAtDesc(
             Integer studentId,
             LocalDateTime startDate);

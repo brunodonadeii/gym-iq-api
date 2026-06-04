@@ -42,14 +42,21 @@ public class RetentionAlertService {
     private static final int INACTIVITY_THRESHOLD_MEDIUM = 15;
     private static final int INACTIVITY_THRESHOLD_HIGH = 30;
 
-    private static final int INACTIVITY_SCORE_LOW = 20;
-    private static final int INACTIVITY_SCORE_MEDIUM = 35;
-    private static final int INACTIVITY_SCORE_HIGH = 50;
+    private static final int INACTIVITY_SCORE_LOW = 10;
+    private static final int INACTIVITY_SCORE_MEDIUM = 25;
+    private static final int INACTIVITY_SCORE_HIGH = 40;
 
-    private static final int POINTS_PER_OVERDUE_PAYMENT = 20;
+    private static final int FREQUENCY_WINDOW_DAYS = 30;
+    private static final int FREQUENCY_MINIMUM_HEALTHY = 8;
+    private static final int FREQUENCY_WARNING = 4;
+
+    private static final int FREQUENCY_SCORE_MEDIUM = 15;
+    private static final int FREQUENCY_SCORE_HIGH = 30;
+
+    private static final int POINTS_PER_OVERDUE_PAYMENT = 15;
 
     private static final int MAX_RISK_SCORE = 100;
-    private static final int MAX_PAYMENT_SCORE = 50;
+    private static final int MAX_PAYMENT_SCORE = 30;
 
     private static final int RISK_THRESHOLD_MEDIUM = 30;
     private static final int RISK_THRESHOLD_HIGH = 60;
@@ -68,8 +75,10 @@ public class RetentionAlertService {
         Enrollment activeEnrollment = findActiveEnrollment(studentId);
 
         Integer inactiveDays = calculateInactiveDays(studentId, activeEnrollment);
+        Integer recentCheckIns = countRecentCheckIns(studentId, activeEnrollment);
+        Integer frequencyWindowDays = calculateFrequencyWindowDays(activeEnrollment);
         Integer overduePayments = countOverduePayments(studentId);
-        Integer riskScore = calculateRiskScore(inactiveDays, overduePayments);
+        Integer riskScore = calculateRiskScore(inactiveDays, recentCheckIns, frequencyWindowDays, overduePayments);
 
         Optional<RetentionAlert> openAlert = retentionAlertRepository
                 .findByStudentStudentIdAndStatus(studentId, AlertStatus.OPEN);
@@ -81,7 +90,7 @@ public class RetentionAlertService {
         }
 
         RiskLevel riskLevel = resolveRiskLevel(riskScore);
-        String message = buildMessage(inactiveDays, overduePayments, riskLevel);
+        String message = buildMessage(inactiveDays, recentCheckIns, frequencyWindowDays, overduePayments, riskLevel);
 
         RetentionAlert alert = openAlert
                 .orElseGet(() -> RetentionAlert.builder()
@@ -216,10 +225,39 @@ public class RetentionAlertService {
         return Math.toIntExact(manuallyMarkedOverdue + pendingPastDue);
     }
 
-    private Integer calculateRiskScore(Integer inactiveDays, Integer overduePayments) {
+    private Integer countRecentCheckIns(Integer studentId, Enrollment activeEnrollment) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate = activeEnrollment.getStartDate()
+                .atStartOfDay()
+                .isAfter(now.minusDays(FREQUENCY_WINDOW_DAYS))
+                ? activeEnrollment.getStartDate().atStartOfDay()
+                : now.minusDays(FREQUENCY_WINDOW_DAYS);
+
+        return Math.toIntExact(presenceRepository
+                .countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+                        studentId,
+                        startDate,
+                        now));
+    }
+
+    private Integer calculateFrequencyWindowDays(Enrollment activeEnrollment) {
+        LocalDate windowStartDate = LocalDate.now().minusDays(FREQUENCY_WINDOW_DAYS);
+        LocalDate effectiveStartDate = activeEnrollment.getStartDate().isAfter(windowStartDate)
+                ? activeEnrollment.getStartDate()
+                : windowStartDate;
+
+        return calculateDaysBetween(effectiveStartDate, LocalDate.now());
+    }
+
+    private Integer calculateRiskScore(
+            Integer inactiveDays,
+            Integer recentCheckIns,
+            Integer frequencyWindowDays,
+            Integer overduePayments) {
         int inactivityScore = calculateInactivityScore(inactiveDays);
+        int frequencyScore = calculateFrequencyScore(recentCheckIns, frequencyWindowDays);
         int paymentScore = Math.min(overduePayments * POINTS_PER_OVERDUE_PAYMENT, MAX_PAYMENT_SCORE);
-        return Math.min(inactivityScore + paymentScore, MAX_RISK_SCORE);
+        return Math.min(inactivityScore + frequencyScore + paymentScore, MAX_RISK_SCORE);
     }
 
     private boolean hasActionableRisk(Integer riskScore) {
@@ -239,6 +277,31 @@ public class RetentionAlertService {
         return 0;
     }
 
+    private Integer calculateFrequencyScore(Integer recentCheckIns, Integer frequencyWindowDays) {
+        if (frequencyWindowDays < INACTIVITY_THRESHOLD_LOW) {
+            return 0;
+        }
+
+        int healthyThreshold = calculateProportionalFrequencyThreshold(
+                FREQUENCY_MINIMUM_HEALTHY,
+                frequencyWindowDays);
+        int warningThreshold = calculateProportionalFrequencyThreshold(
+                FREQUENCY_WARNING,
+                frequencyWindowDays);
+
+        if (recentCheckIns < warningThreshold) {
+            return FREQUENCY_SCORE_HIGH;
+        }
+        if (recentCheckIns < healthyThreshold) {
+            return FREQUENCY_SCORE_MEDIUM;
+        }
+        return 0;
+    }
+
+    private Integer calculateProportionalFrequencyThreshold(Integer baseThreshold, Integer frequencyWindowDays) {
+        return Math.max(1, (int) Math.ceil(baseThreshold * (frequencyWindowDays / (double) FREQUENCY_WINDOW_DAYS)));
+    }
+
     private RiskLevel resolveRiskLevel(Integer riskScore) {
         if (riskScore >= RISK_THRESHOLD_CRITICAL) {
             return RiskLevel.CRITICAL;
@@ -252,11 +315,18 @@ public class RetentionAlertService {
         return RiskLevel.LOW;
     }
 
-    private String buildMessage(Integer inactiveDays, Integer overduePayments, RiskLevel riskLevel) {
+    private String buildMessage(
+            Integer inactiveDays,
+            Integer recentCheckIns,
+            Integer frequencyWindowDays,
+            Integer overduePayments,
+            RiskLevel riskLevel) {
         String inactivityText = inactiveDays + " dia(s) sem check-in";
 
         return "Risco " + riskLevel.name() + ": " +
-                inactivityText + " e " +
+                inactivityText + ", " +
+                recentCheckIns + " check-in(s) nos ultimos " +
+                frequencyWindowDays + " dia(s) avaliados e " +
                 overduePayments + " pagamento(s) atrasado(s).";
     }
 
