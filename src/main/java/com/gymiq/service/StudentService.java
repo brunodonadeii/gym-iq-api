@@ -5,7 +5,9 @@ import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
+import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
+import com.gymiq.entity.Payment.PaymentStatus;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
 import com.gymiq.enums.AuditAction;
@@ -13,6 +15,7 @@ import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
+import com.gymiq.repository.PaymentRepository;
 import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.UserRepository;
 import com.gymiq.security.PersonalDataExposurePolicy;
@@ -29,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -38,6 +42,7 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final PaymentRepository paymentRepository;
     private final PasswordEncoder passwordEncoder;
     private final StudentDataService studentDataService;
     private final PersonalDataProtectionService personalDataProtectionService;
@@ -123,7 +128,7 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public StudentResponse findById(Integer id) {
+    public StudentResponse findById(UUID id) {
         return StudentResponse.fromEntity(findEntityById(id));
     }
 
@@ -134,7 +139,7 @@ public class StudentService {
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Atualizou dados do aluno")
-    public StudentResponse update(Integer id, UpdateStudentRequest request) {
+    public StudentResponse update(UUID id, UpdateStudentRequest request) {
         Student student = findEntityById(id);
         User user = student.getUser();
 
@@ -184,7 +189,7 @@ public class StudentService {
 
     @Transactional
     @Auditable(action = AuditAction.DEACTIVATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Inativou aluno")
-    public void deactivate(Integer id) {
+    public void deactivate(UUID id) {
         Student student = findEntityById(id);
         cancelActiveEnrollmentIfPresent(student);
         student.getUser().setActive(false);
@@ -194,7 +199,7 @@ public class StudentService {
 
     @Transactional
     @Auditable(action = AuditAction.ACTIVATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Ativou aluno")
-    public StudentResponse activate(Integer id) {
+    public StudentResponse activate(UUID id) {
         Student student = findEntityById(id);
         student.getUser().setActive(true);
         studentRepository.save(student);
@@ -204,37 +209,45 @@ public class StudentService {
 
     @Transactional
     @Auditable(action = AuditAction.ANONYMIZE_STUDENT, resourceType = ResourceType.STUDENT, description = "Anonimizou aluno")
-    public StudentResponse anonymize(Integer id) {
+    public StudentResponse anonymize(UUID id) {
         Student student = findEntityById(id);
+        return anonymizeStudentData(student);
+    }
+
+    @Transactional
+    @Auditable(action = AuditAction.ANONYMIZE_STUDENT, resourceType = ResourceType.STUDENT, description = "Anonimizou seus proprios dados")
+    public StudentResponse anonymizeAuthenticatedStudent(String email) {
+        Student student = findEntityByAuthenticatedEmail(email);
+        return anonymizeStudentData(student);
+    }
+
+    private StudentResponse anonymizeStudentData(Student student) {
         User user = student.getUser();
 
-        if (Boolean.TRUE.equals(user.getActive())) {
-            throw new BusinessException("Aluno precisa estar inativo antes da anonimizacao");
-        }
+        validateDataDeletionEligibility(student);
 
-        cancelActiveEnrollmentIfPresent(student);
-
-        String anonymizedEmail = buildAnonymizedEmail(student);
+        String anonymizedEmail = UUID.randomUUID() + "@deleted.gymiq.com";
         String anonymizedCpf = buildAnonymizedCpf(student);
 
-        user.setName("Aluno anonimizado #" + student.getStudentId());
+        user.setName("Usuário Anonimizado");
         user.setEmail(anonymizedEmail);
         user.setEmailHash(personalDataProtectionService.emailHash(anonymizedEmail));
-        user.setPasswordHash("{anonymized}");
+        user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+        user.setActive(false);
 
         student.setCpf(anonymizedCpf);
         student.setCpfHash(personalDataProtectionService.cpfHash(anonymizedCpf));
         student.setBirthDate(LocalDate.of(1900, 1, 1));
-        student.setPhone("ANONYMIZED");
+        student.setPhone("00000000000");
         student.setZipCode(null);
         student.setAddress(null);
 
         studentRepository.save(student);
-        log.info("Student anonymized: id={}", id);
+        log.info("Student anonymized: id={}", student.getStudentId());
         return StudentResponse.fromEntity(student);
     }
 
-    public Student findEntityById(Integer id) {
+    public Student findEntityById(UUID id) {
         return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + id));
     }
@@ -252,19 +265,40 @@ public class StudentService {
         enrollmentRepository.findByStudentStudentIdAndStatus(student.getStudentId(), EnrollmentStatus.ACTIVE)
                 .ifPresent(enrollment -> {
                     enrollment.setStatus(EnrollmentStatus.CANCELED);
+                    enrollment.setCanceledAt(LocalDateTime.now());
                     enrollmentRepository.save(enrollment);
                     log.info("Active enrollment canceled during student deactivation/anonymization: enrollmentId={}, studentId={}",
                             enrollment.getEnrollmentId(), student.getStudentId());
                 });
     }
 
-    private String buildAnonymizedEmail(Student student) {
-        return "anonymized.student." + student.getStudentId() + "." + student.getUser().getUserId() + "@deleted.local";
+    private void validateDataDeletionEligibility(Student student) {
+        enrollmentRepository.findTopByStudentStudentIdOrderByStartDateDescCreatedAtDesc(student.getStudentId())
+                .map(Enrollment::getStatus)
+                .filter(EnrollmentStatus.ACTIVE::equals)
+                .ifPresent(status -> {
+                    throw new BusinessException(
+                            "Não é possível excluir os dados. O aluno possui uma matrícula ativa. Solicite o cancelamento primeiro.");
+                });
+
+        if (paymentRepository.existsByEnrollmentStudentStudentIdAndStatusIn(
+                student.getStudentId(),
+                List.of(PaymentStatus.PENDING, PaymentStatus.OVERDUE))) {
+            throw new BusinessException(
+                    "Não é possível excluir os dados. O aluno possui pendências financeiras em aberto.");
+        }
     }
 
     private String buildAnonymizedCpf(Student student) {
-        long numericCpf = 10_000_000_000L + student.getStudentId();
-        String digits = String.format("%011d", numericCpf);
+        String digits = UUID.randomUUID()
+                .toString()
+                .replaceAll("\\D", "");
+
+        while (digits.length() < 11) {
+            digits += UUID.randomUUID().toString().replaceAll("\\D", "");
+        }
+
+        digits = digits.substring(0, 11);
         return digits.substring(0, 3) + "." +
                 digits.substring(3, 6) + "." +
                 digits.substring(6, 9) + "-" +

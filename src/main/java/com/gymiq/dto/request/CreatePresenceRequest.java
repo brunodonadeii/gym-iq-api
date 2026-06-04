@@ -1,5 +1,7 @@
 package com.gymiq.dto.request;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -10,7 +12,7 @@ import java.time.LocalDateTime;
 public class CreatePresenceRequest {
 
     @NotNull(message = "ID do aluno e obrigatorio")
-    private Integer studentId;
+    private UUID studentId;
 
     private LocalDateTime checkInAt;
 

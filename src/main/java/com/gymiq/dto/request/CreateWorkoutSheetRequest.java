@@ -1,5 +1,7 @@
 package com.gymiq.dto.request;
 
+import java.util.UUID;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -11,10 +13,10 @@ import java.util.List;
 public class CreateWorkoutSheetRequest {
 
     @NotNull(message = "ID do aluno e obrigatorio")
-    private Integer studentId;
+    private UUID studentId;
 
     @NotNull(message = "ID do instrutor e obrigatorio")
-    private Integer instructorId;
+    private UUID instructorId;
 
     @NotBlank(message = "Nome da ficha e obrigatorio")
     @Size(max = 100, message = "Nome da ficha deve ter no maximo 100 caracteres")

@@ -1,5 +1,7 @@
 package com.gymiq.aop;
 
+import java.util.UUID;
+
 import com.gymiq.enums.ResourceType;
 import com.gymiq.service.AuditLogService;
 import lombok.RequiredArgsConstructor;

@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface InstructorRepository extends JpaRepository<Instructor, Integer> {
+public interface InstructorRepository extends JpaRepository<Instructor, UUID> {
 
     @Override
     @EntityGraph(attributePaths = "user")

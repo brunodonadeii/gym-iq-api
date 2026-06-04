@@ -1,5 +1,7 @@
 package com.gymiq.repository;
 
+import java.util.UUID;
+
 import com.gymiq.entity.WorkoutSheet;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -7,23 +9,23 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface WorkoutSheetRepository extends JpaRepository<WorkoutSheet, Integer> {
+public interface WorkoutSheetRepository extends JpaRepository<WorkoutSheet, UUID> {
 
-    Page<WorkoutSheet> findByStudentStudentId(Integer studentId, Pageable pageable);
+    Page<WorkoutSheet> findByStudentStudentId(UUID studentId, Pageable pageable);
 
-    Page<WorkoutSheet> findByStudentStudentIdAndActiveTrue(Integer studentId, Pageable pageable);
+    Page<WorkoutSheet> findByStudentStudentIdAndActiveTrue(UUID studentId, Pageable pageable);
 
     Page<WorkoutSheet> findByStudentStudentIdAndInstructorUserEmailHash(
-            Integer studentId,
+            UUID studentId,
             String emailHash,
             Pageable pageable);
 
     Page<WorkoutSheet> findByStudentStudentIdAndInstructorUserEmailHashAndActiveTrue(
-            Integer studentId,
+            UUID studentId,
             String emailHash,
             Pageable pageable);
 
-    Page<WorkoutSheet> findByInstructorInstructorId(Integer instructorId, Pageable pageable);
+    Page<WorkoutSheet> findByInstructorInstructorId(UUID instructorId, Pageable pageable);
 
-    boolean existsByInstructorInstructorId(Integer instructorId);
+    boolean existsByInstructorInstructorId(UUID instructorId);
 }

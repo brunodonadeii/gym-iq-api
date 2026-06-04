@@ -1,5 +1,7 @@
 package com.gymiq.repository;
 
+import java.util.UUID;
+
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import org.springframework.data.domain.Page;
@@ -16,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer> {
+public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
 
     @Override
     @EntityGraph(attributePaths = {
@@ -32,14 +34,14 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
             "student.user",
             "plan"
     })
-    Optional<Enrollment> findById(Integer id);
+    Optional<Enrollment> findById(UUID id);
 
     @EntityGraph(attributePaths = {
             "student",
             "student.user",
             "plan"
     })
-    Page<Enrollment> findByStudentStudentId(Integer studentId, Pageable pageable);
+    Page<Enrollment> findByStudentStudentId(UUID studentId, Pageable pageable);
 
     @EntityGraph(attributePaths = {
             "student",
@@ -90,9 +92,16 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
             "student.user",
             "plan"
     })
-    Optional<Enrollment> findByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
+    Optional<Enrollment> findByStudentStudentIdAndStatus(UUID studentId, EnrollmentStatus status);
 
-    boolean existsByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
+    Optional<Enrollment> findTopByStudentStudentIdOrderByStartDateDescCreatedAtDesc(UUID studentId);
+
+    boolean existsByStudentStudentIdAndStatus(UUID studentId, EnrollmentStatus status);
 
     boolean existsByPlanPlanId(Integer planId);
 

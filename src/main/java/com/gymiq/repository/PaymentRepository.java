@@ -1,5 +1,7 @@
 package com.gymiq.repository;
 
+import java.util.UUID;
+
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment.PaymentStatus;
@@ -13,11 +15,12 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PaymentRepository extends JpaRepository<Payment, Integer> {
+public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     @Override
     @EntityGraph(attributePaths = {
@@ -34,7 +37,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
             "enrollment.student.user",
             "enrollment.plan"
     })
-    List<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId);
+    List<Payment> findByEnrollmentEnrollmentId(UUID enrollmentId);
 
     @EntityGraph(attributePaths = {
             "enrollment",
@@ -42,7 +45,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
             "enrollment.student.user",
             "enrollment.plan"
     })
-    List<Payment> findByEnrollmentEnrollmentIdOrderByDueDateDesc(Integer enrollmentId);
+    List<Payment> findByEnrollmentEnrollmentIdOrderByDueDateDesc(UUID enrollmentId);
 
     @EntityGraph(attributePaths = {
             "enrollment",
@@ -50,7 +53,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
             "enrollment.student.user",
             "enrollment.plan"
     })
-    Page<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId, Pageable pageable);
+    Page<Payment> findByEnrollmentEnrollmentId(UUID enrollmentId, Pageable pageable);
 
     @EntityGraph(attributePaths = {
             "enrollment",
@@ -58,7 +61,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
             "enrollment.student.user",
             "enrollment.plan"
     })
-    List<Payment> findByEnrollmentStudentStudentId(Integer studentId);
+    List<Payment> findByEnrollmentStudentStudentId(UUID studentId);
 
     @EntityGraph(attributePaths = {
             "enrollment",
@@ -66,7 +69,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
             "enrollment.student.user",
             "enrollment.plan"
     })
-    Page<Payment> findByEnrollmentStudentStudentId(Integer studentId, Pageable pageable);
+    Page<Payment> findByEnrollmentStudentStudentId(UUID studentId, Pageable pageable);
 
     @EntityGraph(attributePaths = {
             "enrollment",
@@ -99,14 +102,18 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
 
-    boolean existsByEnrollmentEnrollmentIdAndDueDate(Integer enrollmentId, LocalDate dueDate);
+    boolean existsByEnrollmentEnrollmentIdAndDueDate(UUID enrollmentId, LocalDate dueDate);
 
-    Optional<Payment> findTopByEnrollmentEnrollmentIdOrderByDueDateDesc(Integer enrollmentId);
+    Optional<Payment> findTopByEnrollmentEnrollmentIdOrderByDueDateDesc(UUID enrollmentId);
 
-    long countByEnrollmentStudentStudentIdAndStatus(Integer studentId, PaymentStatus status);
+    long countByEnrollmentStudentStudentIdAndStatus(UUID studentId, PaymentStatus status);
+
+    boolean existsByEnrollmentStudentStudentIdAndStatusIn(
+            UUID studentId,
+            Collection<PaymentStatus> statuses);
 
     long countByEnrollmentStudentStudentIdAndStatusAndDueDateBefore(
-            Integer studentId,
+            UUID studentId,
             PaymentStatus status,
             LocalDate date);
 
@@ -120,7 +127,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
                     OR (p.status = :pendingStatus AND p.dueDate < :today)
               )
             """)
-    List<Integer> findActiveStudentIdsWithOverduePayments(
+    List<UUID> findActiveStudentIdsWithOverduePayments(
             @Param("activeStatus") EnrollmentStatus activeStatus,
             @Param("overdueStatus") PaymentStatus overdueStatus,
             @Param("pendingStatus") PaymentStatus pendingStatus,

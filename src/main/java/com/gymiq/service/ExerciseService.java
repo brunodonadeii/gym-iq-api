@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateExerciseRequest;
 import com.gymiq.dto.response.ExerciseResponse;

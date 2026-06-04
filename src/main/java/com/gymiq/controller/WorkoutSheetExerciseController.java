@@ -1,5 +1,7 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.response.WorkoutSheetExerciseResponse;
 import com.gymiq.service.WorkoutSheetExerciseService;
@@ -24,7 +26,7 @@ public class WorkoutSheetExerciseController {
     @PostMapping("/api/workout-sheets/{workoutSheetId}/exercises")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetExerciseResponse> addExercise(
-            @PathVariable Integer workoutSheetId,
+            @PathVariable UUID workoutSheetId,
             Authentication authentication,
             @Valid @RequestBody CreateWorkoutSheetExerciseRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -38,7 +40,7 @@ public class WorkoutSheetExerciseController {
     @GetMapping("/api/workout-sheets/{workoutSheetId}/exercises")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
     public ResponseEntity<Page<WorkoutSheetExerciseResponse>> findByWorkoutSheet(
-            @PathVariable Integer workoutSheetId,
+            @PathVariable UUID workoutSheetId,
             Authentication authentication,
             @PageableDefault(size = 10, sort = "executionOrder", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(workoutSheetExerciseService.findByWorkoutSheet(
@@ -53,7 +55,7 @@ public class WorkoutSheetExerciseController {
     @PutMapping("/api/workout-sheet-exercises/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetExerciseResponse> update(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             Authentication authentication,
             @Valid @RequestBody CreateWorkoutSheetExerciseRequest request) {
         return ResponseEntity.ok(workoutSheetExerciseService.update(
@@ -66,7 +68,7 @@ public class WorkoutSheetExerciseController {
     @DeleteMapping("/api/workout-sheet-exercises/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<Void> delete(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             Authentication authentication) {
         workoutSheetExerciseService.delete(
                 id,

@@ -1,5 +1,7 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.EnrollStudentRequest;
 import com.gymiq.dto.response.EnrollmentResponse;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
@@ -54,14 +56,14 @@ public class EnrollmentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<EnrollmentResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<EnrollmentResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(enrollmentService.findById(id));
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<EnrollmentResponse>> findByStudent(
-            @PathVariable Integer studentId,
+            @PathVariable UUID studentId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(enrollmentService.findByStudent(studentId, pageable));
     }
@@ -69,14 +71,14 @@ public class EnrollmentController {
     @GetMapping("/student/{studentId}/active")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<EnrollmentResponse> findActiveByStudent(
-            @PathVariable Integer studentId) {
+            @PathVariable UUID studentId) {
         return ResponseEntity.ok(enrollmentService.findActiveByStudent(studentId));
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<EnrollmentResponse> changeStatus(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @RequestParam EnrollmentStatus newStatus) {
         return ResponseEntity.ok(enrollmentService.changeStatus(id, newStatus));
     }
@@ -84,7 +86,7 @@ public class EnrollmentController {
     @PostMapping("/{id}/renew")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<EnrollmentResponse> renew(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @RequestParam(required = false) Integer newPlanId) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrollmentService.renew(id, newPlanId));

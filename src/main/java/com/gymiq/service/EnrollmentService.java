@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.EnrollStudentRequest;
 import com.gymiq.dto.response.EnrollmentResponse;
@@ -81,12 +83,12 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public EnrollmentResponse findById(Integer enrollmentId) {
+    public EnrollmentResponse findById(UUID enrollmentId) {
         return buildResponseWithPayments(findEntityById(enrollmentId));
     }
 
     @Transactional(readOnly = true)
-    public Page<EnrollmentResponse> findByStudent(Integer studentId, Pageable pageable) {
+    public Page<EnrollmentResponse> findByStudent(UUID studentId, Pageable pageable) {
         studentService.findEntityById(studentId);
         return enrollmentRepository.findByStudentStudentId(studentId, pageable)
                 .map(EnrollmentResponse::fromEntity);
@@ -100,7 +102,7 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public EnrollmentResponse findActiveByStudent(Integer studentId) {
+    public EnrollmentResponse findActiveByStudent(UUID studentId) {
         return enrollmentRepository
                 .findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
                 .map(this::buildResponseWithPayments)
@@ -116,7 +118,7 @@ public class EnrollmentService {
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_ENROLLMENT_STATUS, resourceType = ResourceType.ENROLLMENT, description = "Alterou status da matricula")
-    public EnrollmentResponse changeStatus(Integer enrollmentId, EnrollmentStatus newStatus) {
+    public EnrollmentResponse changeStatus(UUID enrollmentId, EnrollmentStatus newStatus) {
         Enrollment enrollment = findEntityById(enrollmentId);
 
         validateStatusTransition(enrollment.getStatus(), newStatus);
@@ -131,7 +133,7 @@ public class EnrollmentService {
 
     @Transactional
     @Auditable(action = AuditAction.RENEW_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Renovou matricula")
-    public EnrollmentResponse renew(Integer enrollmentId, Integer newPlanId) {
+    public EnrollmentResponse renew(UUID enrollmentId, Integer newPlanId) {
         Enrollment oldEnrollment = findEntityById(enrollmentId);
 
         if (oldEnrollment.getStatus() == EnrollmentStatus.CANCELED) {
@@ -176,7 +178,7 @@ public class EnrollmentService {
         return buildResponseWithPayments(newEnrollment);
     }
 
-    private Enrollment findEntityById(Integer id) {
+    private Enrollment findEntityById(UUID id) {
         return enrollmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Matrícula não encontrada: " + id));
     }

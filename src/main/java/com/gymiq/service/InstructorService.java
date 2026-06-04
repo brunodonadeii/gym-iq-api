@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateInstructorRequest;
 import com.gymiq.dto.request.InstructorStatusFilter;
@@ -92,7 +94,7 @@ public class InstructorService {
     }
 
     @Transactional(readOnly = true)
-    public InstructorResponse findById(Integer id) {
+    public InstructorResponse findById(UUID id) {
         return InstructorResponse.fromEntity(findEntityById(id));
     }
 
@@ -103,7 +105,7 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Atualizou instrutor")
-    public InstructorResponse update(Integer id, UpdateInstructorRequest request) {
+    public InstructorResponse update(UUID id, UpdateInstructorRequest request) {
         Instructor instructor = findEntityById(id);
         User user = instructor.getUser();
         String emailHash = personalDataProtectionService.emailHash(request.getEmail());
@@ -142,7 +144,7 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.DEACTIVATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Inativou instrutor")
-    public InstructorResponse deactivate(Integer id) {
+    public InstructorResponse deactivate(UUID id) {
         Instructor instructor = findEntityById(id);
         instructor.getUser().setActive(false);
         instructorRepository.save(instructor);
@@ -152,7 +154,7 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.ACTIVATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Ativou instrutor")
-    public InstructorResponse activate(Integer id) {
+    public InstructorResponse activate(UUID id) {
         Instructor instructor = findEntityById(id);
         instructor.getUser().setActive(true);
         instructorRepository.save(instructor);
@@ -162,7 +164,7 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.DELETE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Excluiu instrutor")
-    public void delete(Integer id) {
+    public void delete(UUID id) {
         Instructor instructor = findEntityById(id);
 
         if (workoutSheetRepository.existsByInstructorInstructorId(id)) {
@@ -175,7 +177,7 @@ public class InstructorService {
         log.info("Instructor deleted: id={}", id);
     }
 
-    public Instructor findEntityById(Integer id) {
+    public Instructor findEntityById(UUID id) {
         return instructorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + id));
     }

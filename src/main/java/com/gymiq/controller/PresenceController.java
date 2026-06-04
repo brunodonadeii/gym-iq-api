@@ -1,5 +1,7 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
 import com.gymiq.dto.request.SelfCheckInRequest;
@@ -43,7 +45,7 @@ public class PresenceController {
     @PatchMapping("/{id}/checkout")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<PresenceResponse> checkOut(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody(required = false) CheckOutPresenceRequest request) {
         return ResponseEntity.ok(presenceService.checkOut(id, request));
     }
@@ -65,14 +67,14 @@ public class PresenceController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<PresenceResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<PresenceResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(presenceService.findById(id));
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PresenceResponse>> findByStudent(
-            @PathVariable Integer studentId,
+            @PathVariable UUID studentId,
             @PageableDefault(size = 10, sort = "checkInAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(presenceService.findByStudent(studentId, pageable));
     }

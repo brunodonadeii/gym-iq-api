@@ -1,5 +1,7 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.response.RetentionAlertResponse;
 import com.gymiq.service.RetentionAlertService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +24,7 @@ public class RetentionAlertController {
 
     @PostMapping("/student/{studentId}/generate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RetentionAlertResponse> generateForStudent(@PathVariable Integer studentId) {
+    public ResponseEntity<RetentionAlertResponse> generateForStudent(@PathVariable UUID studentId) {
         return retentionAlertService.generateForStudent(studentId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.noContent().build());
@@ -50,20 +52,20 @@ public class RetentionAlertController {
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<RetentionAlertResponse>> findByStudent(
-            @PathVariable Integer studentId,
+            @PathVariable UUID studentId,
             @PageableDefault(size = 10, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(retentionAlertService.findByStudent(studentId, pageable));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RetentionAlertResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<RetentionAlertResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(retentionAlertService.findById(id));
     }
 
     @PatchMapping("/{id}/resolve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RetentionAlertResponse> resolve(@PathVariable Integer id) {
+    public ResponseEntity<RetentionAlertResponse> resolve(@PathVariable UUID id) {
         return ResponseEntity.ok(retentionAlertService.resolve(id));
     }
 }

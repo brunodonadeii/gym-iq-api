@@ -1,5 +1,7 @@
 package com.gymiq.entity;
 
+import java.util.UUID;
+
 import com.gymiq.entity.converter.EncryptedLocalDateConverter;
 import com.gymiq.entity.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
@@ -27,9 +29,9 @@ import java.util.List;
 public class Student {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_student")
-    private Integer studentId;
+    private UUID studentId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true,

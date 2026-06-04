@@ -1,5 +1,7 @@
 package com.gymiq.repository;
 
+import java.util.UUID;
+
 import com.gymiq.entity.Presence;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,24 +14,24 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
-public interface PresenceRepository extends JpaRepository<Presence, Integer> {
+public interface PresenceRepository extends JpaRepository<Presence, UUID> {
 
-    Page<Presence> findByStudentStudentId(Integer studentId, Pageable pageable);
+    Page<Presence> findByStudentStudentId(UUID studentId, Pageable pageable);
 
-    Optional<Presence> findByStudentStudentIdAndCheckOutAtIsNull(Integer studentId);
+    Optional<Presence> findByStudentStudentIdAndCheckOutAtIsNull(UUID studentId);
 
     boolean existsByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
-            Integer studentId,
+            UUID studentId,
             LocalDateTime startDate,
             LocalDateTime endDate);
 
     long countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
-            Integer studentId,
+            UUID studentId,
             LocalDateTime startDate,
             LocalDateTime endDate);
 
     Optional<Presence> findFirstByStudentStudentIdAndCheckInAtGreaterThanEqualOrderByCheckInAtDesc(
-            Integer studentId,
+            UUID studentId,
             LocalDateTime startDate);
 
     Page<Presence> findByCheckInAtBetween(LocalDateTime start, LocalDateTime end, Pageable pageable);

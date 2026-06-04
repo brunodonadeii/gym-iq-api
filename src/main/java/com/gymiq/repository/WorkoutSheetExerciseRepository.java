@@ -7,13 +7,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface WorkoutSheetExerciseRepository extends JpaRepository<WorkoutSheetExercise, Integer> {
+public interface WorkoutSheetExerciseRepository extends JpaRepository<WorkoutSheetExercise, UUID> {
 
-    List<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetIdOrderByExecutionOrderAsc(Integer workoutSheetId);
+    List<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetIdOrderByTrainingSectionAscExecutionOrderAsc(UUID workoutSheetId);
 
-    Page<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetId(Integer workoutSheetId, Pageable pageable);
+    Page<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetId(UUID workoutSheetId, Pageable pageable);
 
     boolean existsByExerciseExerciseId(Integer exerciseId);
 }

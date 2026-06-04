@@ -1,5 +1,7 @@
 package com.gymiq.repository;
 
+import java.util.UUID;
+
 import com.gymiq.entity.RetentionAlert;
 import com.gymiq.entity.RetentionAlert.AlertStatus;
 import com.gymiq.entity.RetentionAlert.RiskLevel;
@@ -14,7 +16,7 @@ import java.util.Optional;
 
 
 @Repository
-public interface RetentionAlertRepository extends JpaRepository<RetentionAlert, Integer> {
+public interface RetentionAlertRepository extends JpaRepository<RetentionAlert, UUID> {
 
     Page<RetentionAlert> findByStatus(AlertStatus status, Pageable pageable);
 
@@ -25,7 +27,7 @@ public interface RetentionAlertRepository extends JpaRepository<RetentionAlert, 
     @Query("SELECT AVG(r.riskScore) FROM RetentionAlert r WHERE r.status = :status")
     Optional<Double> averageRiskScoreByStatus(@Param("status") AlertStatus status);
 
-    Page<RetentionAlert> findByStudentStudentId(Integer studentId, Pageable pageable);
+    Page<RetentionAlert> findByStudentStudentId(UUID studentId, Pageable pageable);
 
-    Optional<RetentionAlert> findByStudentStudentIdAndStatus(Integer studentId, AlertStatus status);
+    Optional<RetentionAlert> findByStudentStudentIdAndStatus(UUID studentId, AlertStatus status);
 }

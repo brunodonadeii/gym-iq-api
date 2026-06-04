@@ -20,6 +20,9 @@ public class CreateWorkoutSheetExerciseRequest {
     @Min(value = 0, message = "Descanso nao pode ser negativo")
     private Integer restSeconds;
 
+    @Size(max = 40, message = "Treino deve ter no maximo 40 caracteres")
+    private String trainingSection;
+
     @NotNull(message = "Ordem de execucao e obrigatoria")
     @Min(value = 1, message = "Ordem de execucao deve ser maior que zero")
     private Integer executionOrder;

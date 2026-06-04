@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
@@ -86,7 +88,7 @@ public class PresenceService {
         return PresenceResponse.fromEntity(presence);
     }
 
-    private void validateDailyCheckIn(Integer studentId, LocalDateTime checkInAt) {
+    private void validateDailyCheckIn(UUID studentId, LocalDateTime checkInAt) {
         LocalDateTime startOfDay = checkInAt.toLocalDate().atStartOfDay();
         LocalDateTime startOfNextDay = checkInAt.toLocalDate().plusDays(1).atStartOfDay();
 
@@ -100,7 +102,7 @@ public class PresenceService {
 
     @Transactional
     @Auditable(action = AuditAction.CHECK_OUT, resourceType = ResourceType.PRESENCE, description = "Registrou check-out")
-    public PresenceResponse checkOut(Integer id, CheckOutPresenceRequest request) {
+    public PresenceResponse checkOut(UUID id, CheckOutPresenceRequest request) {
         Presence presence = findEntityById(id);
         CheckOutPresenceRequest checkOutRequest = request != null ? request : new CheckOutPresenceRequest();
 
@@ -133,12 +135,12 @@ public class PresenceService {
     }
 
     @Transactional(readOnly = true)
-    public PresenceResponse findById(Integer id) {
+    public PresenceResponse findById(UUID id) {
         return PresenceResponse.fromEntity(findEntityById(id));
     }
 
     @Transactional(readOnly = true)
-    public Page<PresenceResponse> findByStudent(Integer studentId, Pageable pageable) {
+    public Page<PresenceResponse> findByStudent(UUID studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
@@ -149,7 +151,7 @@ public class PresenceService {
 
     @Transactional(readOnly = true)
     public Page<PresenceResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
-        Integer studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
+        UUID studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
                 .getStudentId();
 
@@ -166,7 +168,7 @@ public class PresenceService {
                 .map(PresenceResponse::fromEntity);
     }
 
-    private Presence findEntityById(Integer id) {
+    private Presence findEntityById(UUID id) {
         return presenceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Presenca nao encontrada: " + id));
     }

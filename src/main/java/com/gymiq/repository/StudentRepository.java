@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface StudentRepository extends JpaRepository<Student, Integer> {
+public interface StudentRepository extends JpaRepository<Student, UUID> {
 
     @Override
     @EntityGraph(attributePaths = "user")
@@ -24,7 +24,7 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
 
     @Override
     @EntityGraph(attributePaths = "user")
-    Optional<Student> findById(Integer id);
+    Optional<Student> findById(UUID id);
 
     Optional<Student> findByCpfHash(String cpfHash);
 

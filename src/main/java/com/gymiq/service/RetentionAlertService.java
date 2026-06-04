@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.response.RetentionAlertResponse;
 import com.gymiq.entity.Enrollment;
@@ -70,7 +72,7 @@ public class RetentionAlertService {
 
     @Transactional
     @Auditable(action = AuditAction.GENERATE_RETENTION_ALERT, resourceType = ResourceType.STUDENT, description = "Processou geracao de alerta de retencao para aluno")
-    public Optional<RetentionAlertResponse> generateForStudent(Integer studentId) {
+    public Optional<RetentionAlertResponse> generateForStudent(UUID studentId) {
         Student student = findActiveStudent(studentId);
         Enrollment activeEnrollment = findActiveEnrollment(studentId);
 
@@ -125,7 +127,7 @@ public class RetentionAlertService {
     @Transactional
     @Auditable(action = AuditAction.GENERATE_RETENTION_ALERTS, resourceType = ResourceType.JOB, description = "Processou alertas para alunos inadimplentes")
     public List<RetentionAlertResponse> generateForOverdueStudents() {
-        List<Integer> studentIds = paymentRepository.findActiveStudentIdsWithOverduePayments(
+        List<UUID> studentIds = paymentRepository.findActiveStudentIdsWithOverduePayments(
                 EnrollmentStatus.ACTIVE,
                 PaymentStatus.OVERDUE,
                 PaymentStatus.PENDING,
@@ -145,7 +147,7 @@ public class RetentionAlertService {
     }
 
     @Transactional(readOnly = true)
-    public Page<RetentionAlertResponse> findByStudent(Integer studentId, Pageable pageable) {
+    public Page<RetentionAlertResponse> findByStudent(UUID studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
@@ -155,13 +157,13 @@ public class RetentionAlertService {
     }
 
     @Transactional(readOnly = true)
-    public RetentionAlertResponse findById(Integer id) {
+    public RetentionAlertResponse findById(UUID id) {
         return RetentionAlertResponse.fromEntity(findEntityById(id));
     }
 
     @Transactional
     @Auditable(action = AuditAction.RESOLVE_RETENTION_ALERT, resourceType = ResourceType.RETENTION_ALERT, description = "Resolveu alerta de retencao")
-    public RetentionAlertResponse resolve(Integer id) {
+    public RetentionAlertResponse resolve(UUID id) {
         RetentionAlert alert = findEntityById(id);
 
         if (alert.getStatus() == AlertStatus.RESOLVED) {
@@ -176,12 +178,12 @@ public class RetentionAlertService {
         return RetentionAlertResponse.fromEntity(alert);
     }
 
-    private RetentionAlert findEntityById(Integer id) {
+    private RetentionAlert findEntityById(UUID id) {
         return retentionAlertRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Alerta de retencao nao encontrado: " + id));
     }
 
-    private Student findActiveStudent(Integer studentId) {
+    private Student findActiveStudent(UUID studentId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + studentId));
 
@@ -191,12 +193,12 @@ public class RetentionAlertService {
         return student;
     }
 
-    private Enrollment findActiveEnrollment(Integer studentId) {
+    private Enrollment findActiveEnrollment(UUID studentId) {
         return enrollmentRepository.findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException("Aluno sem matricula ativa nao deve gerar alerta de retencao"));
     }
 
-    private Integer calculateInactiveDays(Integer studentId, Enrollment activeEnrollment) {
+    private Integer calculateInactiveDays(UUID studentId, Enrollment activeEnrollment) {
         LocalDate today = LocalDate.now();
         LocalDate enrollmentStartDate = activeEnrollment.getStartDate();
 
@@ -213,7 +215,7 @@ public class RetentionAlertService {
         return Math.toIntExact(Math.max(0, ChronoUnit.DAYS.between(startDate, endDate)));
     }
 
-    private Integer countOverduePayments(Integer studentId) {
+    private Integer countOverduePayments(UUID studentId) {
         long manuallyMarkedOverdue = paymentRepository
                 .countByEnrollmentStudentStudentIdAndStatus(studentId, PaymentStatus.OVERDUE);
         long pendingPastDue = paymentRepository
@@ -225,7 +227,7 @@ public class RetentionAlertService {
         return Math.toIntExact(manuallyMarkedOverdue + pendingPastDue);
     }
 
-    private Integer countRecentCheckIns(Integer studentId, Enrollment activeEnrollment) {
+    private Integer countRecentCheckIns(UUID studentId, Enrollment activeEnrollment) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate = activeEnrollment.getStartDate()
                 .atStartOfDay()
@@ -353,7 +355,7 @@ public class RetentionAlertService {
         log.info("Retention alert automatically resolved: id={}", alert.getRetentionAlertId());
     }
 
-    private void generateAlertSafely(Integer studentId, List<RetentionAlertResponse> generatedAlerts) {
+    private void generateAlertSafely(UUID studentId, List<RetentionAlertResponse> generatedAlerts) {
         try {
             generateForStudent(studentId).ifPresent(generatedAlerts::add);
         } catch (BusinessException | ResourceNotFoundException ex) {

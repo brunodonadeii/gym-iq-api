@@ -14,7 +14,7 @@ import java.util.UUID;
 @Builder
 public class StudentResponse {
 
-    private Integer studentId;
+    private UUID studentId;
     private UUID userId;
     private String name;
     private String email;

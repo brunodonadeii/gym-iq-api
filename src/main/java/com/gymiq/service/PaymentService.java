@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.PayPaymentRequest;
 import com.gymiq.dto.response.PaymentResponse;
@@ -66,12 +68,12 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public PaymentResponse findById(Integer id) {
+    public PaymentResponse findById(UUID id) {
         return PaymentResponse.fromEntity(findEntityById(id));
     }
 
     @Transactional(readOnly = true)
-    public Page<PaymentResponse> findByEnrollment(Integer enrollmentId, Pageable pageable) {
+    public Page<PaymentResponse> findByEnrollment(UUID enrollmentId, Pageable pageable) {
         if (!enrollmentRepository.existsById(enrollmentId)) {
             throw new ResourceNotFoundException("Matricula nao encontrada: " + enrollmentId);
         }
@@ -81,7 +83,7 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PaymentResponse> findByStudent(Integer studentId, Pageable pageable) {
+    public Page<PaymentResponse> findByStudent(UUID studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
@@ -92,7 +94,7 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
-        Integer studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
+        UUID studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
                 .getStudentId();
 
@@ -108,7 +110,7 @@ public class PaymentService {
 
     @Transactional
     @Auditable(action = AuditAction.PAY_PAYMENT, resourceType = ResourceType.PAYMENT, description = "Quitou pagamento")
-    public PaymentResponse pay(Integer id, PayPaymentRequest request) {
+    public PaymentResponse pay(UUID id, PayPaymentRequest request) {
         Payment payment = findEntityById(id);
         PayPaymentRequest payRequest = request != null ? request : new PayPaymentRequest();
 
@@ -134,7 +136,7 @@ public class PaymentService {
 
     @Transactional
     @Auditable(action = AuditAction.CHANGE_PAYMENT_STATUS, resourceType = ResourceType.PAYMENT, description = "Alterou status do pagamento")
-    public PaymentResponse changeStatus(Integer id, PaymentStatus newStatus) {
+    public PaymentResponse changeStatus(UUID id, PaymentStatus newStatus) {
         Payment payment = findEntityById(id);
 
         if (newStatus == PaymentStatus.PAID) {
@@ -151,7 +153,7 @@ public class PaymentService {
         return PaymentResponse.fromEntity(payment);
     }
 
-    private Payment findEntityById(Integer id) {
+    private Payment findEntityById(UUID id) {
         return paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pagamento nao encontrado: " + id));
     }

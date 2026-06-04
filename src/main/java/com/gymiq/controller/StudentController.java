@@ -1,5 +1,7 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.AddressLookupResponse;
@@ -72,34 +74,46 @@ public class StudentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<StudentResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<StudentResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(studentService.findById(id));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<StudentResponse> update(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateStudentRequest request) {
         return ResponseEntity.ok(studentService.update(id, request));
     }
 
     @PatchMapping("/{id}/inactive")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
+    public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
         studentService.deactivate(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/active")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<StudentResponse> activate(@PathVariable Integer id) {
+    public ResponseEntity<StudentResponse> activate(@PathVariable UUID id) {
         return ResponseEntity.ok(studentService.activate(id));
     }
 
     @PatchMapping("/{id}/anonymize")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<StudentResponse> anonymize(@PathVariable Integer id) {
+    public ResponseEntity<StudentResponse> anonymize(@PathVariable UUID id) {
         return ResponseEntity.ok(studentService.anonymize(id));
+    }
+
+    @DeleteMapping("/{id}/personal-data")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<StudentResponse> anonymizePersonalData(@PathVariable UUID id) {
+        return ResponseEntity.ok(studentService.anonymize(id));
+    }
+
+    @DeleteMapping("/me/personal-data")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentResponse> anonymizeMyPersonalData(Authentication authentication) {
+        return ResponseEntity.ok(studentService.anonymizeAuthenticatedStudent(authentication.getName()));
     }
 }
