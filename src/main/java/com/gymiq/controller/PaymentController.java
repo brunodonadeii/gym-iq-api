@@ -30,8 +30,9 @@ public class PaymentController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PaymentResponse>> findAll(
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findAll(pageable));
+        return ResponseEntity.ok(paymentService.findAll(status, pageable));
     }
 
     @GetMapping("/enrollment/{enrollmentId}")

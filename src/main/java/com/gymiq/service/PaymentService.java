@@ -56,8 +56,12 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PaymentResponse> findAll(Pageable pageable) {
-        return paymentRepository.findAll(pageable)
+    public Page<PaymentResponse> findAll(PaymentStatus status, Pageable pageable) {
+        Page<Payment> payments = status == null
+                ? paymentRepository.findAll(pageable)
+                : paymentRepository.findByStatus(status, pageable);
+
+        return payments
                 .map(PaymentResponse::fromEntity);
     }
 
