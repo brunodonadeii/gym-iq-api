@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -121,6 +122,7 @@ public class EnrollmentService {
         validateStatusTransition(enrollment.getStatus(), newStatus);
 
         enrollment.setStatus(newStatus);
+        enrollment.setCanceledAt(newStatus == EnrollmentStatus.CANCELED ? LocalDateTime.now() : null);
         enrollmentRepository.save(enrollment);
         log.info("Status da matrícula id={} alterado para {}", enrollmentId, newStatus);
 
@@ -149,6 +151,7 @@ public class EnrollmentService {
         }
 
         oldEnrollment.setStatus(EnrollmentStatus.CANCELED);
+        oldEnrollment.setCanceledAt(LocalDateTime.now());
         enrollmentRepository.save(oldEnrollment);
 
         LocalDate start = LocalDate.now();

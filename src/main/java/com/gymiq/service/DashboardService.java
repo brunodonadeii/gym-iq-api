@@ -34,6 +34,7 @@ public class DashboardService {
     private static final int INACTIVITY_DAYS_THRESHOLD = 15;
     private static final int TOP_RISK_LIMIT = 5;
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
+    private static final int RATE_SCALE = 2;
 
     private final RetentionAlertRepository retentionAlertRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -93,6 +94,15 @@ public class DashboardService {
         DateRange dateRange = resolveDateRange(startDate, endDate);
         LocalDateTime startDateTime = dateRange.startDate().atStartOfDay();
         LocalDateTime endDateTimeExclusive = dateRange.endDate().plusDays(1).atStartOfDay();
+        Long activeCustomersAtPeriodStart = enrollmentRepository.countActiveCustomersAtDate(
+                dateRange.startDate(),
+                startDateTime,
+                EnrollmentStatus.ACTIVE,
+                EnrollmentStatus.CANCELED);
+        Long lostCustomersInPeriod = enrollmentRepository.countCanceledCustomersBetween(
+                startDateTime,
+                endDateTimeExclusive,
+                EnrollmentStatus.CANCELED);
 
         return OperationsDashboardResponse.builder()
                 .checkInsToday(presenceRepository.countCheckInsBetween(startDateTime, endDateTimeExclusive))
@@ -105,6 +115,9 @@ public class DashboardService {
                         dateRange.startDate(),
                         dateRange.endDate()))
                 .newStudentsCurrentMonth(studentRepository.countCreatedBetween(startDateTime, endDateTimeExclusive))
+                .activeCustomersAtPeriodStart(activeCustomersAtPeriodStart)
+                .lostCustomersInPeriod(lostCustomersInPeriod)
+                .churnRate(calculateChurnRate(lostCustomersInPeriod, activeCustomersAtPeriodStart))
                 .generatedAt(LocalDateTime.now(BUSINESS_ZONE))
                 .build();
     }
@@ -141,7 +154,17 @@ public class DashboardService {
 
         return overdueAmount
                 .multiply(ONE_HUNDRED)
-                .divide(projectedRevenue, 2, RoundingMode.HALF_UP);
+                .divide(projectedRevenue, RATE_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateChurnRate(Long lostCustomers, Long activeCustomersAtStart) {
+        if (activeCustomersAtStart == null || activeCustomersAtStart == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return BigDecimal.valueOf(lostCustomers)
+                .multiply(ONE_HUNDRED)
+                .divide(BigDecimal.valueOf(activeCustomersAtStart), RATE_SCALE, RoundingMode.HALF_UP);
     }
 
     private java.util.List<RetentionAlertResponse> findTopRiskStudents() {

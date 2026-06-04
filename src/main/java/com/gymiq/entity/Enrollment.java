@@ -43,6 +43,9 @@ public class Enrollment {
     @Builder.Default
     private EnrollmentStatus status = EnrollmentStatus.ACTIVE;
 
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

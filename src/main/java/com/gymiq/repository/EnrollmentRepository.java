@@ -53,6 +53,33 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
     @Query("""
             SELECT COUNT(DISTINCT e.student.studentId)
             FROM Enrollment e
+            WHERE e.startDate <= :referenceDate
+              AND (
+                    e.status = :activeStatus
+                    OR (e.status = :canceledStatus AND e.canceledAt >= :referenceDateTime)
+              )
+            """)
+    long countActiveCustomersAtDate(
+            @Param("referenceDate") LocalDate referenceDate,
+            @Param("referenceDateTime") LocalDateTime referenceDateTime,
+            @Param("activeStatus") EnrollmentStatus activeStatus,
+            @Param("canceledStatus") EnrollmentStatus canceledStatus);
+
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
+            WHERE e.status = :canceledStatus
+              AND e.canceledAt >= :startDateTime
+              AND e.canceledAt < :endDateTime
+            """)
+    long countCanceledCustomersBetween(
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("canceledStatus") EnrollmentStatus canceledStatus);
+
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
             WHERE e.status = :status
               AND e.student.user.active = true
             """)
