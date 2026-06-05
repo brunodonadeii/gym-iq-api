@@ -26,6 +26,7 @@ public class CreateInstructorRequest {
     @Size(max = 20)
     private String phone;
 
+    @NotBlank(message = "Especialidade e obrigatoria")
     @Size(max = 100, message = "Especialidade deve ter no maximo 100 caracteres")
     private String specialty;
 

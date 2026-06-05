@@ -39,7 +39,7 @@ public class Instructor {
     @Column(name = "phone", nullable = false, columnDefinition = "TEXT")
     private String phone;
 
-    @Column(name = "specialty", length = 100)
+    @Column(name = "specialty", nullable = false, length = 100)
     private String specialty;
 
     @CreationTimestamp
