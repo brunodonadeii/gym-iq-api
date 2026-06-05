@@ -38,6 +38,7 @@ public class PresenceService {
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
     private final PersonalDataProtectionService personalDataProtectionService;
+    private final StudentContractService studentContractService;
 
     @Transactional
     @Auditable(action = AuditAction.CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou check-in")
@@ -70,6 +71,8 @@ public class PresenceService {
         if (Boolean.FALSE.equals(student.getUser().getActive())) {
             throw new BusinessException("Nao e possivel registrar presenca para aluno inativo");
         }
+
+        studentContractService.validateStudentCheckInAccess(student.getStudentId());
 
         LocalDateTime checkInAt = requestedCheckInAt != null
                 ? requestedCheckInAt

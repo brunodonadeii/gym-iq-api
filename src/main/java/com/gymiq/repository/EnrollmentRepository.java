@@ -103,6 +103,32 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
 
     boolean existsByStudentStudentIdAndStatus(UUID studentId, EnrollmentStatus status);
 
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM Enrollment e
+            WHERE e.student.studentId = :studentId
+              AND e.status = :status
+              AND e.startDate <= :referenceDate
+              AND (e.endDate IS NULL OR e.endDate >= :referenceDate)
+            """)
+    boolean existsActiveEnrollmentForStudent(
+            @Param("studentId") UUID studentId,
+            @Param("status") EnrollmentStatus status,
+            @Param("referenceDate") LocalDate referenceDate);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM Enrollment e
+            WHERE e.student.user.userId = :userId
+              AND e.status = :status
+              AND e.startDate <= :referenceDate
+              AND (e.endDate IS NULL OR e.endDate >= :referenceDate)
+            """)
+    boolean existsActiveEnrollmentForStudentUser(
+            @Param("userId") UUID userId,
+            @Param("status") EnrollmentStatus status,
+            @Param("referenceDate") LocalDate referenceDate);
+
     boolean existsByPlanPlanId(Integer planId);
 
     @Query("SELECT e FROM Enrollment e WHERE e.status = 'ACTIVE' " +
