@@ -81,6 +81,17 @@ public class GlobalExceptionHandler {
                 null));
     }
 
+    @ExceptionHandler(InvalidParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidParameter(
+            InvalidParameterException ex, WebRequest request) {
+        return ResponseEntity.badRequest().body(errorBody(
+                400,
+                "INVALID_PARAMETER",
+                ex.getMessage(),
+                request.getDescription(false),
+                null));
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, Object>> handleBadCredentials(
             BadCredentialsException ex, WebRequest request) {
