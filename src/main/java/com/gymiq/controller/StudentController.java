@@ -9,6 +9,7 @@ import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.service.AddressLookupService;
 import com.gymiq.service.StudentService;
+import com.gymiq.service.StudentService.StudentListStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -41,8 +42,10 @@ public class StudentController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<Page<StudentResponse>> findAll(
+            Authentication authentication,
+            @RequestParam(required = false, defaultValue = "ACTIVE") StudentListStatus status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(studentService.findAll(pageable));
+        return ResponseEntity.ok(studentService.findAll(status, hasRole(authentication, "ADMIN"), pageable));
     }
 
     @GetMapping("/search")
@@ -115,5 +118,10 @@ public class StudentController {
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<StudentResponse> anonymizeMyPersonalData(Authentication authentication) {
         return ResponseEntity.ok(studentService.anonymizeAuthenticatedStudent(authentication.getName()));
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_" + role));
     }
 }

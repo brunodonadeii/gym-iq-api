@@ -22,6 +22,12 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
     @EntityGraph(attributePaths = "user")
     Page<Student> findAll(Pageable pageable);
 
+    @EntityGraph(attributePaths = "user")
+    Page<Student> findByUserActiveTrue(Pageable pageable);
+
+    @EntityGraph(attributePaths = "user")
+    Page<Student> findByUserActiveFalse(Pageable pageable);
+
     @Override
     @EntityGraph(attributePaths = "user")
     Optional<Student> findById(UUID id);
@@ -52,9 +58,12 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
             SELECT s
             FROM Student s
             JOIN s.user u
-            WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
-               OR (:cpfHash IS NOT NULL AND s.cpfHash = :cpfHash)
-               OR (:emailHash IS NOT NULL AND u.emailHash = :emailHash)
+            WHERE u.active = true
+              AND (
+                    LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
+                    OR (:cpfHash IS NOT NULL AND s.cpfHash = :cpfHash)
+                    OR (:emailHash IS NOT NULL AND u.emailHash = :emailHash)
+              )
             """)
     @EntityGraph(attributePaths = "user")
     Page<Student> searchByTerm(

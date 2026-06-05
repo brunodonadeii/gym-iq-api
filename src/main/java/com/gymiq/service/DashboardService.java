@@ -45,16 +45,35 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public RetentionDashboardResponse getRetentionDashboard() {
         LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        LocalDate currentMonthStart = today.withDayOfMonth(1);
+        LocalDate currentMonthEnd = today.withDayOfMonth(today.lengthOfMonth());
+        LocalDateTime currentMonthStartDateTime = currentMonthStart.atStartOfDay();
+        LocalDateTime nextMonthStartDateTime = currentMonthEnd.plusDays(1).atStartOfDay();
         LocalDateTime inactivityLimit = today.minusDays(INACTIVITY_DAYS_THRESHOLD).atStartOfDay();
+        Long activeCustomersAtMonthStart = enrollmentRepository.countActiveCustomersAtDate(
+                currentMonthStart,
+                currentMonthStartDateTime,
+                EnrollmentStatus.ACTIVE,
+                EnrollmentStatus.CANCELED);
+        Long canceledEnrollmentsCurrentMonth = enrollmentRepository.countCanceledEnrollmentsBetween(
+                currentMonthStartDateTime,
+                nextMonthStartDateTime,
+                EnrollmentStatus.CANCELED);
 
         return RetentionDashboardResponse.builder()
-                .activeStudents(enrollmentRepository.countDistinctStudentsByStatus(EnrollmentStatus.ACTIVE))
-                .openAlerts(retentionAlertRepository.countByStatus(AlertStatus.OPEN))
+                .activeStudents(enrollmentRepository.countActiveStudentsForCurrentOperation(
+                        EnrollmentStatus.ACTIVE,
+                        today))
+                .openAlerts(retentionAlertRepository.countOpenAlertsForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE))
                 .lowRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.LOW))
                 .mediumRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.MEDIUM))
                 .highRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.HIGH))
                 .criticalRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.CRITICAL))
-                .averageRiskScore(retentionAlertRepository.averageRiskScoreByStatus(AlertStatus.OPEN).orElse(0.0))
+                .averageRiskScore(retentionAlertRepository.averageRiskScoreForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE).orElse(0.0))
                 .studentsWithoutCheckInOver15Days(
                         enrollmentRepository.countActiveStudentsWithoutCheckInSince(inactivityLimit))
                 .studentsWithOverduePayments((long) paymentRepository.findActiveStudentIdsWithOverduePayments(
@@ -62,6 +81,9 @@ public class DashboardService {
                         PaymentStatus.OVERDUE,
                         PaymentStatus.PENDING,
                         today).size())
+                .activeCustomersAtPeriodStart(activeCustomersAtMonthStart)
+                .canceledEnrollmentsCurrentMonth(canceledEnrollmentsCurrentMonth)
+                .churnRateCurrentMonth(calculateChurnRate(canceledEnrollmentsCurrentMonth, activeCustomersAtMonthStart))
                 .topRiskStudents(findTopRiskStudents())
                 .generatedAt(LocalDateTime.now(BUSINESS_ZONE))
                 .build();
@@ -134,7 +156,10 @@ public class DashboardService {
     }
 
     private Long countOpenAlertsByRiskLevel(RiskLevel riskLevel) {
-        return retentionAlertRepository.countByStatusAndRiskLevel(AlertStatus.OPEN, riskLevel);
+        return retentionAlertRepository.countOpenAlertsForActiveStudentsByRiskLevel(
+                AlertStatus.OPEN,
+                EnrollmentStatus.ACTIVE,
+                riskLevel);
     }
 
     private BigDecimal sumAmountByStatus(PaymentStatus status, LocalDate startDate, LocalDate endDate) {
@@ -172,7 +197,10 @@ public class DashboardService {
                 TOP_RISK_LIMIT,
                 Sort.by(Sort.Order.desc("riskScore"), Sort.Order.desc("updatedAt")));
 
-        return retentionAlertRepository.findByStatus(AlertStatus.OPEN, topRiskPage)
+        return retentionAlertRepository.findOpenAlertsForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE,
+                        topRiskPage)
                 .map(RetentionAlertResponse::fromEntity)
                 .toList();
     }

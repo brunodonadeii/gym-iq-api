@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,12 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class StudentService {
+
+    public enum StudentListStatus {
+        ACTIVE,
+        INACTIVE,
+        ALL
+    }
 
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
@@ -91,8 +98,24 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public Page<StudentResponse> findAll(Pageable pageable) {
-        return studentRepository.findAll(pageable)
-                .map(StudentResponse::fromEntity);
+        return findAll(StudentListStatus.ACTIVE, false, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StudentResponse> findAll(StudentListStatus status, boolean admin, Pageable pageable) {
+        StudentListStatus resolvedStatus = status != null ? status : StudentListStatus.ACTIVE;
+
+        if (resolvedStatus != StudentListStatus.ACTIVE && !admin) {
+            throw new AccessDeniedException("Apenas administradores podem consultar alunos inativos ou anonimizados");
+        }
+
+        Page<Student> students = switch (resolvedStatus) {
+            case ACTIVE -> studentRepository.findByUserActiveTrue(pageable);
+            case INACTIVE -> studentRepository.findByUserActiveFalse(pageable);
+            case ALL -> studentRepository.findAll(pageable);
+        };
+
+        return students.map(StudentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)

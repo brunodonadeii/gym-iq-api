@@ -41,6 +41,17 @@ public class EnrollmentService {
 
     @Transactional(readOnly = true)
     public Page<EnrollmentResponse> findAll(Pageable pageable) {
+        return findActive(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findActive(Pageable pageable) {
+        return enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE, pageable)
+                .map(EnrollmentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findHistory(Pageable pageable) {
         return enrollmentRepository.findAll(pageable)
                 .map(EnrollmentResponse::fromEntity);
     }
