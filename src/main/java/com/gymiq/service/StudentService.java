@@ -3,6 +3,7 @@ package com.gymiq.service;
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
+import com.gymiq.dto.response.StudentDataDeletionEligibilityResponse;
 import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.dto.response.StudentSummaryResponse;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -159,6 +161,16 @@ public class StudentService {
     @Transactional(readOnly = true)
     public StudentResponse findByAuthenticatedEmail(String email) {
         return StudentResponse.fromEntity(findEntityByAuthenticatedEmail(email));
+    }
+
+    @Transactional(readOnly = true)
+    public StudentDataDeletionEligibilityResponse checkDataDeletionEligibility(UUID id) {
+        return buildDataDeletionEligibility(findEntityById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public StudentDataDeletionEligibilityResponse checkAuthenticatedDataDeletionEligibility(String email) {
+        return buildDataDeletionEligibility(findEntityByAuthenticatedEmail(email));
     }
 
     @Transactional
@@ -294,6 +306,44 @@ public class StudentService {
                     log.info("Active enrollment canceled during student deactivation/anonymization: enrollmentId={}, studentId={}",
                             enrollment.getEnrollmentId(), student.getStudentId());
                 });
+    }
+
+    private StudentDataDeletionEligibilityResponse buildDataDeletionEligibility(Student student) {
+        Enrollment latestEnrollment = enrollmentRepository
+                .findTopByStudentStudentIdOrderByStartDateDescCreatedAtDesc(student.getStudentId())
+                .orElse(null);
+
+        boolean hasActiveEnrollment = latestEnrollment != null
+                && EnrollmentStatus.ACTIVE.equals(latestEnrollment.getStatus());
+
+        long pendingPayments = paymentRepository.countByEnrollmentStudentStudentIdAndStatus(
+                student.getStudentId(), PaymentStatus.PENDING);
+        long overduePayments = paymentRepository.countByEnrollmentStudentStudentIdAndStatus(
+                student.getStudentId(), PaymentStatus.OVERDUE);
+        boolean hasFinancialPendingIssues = pendingPayments > 0 || overduePayments > 0;
+
+        List<String> blockers = new ArrayList<>();
+        if (hasActiveEnrollment) {
+            blockers.add("Aluno possui uma matricula ativa");
+        }
+        if (pendingPayments > 0) {
+            blockers.add("Aluno possui " + pendingPayments + " pagamento(s) pendente(s)");
+        }
+        if (overduePayments > 0) {
+            blockers.add("Aluno possui " + overduePayments + " pagamento(s) vencido(s)");
+        }
+
+        return StudentDataDeletionEligibilityResponse.builder()
+                .studentId(student.getStudentId())
+                .latestEnrollmentId(latestEnrollment != null ? latestEnrollment.getEnrollmentId() : null)
+                .latestEnrollmentStatus(latestEnrollment != null ? latestEnrollment.getStatus() : null)
+                .hasActiveEnrollment(hasActiveEnrollment)
+                .pendingPayments(pendingPayments)
+                .overduePayments(overduePayments)
+                .hasFinancialPendingIssues(hasFinancialPendingIssues)
+                .canAnonymize(!hasActiveEnrollment && !hasFinancialPendingIssues)
+                .blockers(blockers)
+                .build();
     }
 
     private void validateDataDeletionEligibility(Student student) {

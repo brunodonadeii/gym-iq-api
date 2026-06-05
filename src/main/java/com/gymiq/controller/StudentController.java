@@ -5,6 +5,7 @@ import java.util.UUID;
 import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.AddressLookupResponse;
+import com.gymiq.dto.response.StudentDataDeletionEligibilityResponse;
 import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.dto.response.StudentSummaryResponse;
@@ -80,6 +81,18 @@ public class StudentController {
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<StudentResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(studentService.findById(id));
+    }
+
+    @GetMapping("/{id}/personal-data/deletion-eligibility")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<StudentDataDeletionEligibilityResponse> checkDataDeletionEligibility(@PathVariable UUID id) {
+        return ResponseEntity.ok(studentService.checkDataDeletionEligibility(id));
+    }
+
+    @GetMapping("/me/personal-data/deletion-eligibility")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentDataDeletionEligibilityResponse> checkMyDataDeletionEligibility(Authentication authentication) {
+        return ResponseEntity.ok(studentService.checkAuthenticatedDataDeletionEligibility(authentication.getName()));
     }
 
     @PutMapping("/{id}")
