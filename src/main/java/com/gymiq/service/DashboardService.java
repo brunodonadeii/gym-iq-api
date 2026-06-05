@@ -106,7 +106,6 @@ public class DashboardService {
 
         return OperationsDashboardResponse.builder()
                 .checkInsToday(presenceRepository.countCheckInsBetween(startDateTime, endDateTimeExclusive))
-                .openCheckIns(presenceRepository.countByCheckOutAtIsNull())
                 .activeEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.ACTIVE))
                 .suspendedEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.SUSPENDED))
                 .canceledEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.CANCELED))

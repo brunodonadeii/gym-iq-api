@@ -2,7 +2,6 @@ package com.gymiq.controller;
 
 import java.util.UUID;
 
-import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
 import com.gymiq.dto.request.SelfCheckInRequest;
 import com.gymiq.dto.response.PresenceResponse;
@@ -40,14 +39,6 @@ public class PresenceController {
     public ResponseEntity<PresenceResponse> selfCheckIn(
             @Valid @RequestBody SelfCheckInRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(presenceService.selfCheckIn(request));
-    }
-
-    @PatchMapping("/{id}/checkout")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<PresenceResponse> checkOut(
-            @PathVariable UUID id,
-            @Valid @RequestBody(required = false) CheckOutPresenceRequest request) {
-        return ResponseEntity.ok(presenceService.checkOut(id, request));
     }
 
     @GetMapping

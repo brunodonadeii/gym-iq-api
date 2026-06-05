@@ -17,7 +17,6 @@ public class PresenceResponse {
     private String studentName;
     private String studentEmail;
     private LocalDateTime checkInAt;
-    private LocalDateTime checkOutAt;
     private String notes;
     private LocalDateTime createdAt;
 
@@ -28,7 +27,6 @@ public class PresenceResponse {
                 .studentName(presence.getStudent().getUser().getName())
                 .studentEmail(presence.getStudent().getUser().getEmail())
                 .checkInAt(presence.getCheckInAt())
-                .checkOutAt(presence.getCheckOutAt())
                 .notes(presence.getNotes())
                 .createdAt(presence.getCreatedAt())
                 .build();

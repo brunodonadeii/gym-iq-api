@@ -30,9 +30,6 @@ public class Presence {
     @Column(name = "check_in_at", nullable = false)
     private LocalDateTime checkInAt;
 
-    @Column(name = "check_out_at")
-    private LocalDateTime checkOutAt;
-
     @Column(name = "notes", length = 255)
     private String notes;
 

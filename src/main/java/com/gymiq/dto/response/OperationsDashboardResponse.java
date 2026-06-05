@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 public class OperationsDashboardResponse {
 
     private Long checkInsToday;
-    private Long openCheckIns;
     private Long activeEnrollments;
     private Long suspendedEnrollments;
     private Long canceledEnrollments;

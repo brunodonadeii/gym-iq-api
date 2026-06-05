@@ -39,7 +39,6 @@ public enum AuditAction {
 
     CHECK_IN,
     SELF_CHECK_IN,
-    CHECK_OUT,
 
     CREATE_EXERCISE,
     UPDATE_EXERCISE,

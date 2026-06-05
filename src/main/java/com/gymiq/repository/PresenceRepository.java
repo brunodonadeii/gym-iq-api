@@ -18,13 +18,6 @@ public interface PresenceRepository extends JpaRepository<Presence, UUID> {
 
     Page<Presence> findByStudentStudentId(UUID studentId, Pageable pageable);
 
-    Optional<Presence> findByStudentStudentIdAndCheckOutAtIsNull(UUID studentId);
-
-    boolean existsByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
-            UUID studentId,
-            LocalDateTime startDate,
-            LocalDateTime endDate);
-
     long countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
             UUID studentId,
             LocalDateTime startDate,
@@ -45,6 +38,4 @@ public interface PresenceRepository extends JpaRepository<Presence, UUID> {
     long countCheckInsBetween(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
-
-    long countByCheckOutAtIsNull();
 }

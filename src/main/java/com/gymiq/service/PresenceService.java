@@ -3,7 +3,6 @@ package com.gymiq.service;
 import java.util.UUID;
 
 import com.gymiq.aop.Auditable;
-import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
 import com.gymiq.dto.request.SelfCheckInRequest;
 import com.gymiq.dto.response.PresenceResponse;
@@ -33,6 +32,7 @@ import java.time.ZoneId;
 public class PresenceService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    private static final int MAX_DAILY_CHECK_INS = 4;
 
     private final PresenceRepository presenceRepository;
     private final StudentRepository studentRepository;
@@ -75,7 +75,7 @@ public class PresenceService {
                 ? requestedCheckInAt
                 : LocalDateTime.now(BUSINESS_ZONE);
 
-        validateDailyCheckIn(student.getStudentId(), checkInAt);
+        validateDailyCheckInLimit(student.getStudentId(), checkInAt.toLocalDate());
 
         Presence presence = Presence.builder()
                 .student(student)
@@ -88,44 +88,18 @@ public class PresenceService {
         return PresenceResponse.fromEntity(presence);
     }
 
-    private void validateDailyCheckIn(UUID studentId, LocalDateTime checkInAt) {
-        LocalDateTime startOfDay = checkInAt.toLocalDate().atStartOfDay();
-        LocalDateTime startOfNextDay = checkInAt.toLocalDate().plusDays(1).atStartOfDay();
+    private void validateDailyCheckInLimit(UUID studentId, LocalDate checkInDate) {
+        LocalDateTime startOfDay = checkInDate.atStartOfDay();
+        LocalDateTime startOfNextDay = checkInDate.plusDays(1).atStartOfDay();
 
-        if (presenceRepository.existsByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+        long dailyCheckIns = presenceRepository.countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
                 studentId,
                 startOfDay,
-                startOfNextDay)) {
-            throw new BusinessException("Aluno ja possui check-in registrado hoje");
+                startOfNextDay);
+
+        if (dailyCheckIns >= MAX_DAILY_CHECK_INS) {
+            throw new BusinessException("Acesso negado. O limite maximo de 4 check-ins diarios foi atingido.");
         }
-    }
-
-    @Transactional
-    @Auditable(action = AuditAction.CHECK_OUT, resourceType = ResourceType.PRESENCE, description = "Registrou check-out")
-    public PresenceResponse checkOut(UUID id, CheckOutPresenceRequest request) {
-        Presence presence = findEntityById(id);
-        CheckOutPresenceRequest checkOutRequest = request != null ? request : new CheckOutPresenceRequest();
-
-        if (presence.getCheckOutAt() != null) {
-            throw new BusinessException("Presenca ja possui check-out registrado");
-        }
-
-        LocalDateTime checkOutAt = checkOutRequest.getCheckOutAt() != null
-                ? checkOutRequest.getCheckOutAt()
-                : LocalDateTime.now(BUSINESS_ZONE);
-
-        if (checkOutAt.isBefore(presence.getCheckInAt())) {
-            throw new BusinessException("Check-out nao pode ser anterior ao check-in");
-        }
-
-        presence.setCheckOutAt(checkOutAt);
-        if (checkOutRequest.getNotes() != null) {
-            presence.setNotes(checkOutRequest.getNotes());
-        }
-
-        presenceRepository.save(presence);
-        log.info("Presence check-out registered: id={}, checkOutAt={}", id, presence.getCheckOutAt());
-        return PresenceResponse.fromEntity(presence);
     }
 
     @Transactional(readOnly = true)
