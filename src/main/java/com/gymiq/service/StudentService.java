@@ -5,6 +5,7 @@ import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
+import com.gymiq.dto.response.StudentSummaryResponse;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment.PaymentStatus;
@@ -97,12 +98,12 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public Page<StudentResponse> findAll(Pageable pageable) {
+    public Page<StudentSummaryResponse> findAll(Pageable pageable) {
         return findAll(StudentListStatus.ACTIVE, false, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Page<StudentResponse> findAll(StudentListStatus status, boolean admin, Pageable pageable) {
+    public Page<StudentSummaryResponse> findAll(StudentListStatus status, boolean admin, Pageable pageable) {
         StudentListStatus resolvedStatus = status != null ? status : StudentListStatus.ACTIVE;
 
         if (resolvedStatus != StudentListStatus.ACTIVE && !admin) {
@@ -115,17 +116,17 @@ public class StudentService {
             case ALL -> studentRepository.findAll(pageable);
         };
 
-        return students.map(StudentResponse::fromEntity);
+        return students.map(StudentSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<StudentResponse> search(String term, Pageable pageable) {
+    public Page<StudentSummaryResponse> search(String term, Pageable pageable) {
         return studentRepository.searchByTerm(
                         term,
                         resolveEmailHashForSearch(term),
                         resolveCpfHashForSearch(term),
                         pageable)
-                .map(StudentResponse::fromEntity);
+                .map(StudentSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)

@@ -7,6 +7,7 @@ import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.AddressLookupResponse;
 import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
+import com.gymiq.dto.response.StudentSummaryResponse;
 import com.gymiq.service.AddressLookupService;
 import com.gymiq.service.StudentService;
 import com.gymiq.service.StudentService.StudentListStatus;
@@ -41,7 +42,7 @@ public class StudentController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<Page<StudentResponse>> findAll(
+    public ResponseEntity<Page<StudentSummaryResponse>> findAll(
             Authentication authentication,
             @RequestParam(required = false, defaultValue = "ACTIVE") StudentListStatus status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -50,7 +51,7 @@ public class StudentController {
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<Page<StudentResponse>> search(
+    public ResponseEntity<Page<StudentSummaryResponse>> search(
             @RequestParam String q,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(studentService.search(q, pageable));
