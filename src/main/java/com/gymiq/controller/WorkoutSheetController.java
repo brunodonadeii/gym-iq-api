@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import com.gymiq.dto.request.CreateWorkoutSheetRequest;
 import com.gymiq.dto.response.WorkoutSheetResponse;
+import com.gymiq.dto.response.WorkoutSheetSummaryResponse;
 import com.gymiq.service.WorkoutSheetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,14 +38,14 @@ public class WorkoutSheetController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findAll(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findAll(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(workoutSheetService.findAll(pageable));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findMine(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findMine(
             Authentication authentication,
             @RequestParam(defaultValue = "true") boolean onlyActive,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -54,7 +55,7 @@ public class WorkoutSheetController {
 
     @GetMapping("/instructor/me")
     @PreAuthorize("hasRole('INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findMineAsInstructor(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findMineAsInstructor(
             Authentication authentication,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(workoutSheetService.findByAuthenticatedInstructor(authentication.getName(), pageable));
@@ -73,7 +74,7 @@ public class WorkoutSheetController {
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findByStudent(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findByStudent(
             @PathVariable UUID studentId,
             Authentication authentication,
             @RequestParam(defaultValue = "true") boolean onlyActive,
@@ -88,7 +89,7 @@ public class WorkoutSheetController {
 
     @GetMapping("/instructor/{instructorId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findByInstructor(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findByInstructor(
             @PathVariable UUID instructorId,
             Authentication authentication,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {

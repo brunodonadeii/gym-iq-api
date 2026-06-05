@@ -6,6 +6,7 @@ import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.request.CreateWorkoutSheetRequest;
 import com.gymiq.dto.response.WorkoutSheetResponse;
+import com.gymiq.dto.response.WorkoutSheetSummaryResponse;
 import com.gymiq.entity.Exercise;
 import com.gymiq.entity.Instructor;
 import com.gymiq.entity.Student;
@@ -81,9 +82,9 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findAll(Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findAll(Pageable pageable) {
         return workoutSheetRepository.findAll(pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -99,7 +100,7 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByStudent(UUID studentId, boolean onlyActive, Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findByStudent(UUID studentId, boolean onlyActive, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
         }
@@ -108,11 +109,11 @@ public class WorkoutSheetService {
                 ? workoutSheetRepository.findByStudentStudentIdAndActiveTrue(studentId, pageable)
                 : workoutSheetRepository.findByStudentStudentId(studentId, pageable);
 
-        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
+        return workoutSheets.map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByStudent(
+    public Page<WorkoutSheetSummaryResponse> findByStudent(
             UUID studentId,
             boolean onlyActive,
             Pageable pageable,
@@ -132,11 +133,11 @@ public class WorkoutSheetService {
                 : workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailHash(
                         studentId, personalDataProtectionService.emailHash(authenticatedEmail), pageable);
 
-        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
+        return workoutSheets.map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByAuthenticatedStudent(String email, boolean onlyActive, Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findByAuthenticatedStudent(String email, boolean onlyActive, Pageable pageable) {
         UUID studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
                 .getStudentId();
@@ -145,17 +146,17 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByInstructor(UUID instructorId, Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findByInstructor(UUID instructorId, Pageable pageable) {
         if (!instructorRepository.existsById(instructorId)) {
             throw new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId);
         }
 
         return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByInstructor(
+    public Page<WorkoutSheetSummaryResponse> findByInstructor(
             UUID instructorId,
             Pageable pageable,
             String authenticatedEmail,
@@ -166,17 +167,17 @@ public class WorkoutSheetService {
         ensureInstructorCanManage(instructor, authenticatedEmail, admin);
 
         return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
         UUID instructorId = instructorRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"))
                 .getInstructorId();
 
         return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional
