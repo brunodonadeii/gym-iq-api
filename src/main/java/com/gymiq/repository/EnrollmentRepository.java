@@ -50,6 +50,13 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
     })
     List<Enrollment> findByStatus(EnrollmentStatus status);
 
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
+    Page<Enrollment> findByStatus(EnrollmentStatus status, Pageable pageable);
+
     long countByStatus(EnrollmentStatus status);
 
     @Query("""
@@ -80,12 +87,36 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
             @Param("canceledStatus") EnrollmentStatus canceledStatus);
 
     @Query("""
+            SELECT COUNT(e)
+            FROM Enrollment e
+            WHERE e.status = :canceledStatus
+              AND e.canceledAt >= :startDateTime
+              AND e.canceledAt < :endDateTime
+            """)
+    long countCanceledEnrollmentsBetween(
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("canceledStatus") EnrollmentStatus canceledStatus);
+
+    @Query("""
             SELECT COUNT(DISTINCT e.student.studentId)
             FROM Enrollment e
             WHERE e.status = :status
               AND e.student.user.active = true
             """)
     long countDistinctStudentsByStatus(@Param("status") EnrollmentStatus status);
+
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
+            WHERE e.status = :status
+              AND e.student.user.active = true
+              AND e.startDate <= :referenceDate
+              AND (e.endDate IS NULL OR e.endDate >= :referenceDate)
+            """)
+    long countActiveStudentsForCurrentOperation(
+            @Param("status") EnrollmentStatus status,
+            @Param("referenceDate") LocalDate referenceDate);
 
     @EntityGraph(attributePaths = {
             "student",

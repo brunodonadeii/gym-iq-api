@@ -142,7 +142,10 @@ public class RetentionAlertService {
 
     @Transactional(readOnly = true)
     public Page<RetentionAlertResponse> findOpenAlerts(Pageable pageable) {
-        return retentionAlertRepository.findByStatus(AlertStatus.OPEN, pageable)
+        return retentionAlertRepository.findOpenAlertsForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE,
+                        pageable)
                 .map(RetentionAlertResponse::fromEntity);
     }
 
