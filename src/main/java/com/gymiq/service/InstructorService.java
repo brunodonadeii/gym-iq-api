@@ -43,10 +43,10 @@ public class InstructorService {
         String emailHash = personalDataProtectionService.emailHash(request.getEmail());
 
         if (userRepository.existsByEmailHash(emailHash)) {
-            throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
+            throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
         }
         if (instructorRepository.existsByCref(request.getCref())) {
-            throw new BusinessException("CREF ja cadastrado: " + request.getCref());
+            throw new BusinessException("CREF já cadastrado: " + request.getCref());
         }
 
         User user = User.builder()
@@ -113,13 +113,13 @@ public class InstructorService {
         userRepository.findByEmailHash(emailHash)
                 .filter(existingUser -> !existingUser.getUserId().equals(user.getUserId()))
                 .ifPresent(existingUser -> {
-                    throw new BusinessException("E-mail ja usado por outro usuario");
+                    throw new BusinessException("E-mail já usado por outro usuário");
                 });
 
         instructorRepository.findByCref(request.getCref())
                 .filter(existingInstructor -> !existingInstructor.getInstructorId().equals(id))
                 .ifPresent(existingInstructor -> {
-                    throw new BusinessException("CREF ja usado por outro instrutor");
+                    throw new BusinessException("CREF já usado por outro instrutor");
                 });
 
         user.setName(request.getName());
@@ -168,7 +168,7 @@ public class InstructorService {
         Instructor instructor = findEntityById(id);
 
         if (workoutSheetRepository.existsByInstructorInstructorId(id)) {
-            throw new BusinessException("Nao e possivel excluir um instrutor vinculado a fichas de treino");
+            throw new BusinessException("Não é possível excluir um instrutor vinculado a fichas de treino");
         }
 
         User user = instructor.getUser();
@@ -179,12 +179,12 @@ public class InstructorService {
 
     public Instructor findEntityById(UUID id) {
         return instructorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor não encontrado: " + id));
     }
 
     public Instructor findEntityByAuthenticatedEmail(String email) {
         return instructorRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
-                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor não encontrado para o usuário autenticado"));
     }
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {

@@ -12,26 +12,26 @@ import java.util.List;
 @Data
 public class CreateWorkoutSheetRequest {
 
-    @NotNull(message = "ID do aluno e obrigatorio")
+    @NotNull(message = "ID do aluno é obrigatório")
     private UUID studentId;
 
-    @NotNull(message = "ID do instrutor e obrigatorio")
+    @NotNull(message = "ID do instrutor é obrigatório")
     private UUID instructorId;
 
-    @NotBlank(message = "Nome da ficha e obrigatorio")
-    @Size(max = 100, message = "Nome da ficha deve ter no maximo 100 caracteres")
+    @NotBlank(message = "Nome da ficha é obrigatório")
+    @Size(max = 100, message = "Nome da ficha deve ter no máximo 100 caracteres")
     private String name;
 
-    @Size(max = 150, message = "Objetivo deve ter no maximo 150 caracteres")
+    @Size(max = 150, message = "Objetivo deve ter no máximo 150 caracteres")
     private String goal;
 
     private LocalDate startDate;
 
     private LocalDate endDate;
 
-    @Size(max = 500, message = "Observacoes devem ter no maximo 500 caracteres")
+    @Size(max = 500, message = "Observações devem ter no máximo 500 caracteres")
     private String notes;
 
-    @NotEmpty(message = "A ficha deve possuir pelo menos um exercicio")
+    @NotEmpty(message = "A ficha deve possuir pelo menos um exercício")
     private List<@Valid CreateWorkoutSheetExerciseRequest> exercises;
 }

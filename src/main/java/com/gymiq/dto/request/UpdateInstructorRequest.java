@@ -10,27 +10,27 @@ import lombok.Data;
 @Data
 public class UpdateInstructorRequest {
 
-    @NotBlank(message = "Nome e obrigatorio")
+    @NotBlank(message = "Nome é obrigatório")
     @Size(min = 2, max = 100, message = "Nome deve ter entre 2 e 100 caracteres")
     private String name;
 
-    @NotBlank(message = "E-mail e obrigatorio")
-    @Email(message = "E-mail invalido")
+    @NotBlank(message = "E-mail é obrigatório")
+    @Email(message = "E-mail inválido")
     private String email;
 
-    @NotBlank(message = "CREF e obrigatorio")
-    @Size(max = 20, message = "CREF deve ter no maximo 20 caracteres")
+    @NotBlank(message = "CREF é obrigatório")
+    @Size(max = 20, message = "CREF deve ter no máximo 20 caracteres")
     private String cref;
 
-    @NotBlank(message = "Telefone e obrigatorio")
-    @Size(max = 20)
+    @NotBlank(message = "Telefone é obrigatório")
+    @Size(max = 20, message = "Telefone deve ter no máximo 20 caracteres")
     private String phone;
 
-    @NotBlank(message = "Especialidade e obrigatoria")
-    @Size(max = 100, message = "Especialidade deve ter no maximo 100 caracteres")
+    @NotBlank(message = "Especialidade é obrigatória")
+    @Size(max = 100, message = "Especialidade deve ter no máximo 100 caracteres")
     private String specialty;
 
-    @NotNull(message = "Aceite LGPD e obrigatorio")
-    @AssertTrue(message = "E necessario aceitar os termos de LGPD para concluir a atualizacao")
+    @NotNull(message = "Aceite LGPD é obrigatório")
+    @AssertTrue(message = "É necessário aceitar os termos de LGPD para concluir a atualização")
     private Boolean lgpdAccepted;
 }

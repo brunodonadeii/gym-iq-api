@@ -38,7 +38,7 @@ public class CreateStudentRequest {
 
     private String address;
 
-    @NotNull(message = "Aceite LGPD e obrigatorio")
-    @AssertTrue(message = "E necessario aceitar os termos de LGPD para concluir o cadastro")
+    @NotNull(message = "Aceite LGPD é obrigatório")
+    @AssertTrue(message = "É necessário aceitar os termos de LGPD para concluir o cadastro")
     private Boolean lgpdAccepted;
 }

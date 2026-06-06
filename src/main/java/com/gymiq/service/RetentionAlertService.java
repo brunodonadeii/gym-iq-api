@@ -71,7 +71,7 @@ public class RetentionAlertService {
     private final PaymentRepository paymentRepository;
 
     @Transactional
-    @Auditable(action = AuditAction.GENERATE_RETENTION_ALERT, resourceType = ResourceType.STUDENT, description = "Processou geracao de alerta de retencao para aluno")
+    @Auditable(action = AuditAction.GENERATE_RETENTION_ALERT, resourceType = ResourceType.STUDENT, description = "Processou geração de alerta de retenção para aluno")
     public Optional<RetentionAlertResponse> generateForStudent(UUID studentId) {
         Student student = findActiveStudent(studentId);
         Enrollment activeEnrollment = findActiveEnrollment(studentId);
@@ -152,7 +152,7 @@ public class RetentionAlertService {
     @Transactional(readOnly = true)
     public Page<RetentionAlertResponse> findByStudent(UUID studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+            throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
         }
 
         return retentionAlertRepository.findByStudentStudentId(studentId, pageable)
@@ -165,12 +165,12 @@ public class RetentionAlertService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.RESOLVE_RETENTION_ALERT, resourceType = ResourceType.RETENTION_ALERT, description = "Resolveu alerta de retencao")
+    @Auditable(action = AuditAction.RESOLVE_RETENTION_ALERT, resourceType = ResourceType.RETENTION_ALERT, description = "Resolveu alerta de retenção")
     public RetentionAlertResponse resolve(UUID id) {
         RetentionAlert alert = findEntityById(id);
 
         if (alert.getStatus() == AlertStatus.RESOLVED) {
-            throw new BusinessException("Alerta ja foi resolvido");
+            throw new BusinessException("Alerta já foi resolvido");
         }
 
         alert.setStatus(AlertStatus.RESOLVED);
@@ -183,22 +183,22 @@ public class RetentionAlertService {
 
     private RetentionAlert findEntityById(UUID id) {
         return retentionAlertRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Alerta de retencao nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Alerta de retenção não encontrado: " + id));
     }
 
     private Student findActiveStudent(UUID studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + studentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + studentId));
 
         if (Boolean.FALSE.equals(student.getUser().getActive())) {
-            throw new BusinessException("Aluno inativo nao deve gerar alerta de retencao");
+            throw new BusinessException("Aluno inativo não deve gerar alerta de retenção");
         }
         return student;
     }
 
     private Enrollment findActiveEnrollment(UUID studentId) {
         return enrollmentRepository.findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessException("Aluno sem matricula ativa nao deve gerar alerta de retencao"));
+                .orElseThrow(() -> new BusinessException("Aluno sem matrícula ativa não deve gerar alerta de retenção"));
     }
 
     private Integer calculateInactiveDays(UUID studentId, Enrollment activeEnrollment) {

@@ -14,7 +14,7 @@ public class UpdateStudentRequest {
     @Size(min = 2, max = 100, message = "Nome deve ter entre 2 e 100 caracteres")
     private String name;
 
-    @Email(message = "E-mail invalido")
+    @Email(message = "E-mail inválido")
     private String email;
 
     @Pattern(regexp = "\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}", message = "CPF deve estar no formato 000.000.000-00")

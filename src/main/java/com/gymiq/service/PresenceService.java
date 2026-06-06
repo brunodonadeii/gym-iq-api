@@ -44,7 +44,7 @@ public class PresenceService {
     @Auditable(action = AuditAction.CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou check-in")
     public PresenceResponse checkIn(CreatePresenceRequest request) {
         Student student = studentRepository.findById(request.getStudentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + request.getStudentId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + request.getStudentId()));
 
         return createPresence(student, request.getCheckInAt(), request.getNotes());
     }
@@ -58,10 +58,10 @@ public class PresenceService {
 
         Student student = studentRepository
                 .findByCpfHashOrUserEmailHash(cpfHash, emailHash)
-                .orElseThrow(() -> new BusinessException("Identificador ou senha invalidos"));
+                .orElseThrow(() -> new BusinessException("Identificador ou senha inválidos"));
 
         if (!passwordEncoder.matches(request.getPassword(), student.getUser().getPasswordHash())) {
-            throw new BusinessException("Identificador ou senha invalidos");
+            throw new BusinessException("Identificador ou senha inválidos");
         }
 
         return createPresence(student, LocalDateTime.now(BUSINESS_ZONE), request.getNotes());
@@ -69,7 +69,7 @@ public class PresenceService {
 
     private PresenceResponse createPresence(Student student, LocalDateTime requestedCheckInAt, String notes) {
         if (Boolean.FALSE.equals(student.getUser().getActive())) {
-            throw new BusinessException("Nao e possivel registrar presenca para aluno inativo");
+            throw new BusinessException("Não é possível registrar presença para aluno inativo");
         }
 
         studentContractService.validateStudentCheckInAccess(student.getStudentId());
@@ -101,7 +101,7 @@ public class PresenceService {
                 startOfNextDay);
 
         if (dailyCheckIns >= MAX_DAILY_CHECK_INS) {
-            throw new BusinessException("Acesso negado. O limite maximo de 4 check-ins diarios foi atingido.");
+            throw new BusinessException("Acesso negado. O limite máximo de 4 check-ins diários foi atingido.");
         }
     }
 
@@ -119,7 +119,7 @@ public class PresenceService {
     @Transactional(readOnly = true)
     public Page<PresenceResponse> findByStudent(UUID studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+            throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
         }
 
         return presenceRepository.findByStudentStudentId(studentId, pageable)
@@ -129,7 +129,7 @@ public class PresenceService {
     @Transactional(readOnly = true)
     public Page<PresenceResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
         UUID studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado para o usuário autenticado"))
                 .getStudentId();
 
         return presenceRepository.findByStudentStudentId(studentId, pageable)
@@ -147,7 +147,7 @@ public class PresenceService {
 
     private Presence findEntityById(UUID id) {
         return presenceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Presenca nao encontrada: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Presença não encontrada: " + id));
     }
 
     private String resolveCpfHash(String identifier) {

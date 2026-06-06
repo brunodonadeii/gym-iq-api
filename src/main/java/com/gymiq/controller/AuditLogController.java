@@ -147,7 +147,7 @@ public class AuditLogController {
                 .filter(action -> action.name().equals(normalizedValue))
                 .findFirst()
                 .orElseThrow(() -> new InvalidParameterException(
-                        "Parametro invalido: action deve ser uma das opcoes disponiveis em /api/audit-logs/actions"));
+                        "Parâmetro inválido: action deve ser uma das opções disponíveis em /api/audit-logs/actions"));
     }
 
     private ResourceType resolveResourceType(String value) {
@@ -163,7 +163,7 @@ public class AuditLogController {
                 .filter(resourceType -> resourceType.name().equals(normalizedValue))
                 .findFirst()
                 .orElseThrow(() -> new InvalidParameterException(
-                        "Parametro invalido: resourceType deve ser uma das opcoes disponiveis em /api/audit-logs/resource-types"));
+                        "Parâmetro inválido: resourceType deve ser uma das opções disponíveis em /api/audit-logs/resource-types"));
     }
 
     private String normalizeEnumValue(String value) {

@@ -11,11 +11,11 @@ import java.time.LocalDateTime;
 @Data
 public class CreatePresenceRequest {
 
-    @NotNull(message = "ID do aluno e obrigatorio")
+    @NotNull(message = "ID do aluno é obrigatório")
     private UUID studentId;
 
     private LocalDateTime checkInAt;
 
-    @Size(max = 255, message = "Observacoes devem ter no maximo 255 caracteres")
+    @Size(max = 255, message = "Observações devem ter no máximo 255 caracteres")
     private String notes;
 }

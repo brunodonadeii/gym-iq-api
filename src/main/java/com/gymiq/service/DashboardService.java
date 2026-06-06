@@ -149,7 +149,7 @@ public class DashboardService {
         LocalDate resolvedEndDate = endDate != null ? endDate : today.withDayOfMonth(today.lengthOfMonth());
 
         if (resolvedStartDate.isAfter(resolvedEndDate)) {
-            throw new BusinessException("Data inicial nao pode ser posterior a data final");
+            throw new BusinessException("Data inicial não pode ser posterior à data final");
         }
 
         return new DateRange(resolvedStartDate, resolvedEndDate);

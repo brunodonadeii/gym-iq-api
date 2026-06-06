@@ -5,10 +5,10 @@ import java.util.UUID;
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.EnrollStudentRequest;
 import com.gymiq.dto.response.EnrollmentResponse;
-import com.gymiq.entity.Student;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Plan;
+import com.gymiq.entity.Student;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
@@ -38,7 +38,6 @@ public class EnrollmentService {
     private final PaymentService paymentService;
     private final PaymentRepository paymentRepository;
 
-
     @Transactional(readOnly = true)
     public Page<EnrollmentResponse> findAll(Pageable pageable) {
         return findActive(pageable);
@@ -57,7 +56,7 @@ public class EnrollmentService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.CREATE_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Criou matricula")
+    @Auditable(action = AuditAction.CREATE_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Criou matrícula")
     public EnrollmentResponse enroll(EnrollStudentRequest request) {
         Student student = studentService.findEntityById(request.getStudentId());
         Plan plan = planService.findEntityById(request.getPlanId());
@@ -128,7 +127,7 @@ public class EnrollmentService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.UPDATE_ENROLLMENT_STATUS, resourceType = ResourceType.ENROLLMENT, description = "Alterou status da matricula")
+    @Auditable(action = AuditAction.UPDATE_ENROLLMENT_STATUS, resourceType = ResourceType.ENROLLMENT, description = "Alterou status da matrícula")
     public EnrollmentResponse changeStatus(UUID enrollmentId, EnrollmentStatus newStatus) {
         Enrollment enrollment = findEntityById(enrollmentId);
 
@@ -143,7 +142,7 @@ public class EnrollmentService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.RENEW_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Renovou matricula")
+    @Auditable(action = AuditAction.RENEW_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Renovou matrícula")
     public EnrollmentResponse renew(UUID enrollmentId, Integer newPlanId) {
         Enrollment oldEnrollment = findEntityById(enrollmentId);
 
@@ -152,7 +151,7 @@ public class EnrollmentService {
         }
 
         if (oldEnrollment.getEndDate() == null) {
-            throw new BusinessException("Matricula mensal recorrente nao precisa de renovacao");
+            throw new BusinessException("Matrícula mensal recorrente não precisa de renovação");
         }
 
         Plan newPlan = newPlanId != null
@@ -214,12 +213,12 @@ public class EnrollmentService {
     private void validateStatusTransition(EnrollmentStatus current, EnrollmentStatus next) {
         boolean invalid = switch (current) {
             case CANCELED -> true;
-            case ACTIVE   -> next == EnrollmentStatus.ACTIVE;
-            case SUSPENDED-> next == EnrollmentStatus.SUSPENDED;
+            case ACTIVE -> next == EnrollmentStatus.ACTIVE;
+            case SUSPENDED -> next == EnrollmentStatus.SUSPENDED;
         };
         if (invalid) {
             throw new BusinessException(
-                    "Transição de status inválida: %s → %s".formatted(current, next));
+                    "Transição de status inválida: %s -> %s".formatted(current, next));
         }
     }
 }

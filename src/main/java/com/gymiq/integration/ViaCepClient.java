@@ -31,13 +31,13 @@ public class ViaCepClient {
             return mapResponse(response, normalizedZipCode);
         } catch (RestClientException ex) {
             log.warn("Erro ao consultar ViaCEP para CEP {}", normalizedZipCode, ex);
-            throw new BusinessException("Nao foi possivel consultar o CEP informado");
+            throw new BusinessException("Não foi possível consultar o CEP informado");
         }
     }
 
     private AddressLookupResponse mapResponse(ViaCepResponse response, String zipCode) {
         if (response == null || Boolean.TRUE.equals(response.getErro())) {
-            throw new BusinessException("CEP nao encontrado: " + zipCode);
+            throw new BusinessException("CEP não encontrado: " + zipCode);
         }
 
         return AddressLookupResponse.builder()
@@ -61,7 +61,7 @@ public class ViaCepClient {
     private String normalizeZipCode(String zipCode) {
         String digits = zipCode == null ? "" : zipCode.replaceAll("\\D", "");
         if (digits.length() != 8) {
-            throw new BusinessException("CEP deve conter 8 digitos");
+            throw new BusinessException("CEP deve conter 8 dígitos");
         }
         return digits;
     }

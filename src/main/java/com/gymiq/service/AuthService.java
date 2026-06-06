@@ -38,10 +38,10 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmailHash(personalDataProtectionService.emailHash(request.getEmail()))
-                .orElseThrow(() -> new BusinessException("Usuario nao encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
 
         if (Boolean.FALSE.equals(user.getActive())) {
-            throw new BusinessException("Usuario inativo");
+            throw new BusinessException("Usuário inativo");
         }
 
         studentContractService.validateStudentLoginAccess(user);
@@ -66,7 +66,7 @@ public class AuthService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.REGISTER, resourceType = ResourceType.STUDENT, description = "Registrou aluno via autenticacao")
+    @Auditable(action = AuditAction.REGISTER, resourceType = ResourceType.STUDENT, description = "Registrou aluno via autenticação")
     public StudentResponse registerStudent(CreateStudentRequest request) {
         StudentResponse student = studentService.create(request);
         log.info("Novo aluno registrado via auth: {} (id={})", student.getEmail(), student.getStudentId());

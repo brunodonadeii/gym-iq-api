@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
                 ? ex.getRequiredType().getSimpleName()
                 : "tipo esperado";
 
-        String message = "Parametro invalido: " + ex.getName()
+        String message = "Parâmetro inválido: " + ex.getName()
                 + " deve ser do tipo " + requiredType;
 
         return ResponseEntity.badRequest().body(errorBody(
@@ -109,7 +109,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorBody(
                 403,
                 "ACCESS_DENIED",
-                "Seu perfil nao tem permissao para esta operacao",
+                "Seu perfil não tem permissão para esta operação",
                 request.getDescription(false),
                 null));
     }

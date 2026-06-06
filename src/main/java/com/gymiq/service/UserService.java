@@ -54,7 +54,7 @@ public class UserService {
         String emailHash = personalDataProtectionService.emailHash(request.getEmail());
 
         if (userRepository.existsByEmailHash(emailHash)) {
-            throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
+            throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
         }
 
         User user = User.builder()
@@ -86,7 +86,7 @@ public class UserService {
         userRepository.findByEmailHash(emailHash)
                 .filter(existingUser -> !existingUser.getUserId().equals(id))
                 .ifPresent(existingUser -> {
-                    throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
+                    throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
                 });
 
         user.setName(request.getName());
@@ -116,13 +116,13 @@ public class UserService {
 
     private void validateAdministrativeRole(User.Role role) {
         if (role == User.Role.STUDENT || role == User.Role.INSTRUCTOR) {
-            throw new BusinessException("Use as rotas especificas para criar alunos ou instrutores");
+            throw new BusinessException("Use as rotas específicas para criar alunos ou instrutores");
         }
     }
 
     private User findAdministrativeUser(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + id));
 
         validateAdministrativeRole(user.getRole());
         return user;

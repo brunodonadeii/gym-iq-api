@@ -27,7 +27,7 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
 
-        log.warn("Acesso nao autorizado: {}", request.getRequestURI());
+        log.warn("Acesso não autorizado: {}", request.getRequestURI());
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -37,7 +37,7 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("statusCode", 401);
         body.put("error", "UNAUTHORIZED");
-        body.put("message", "Token JWT ausente ou invalido. Faca login em /api/auth/login");
+        body.put("message", "Token JWT ausente ou inválido. Faça login em /api/auth/login");
         body.put("path", request.getRequestURI());
 
         objectMapper.writeValue(response.getOutputStream(), body);

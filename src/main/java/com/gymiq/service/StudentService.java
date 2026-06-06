@@ -66,10 +66,10 @@ public class StudentService {
         String cpfHash = personalDataProtectionService.cpfHash(request.getCpf());
 
         if (userRepository.existsByEmailHash(emailHash)) {
-            throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
+            throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
         }
         if (studentRepository.existsByCpfHash(cpfHash)) {
-            throw new BusinessException("CPF ja cadastrado: " + request.getCpf());
+            throw new BusinessException("CPF já cadastrado: " + request.getCpf());
         }
 
         User user = User.builder()
@@ -184,7 +184,7 @@ public class StudentService {
             userRepository.findByEmailHash(emailHash)
                     .filter(existingUser -> !existingUser.getUserId().equals(user.getUserId()))
                     .ifPresent(existingUser -> {
-                        throw new BusinessException("E-mail ja usado por outro usuario");
+                        throw new BusinessException("E-mail já usado por outro usuário");
                     });
             user.setEmail(request.getEmail());
             user.setEmailHash(emailHash);
@@ -196,7 +196,7 @@ public class StudentService {
             studentRepository.findByCpfHash(cpfHash)
                     .filter(existingStudent -> !existingStudent.getStudentId().equals(id))
                     .ifPresent(existingStudent -> {
-                        throw new BusinessException("CPF ja usado por outro aluno");
+                        throw new BusinessException("CPF já usado por outro aluno");
                     });
             student.setCpf(request.getCpf());
             student.setCpfHash(cpfHash);
@@ -285,12 +285,12 @@ public class StudentService {
 
     public Student findEntityById(UUID id) {
         return studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + id));
     }
 
     public Student findEntityByAuthenticatedEmail(String email) {
         return studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado para o usuário autenticado"));
     }
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {

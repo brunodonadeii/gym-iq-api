@@ -7,13 +7,13 @@ import lombok.Data;
 @Data
 public class SelfCheckInRequest {
 
-    @NotBlank(message = "Identificador e obrigatorio")
-    @Size(max = 150, message = "Identificador deve ter no maximo 150 caracteres")
+    @NotBlank(message = "Identificador é obrigatório")
+    @Size(max = 150, message = "Identificador deve ter no máximo 150 caracteres")
     private String identifier;
 
-    @NotBlank(message = "Senha e obrigatoria")
+    @NotBlank(message = "Senha é obrigatória")
     private String password;
 
-    @Size(max = 255, message = "Observacoes devem ter no maximo 255 caracteres")
+    @Size(max = 255, message = "Observações devem ter no máximo 255 caracteres")
     private String notes;
 }

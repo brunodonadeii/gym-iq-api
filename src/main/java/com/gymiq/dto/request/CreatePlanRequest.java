@@ -14,20 +14,20 @@ import java.math.BigDecimal;
 @Data
 public class CreatePlanRequest {
 
-    @NotBlank(message = "Nome do plano e obrigatorio")
+    @NotBlank(message = "Nome do plano é obrigatório")
     @Size(min = 2, max = 100)
     private String name;
 
-    @Size(max = 100, message = "Descricao deve ter no maximo 100 caracteres")
+    @Size(max = 100, message = "Descrição deve ter no máximo 100 caracteres")
     private String description;
 
-    @NotNull(message = "Valor mensal e obrigatorio")
+    @NotNull(message = "Valor mensal é obrigatório")
     @DecimalMin(value = "0.01", message = "Valor deve ser maior que zero")
-    @DecimalMax(value = "500.00", message = "Valor mensal deve ser no maximo 500.00")
+    @DecimalMax(value = "500.00", message = "Valor mensal deve ser no máximo 500.00")
     private BigDecimal monthlyPrice;
 
-    @NotNull(message = "Duracao em meses e obrigatoria")
-    @Min(value = 1, message = "Duracao minima e 1 mes")
-    @Max(value = 24, message = "Duracao maxima e 24 meses")
+    @NotNull(message = "Duração em meses é obrigatória")
+    @Min(value = 1, message = "Duração mínima é 1 mês")
+    @Max(value = 24, message = "Duração máxima é 24 meses")
     private Integer durationMonths;
 }

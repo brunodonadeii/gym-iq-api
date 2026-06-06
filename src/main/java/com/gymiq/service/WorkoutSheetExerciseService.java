@@ -133,7 +133,7 @@ public class WorkoutSheetExerciseService {
 
     private WorkoutSheetExercise findEntityById(UUID id) {
         return workoutSheetExerciseRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Item da ficha nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Item da ficha não encontrado: " + id));
     }
 
     private WorkoutSheet findActiveWorkoutSheet(UUID workoutSheetId) {
@@ -145,17 +145,17 @@ public class WorkoutSheetExerciseService {
 
     private WorkoutSheet findWorkoutSheet(UUID workoutSheetId) {
         return workoutSheetRepository.findById(workoutSheetId)
-                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino nao encontrada: " + workoutSheetId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino não encontrada: " + workoutSheetId));
     }
 
     private Exercise findExercise(Integer exerciseId) {
         return exerciseRepository.findById(exerciseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + exerciseId));
+                .orElseThrow(() -> new ResourceNotFoundException("Exercício não encontrado: " + exerciseId));
     }
 
     private void ensureWorkoutSheetIsActive(WorkoutSheet workoutSheet) {
         if (Boolean.FALSE.equals(workoutSheet.getActive())) {
-            throw new BusinessException("Ficha de treino inativa nao pode ser alterada");
+            throw new BusinessException("Ficha de treino inativa não pode ser alterada");
         }
     }
 
@@ -177,7 +177,7 @@ public class WorkoutSheetExerciseService {
             return;
         }
 
-        throw new AccessDeniedException("Usuario nao tem permissao para acessar esta ficha");
+            throw new AccessDeniedException("Usuário não tem permissão para acessar esta ficha");
     }
 
     private void ensureInstructorCanManage(
@@ -190,7 +190,7 @@ public class WorkoutSheetExerciseService {
 
         if (authenticatedEmail == null
                 || !workoutSheet.getInstructor().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
-            throw new AccessDeniedException("Instrutor nao tem permissao para alterar esta ficha");
+            throw new AccessDeniedException("Instrutor não tem permissão para alterar esta ficha");
         }
     }
 
@@ -202,7 +202,7 @@ public class WorkoutSheetExerciseService {
                 .filter(item -> currentItemId == null || !item.getWorkoutSheetExerciseId().equals(currentItemId))
                 .findFirst()
                 .ifPresent(item -> {
-                    throw new BusinessException("Ordem de execucao ja usada no treino " + trainingSection + ": " + order);
+            throw new BusinessException("Ordem de execução já usada no treino " + trainingSection + ": " + order);
                 });
     }
 

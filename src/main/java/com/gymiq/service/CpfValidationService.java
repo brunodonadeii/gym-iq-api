@@ -33,11 +33,11 @@ public class CpfValidationService {
         String normalizedCpf = normalizeCpf(cpf);
 
         if (!hasValidCheckDigits(normalizedCpf)) {
-            throw new BusinessException("CPF invalido");
+            throw new BusinessException("CPF inválido");
         }
 
         if (mode == CpfValidationMode.EXTERNAL && !brasilApiCpfClient.exists(normalizedCpf)) {
-            throw new BusinessException("CPF nao encontrado / nao existente.");
+            throw new BusinessException("CPF não encontrado / não existente.");
         }
     }
 
@@ -74,7 +74,7 @@ public class CpfValidationService {
     private String normalizeCpf(String cpf) {
         String digits = cpf == null ? "" : cpf.replaceAll("\\D", "");
         if (digits.length() != 11) {
-            throw new BusinessException("CPF deve conter 11 digitos");
+            throw new BusinessException("CPF deve conter 11 dígitos");
         }
         return digits;
     }
