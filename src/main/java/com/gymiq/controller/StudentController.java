@@ -3,6 +3,7 @@ package com.gymiq.controller;
 import java.util.UUID;
 
 import com.gymiq.dto.request.CreateStudentRequest;
+import com.gymiq.dto.request.StudentStatusFilter;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.AddressLookupResponse;
 import com.gymiq.dto.response.StudentDataDeletionEligibilityResponse;
@@ -11,7 +12,6 @@ import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.dto.response.StudentSummaryResponse;
 import com.gymiq.service.AddressLookupService;
 import com.gymiq.service.StudentService;
-import com.gymiq.service.StudentService.StudentListStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -45,7 +45,7 @@ public class StudentController {
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<Page<StudentSummaryResponse>> findAll(
             Authentication authentication,
-            @RequestParam(required = false, defaultValue = "ACTIVE") StudentListStatus status,
+            @RequestParam(required = false, defaultValue = "ACTIVE") StudentStatusFilter status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(studentService.findAll(status, hasRole(authentication, "ADMIN"), pageable));
     }
@@ -53,9 +53,11 @@ public class StudentController {
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<Page<StudentSummaryResponse>> search(
+            Authentication authentication,
             @RequestParam String q,
+            @RequestParam(required = false, defaultValue = "ACTIVE") StudentStatusFilter status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(studentService.search(q, pageable));
+        return ResponseEntity.ok(studentService.search(q, status, hasRole(authentication, "ADMIN"), pageable));
     }
 
     @GetMapping("/options")

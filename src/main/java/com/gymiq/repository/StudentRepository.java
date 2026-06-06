@@ -58,7 +58,22 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
             SELECT s
             FROM Student s
             JOIN s.user u
-            WHERE u.active = true
+            WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
+               OR (:cpfHash IS NOT NULL AND s.cpfHash = :cpfHash)
+               OR (:emailHash IS NOT NULL AND u.emailHash = :emailHash)
+            """)
+    @EntityGraph(attributePaths = "user")
+    Page<Student> searchByTerm(
+            @Param("term") String term,
+            @Param("emailHash") String emailHash,
+            @Param("cpfHash") String cpfHash,
+            Pageable pageable);
+
+    @Query("""
+            SELECT s
+            FROM Student s
+            JOIN s.user u
+            WHERE u.active = :active
               AND (
                     LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
                     OR (:cpfHash IS NOT NULL AND s.cpfHash = :cpfHash)
@@ -66,10 +81,11 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
               )
             """)
     @EntityGraph(attributePaths = "user")
-    Page<Student> searchByTerm(
+    Page<Student> searchByTermAndUserActive(
             @Param("term") String term,
             @Param("emailHash") String emailHash,
             @Param("cpfHash") String cpfHash,
+            @Param("active") Boolean active,
             Pageable pageable);
 
     @Query("""

@@ -2,6 +2,7 @@ package com.gymiq.service;
 
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateStudentRequest;
+import com.gymiq.dto.request.StudentStatusFilter;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.StudentDataDeletionEligibilityResponse;
 import com.gymiq.dto.response.StudentOptionResponse;
@@ -42,12 +43,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class StudentService {
-
-    public enum StudentListStatus {
-        ACTIVE,
-        INACTIVE,
-        ALL
-    }
 
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
@@ -101,15 +96,15 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public Page<StudentSummaryResponse> findAll(Pageable pageable) {
-        return findAll(StudentListStatus.ACTIVE, false, pageable);
+        return findAll(StudentStatusFilter.ACTIVE, false, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Page<StudentSummaryResponse> findAll(StudentListStatus status, boolean admin, Pageable pageable) {
-        StudentListStatus resolvedStatus = status != null ? status : StudentListStatus.ACTIVE;
+    public Page<StudentSummaryResponse> findAll(StudentStatusFilter status, boolean admin, Pageable pageable) {
+        StudentStatusFilter resolvedStatus = status != null ? status : StudentStatusFilter.ACTIVE;
 
-        if (resolvedStatus != StudentListStatus.ACTIVE && !admin) {
-            throw new AccessDeniedException("Apenas administradores podem consultar alunos inativos ou anonimizados");
+        if (resolvedStatus != StudentStatusFilter.ACTIVE && !admin) {
+            throw new AccessDeniedException("Apenas administradores podem consultar alunos inativos");
         }
 
         Page<Student> students = switch (resolvedStatus) {
@@ -123,12 +118,38 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public Page<StudentSummaryResponse> search(String term, Pageable pageable) {
-        return studentRepository.searchByTerm(
-                        term,
-                        resolveEmailHashForSearch(term),
-                        resolveCpfHashForSearch(term),
-                        pageable)
-                .map(StudentSummaryResponse::fromEntity);
+        return search(term, StudentStatusFilter.ACTIVE, false, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StudentSummaryResponse> search(String term, StudentStatusFilter status, boolean admin, Pageable pageable) {
+        StudentStatusFilter resolvedStatus = status != null ? status : StudentStatusFilter.ACTIVE;
+
+        if (resolvedStatus != StudentStatusFilter.ACTIVE && !admin) {
+            throw new AccessDeniedException("Apenas administradores podem consultar alunos inativos");
+        }
+
+        Page<Student> students = switch (resolvedStatus) {
+            case ACTIVE -> studentRepository.searchByTermAndUserActive(
+                    term,
+                    resolveEmailHashForSearch(term),
+                    resolveCpfHashForSearch(term),
+                    true,
+                    pageable);
+            case INACTIVE -> studentRepository.searchByTermAndUserActive(
+                    term,
+                    resolveEmailHashForSearch(term),
+                    resolveCpfHashForSearch(term),
+                    false,
+                    pageable);
+            case ALL -> studentRepository.searchByTerm(
+                    term,
+                    resolveEmailHashForSearch(term),
+                    resolveCpfHashForSearch(term),
+                    pageable);
+        };
+
+        return students.map(StudentSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
