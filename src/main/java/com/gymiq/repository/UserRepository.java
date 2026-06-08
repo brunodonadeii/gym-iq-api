@@ -8,15 +8,14 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Integer> {
+public interface UserRepository extends JpaRepository<User, UUID> {
 
-    Optional<User> findByEmail(String email);
+    Optional<User> findByEmailHash(String emailHash);
 
-    Optional<User> findByEmailIgnoreCase(String email);
-
-    boolean existsByEmail(String email);
+    boolean existsByEmailHash(String emailHash);
 
     Page<User> findByRoleIn(Collection<User.Role> roles, Pageable pageable);
 }

@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateInstructorRequest;
 import com.gymiq.dto.request.InstructorStatusFilter;
@@ -33,20 +35,24 @@ public class InstructorService {
     private final UserRepository userRepository;
     private final WorkoutSheetRepository workoutSheetRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional
     @Auditable(action = AuditAction.CREATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Criou instrutor")
     public InstructorResponse create(CreateInstructorRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+
+        if (userRepository.existsByEmailHash(emailHash)) {
+            throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
         }
         if (instructorRepository.existsByCref(request.getCref())) {
-            throw new BusinessException("CREF ja cadastrado: " + request.getCref());
+            throw new BusinessException("CREF já cadastrado: " + request.getCref());
         }
 
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
+                .emailHash(emailHash)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(User.Role.INSTRUCTOR)
                 .active(true)
@@ -76,19 +82,19 @@ public class InstructorService {
     @Transactional(readOnly = true)
     public Page<InstructorResponse> search(String term, InstructorStatusFilter status, Pageable pageable) {
         InstructorStatusFilter resolvedStatus = resolveStatus(status);
+        String emailHash = resolveEmailHashForSearch(term);
 
         Page<Instructor> instructors = switch (resolvedStatus) {
-            case ACTIVE -> instructorRepository.searchByTermAndUserActive(term, true, pageable);
-            case INACTIVE -> instructorRepository.searchByTermAndUserActive(term, false, pageable);
-            case ALL -> instructorRepository.searchByTerm(term, pageable);
+            case ACTIVE -> instructorRepository.searchByTermAndUserActive(term, emailHash, true, pageable);
+            case INACTIVE -> instructorRepository.searchByTermAndUserActive(term, emailHash, false, pageable);
+            case ALL -> instructorRepository.searchByTerm(term, emailHash, pageable);
         };
 
-        return instructors
-                .map(InstructorResponse::fromEntity);
+        return instructors.map(InstructorResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public InstructorResponse findById(Integer id) {
+    public InstructorResponse findById(UUID id) {
         return InstructorResponse.fromEntity(findEntityById(id));
     }
 
@@ -99,20 +105,26 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Atualizou instrutor")
-    public InstructorResponse update(Integer id, UpdateInstructorRequest request) {
+    public InstructorResponse update(UUID id, UpdateInstructorRequest request) {
         Instructor instructor = findEntityById(id);
         User user = instructor.getUser();
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
 
-        userRepository.findByEmail(request.getEmail())
-                .filter(u -> !u.getUserId().equals(user.getUserId()))
-                .ifPresent(u -> { throw new BusinessException("E-mail ja usado por outro usuario"); });
+        userRepository.findByEmailHash(emailHash)
+                .filter(existingUser -> !existingUser.getUserId().equals(user.getUserId()))
+                .ifPresent(existingUser -> {
+                    throw new BusinessException("E-mail já usado por outro usuário");
+                });
 
         instructorRepository.findByCref(request.getCref())
-                .filter(i -> !i.getInstructorId().equals(id))
-                .ifPresent(i -> { throw new BusinessException("CREF ja usado por outro instrutor"); });
+                .filter(existingInstructor -> !existingInstructor.getInstructorId().equals(id))
+                .ifPresent(existingInstructor -> {
+                    throw new BusinessException("CREF já usado por outro instrutor");
+                });
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
+        user.setEmailHash(emailHash);
         user.setLgpdAccepted(request.getLgpdAccepted());
         if (Boolean.TRUE.equals(request.getLgpdAccepted()) && user.getLgpdAcceptedAt() == null) {
             user.setLgpdAcceptedAt(LocalDateTime.now());
@@ -132,7 +144,7 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.DEACTIVATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Inativou instrutor")
-    public InstructorResponse deactivate(Integer id) {
+    public InstructorResponse deactivate(UUID id) {
         Instructor instructor = findEntityById(id);
         instructor.getUser().setActive(false);
         instructorRepository.save(instructor);
@@ -142,7 +154,7 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.ACTIVATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Ativou instrutor")
-    public InstructorResponse activate(Integer id) {
+    public InstructorResponse activate(UUID id) {
         Instructor instructor = findEntityById(id);
         instructor.getUser().setActive(true);
         instructorRepository.save(instructor);
@@ -152,11 +164,11 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.DELETE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Excluiu instrutor")
-    public void delete(Integer id) {
+    public void delete(UUID id) {
         Instructor instructor = findEntityById(id);
 
         if (workoutSheetRepository.existsByInstructorInstructorId(id)) {
-            throw new BusinessException("Nao e possivel excluir um instrutor vinculado a fichas de treino");
+            throw new BusinessException("Não é possível excluir um instrutor vinculado a fichas de treino");
         }
 
         User user = instructor.getUser();
@@ -165,13 +177,14 @@ public class InstructorService {
         log.info("Instructor deleted: id={}", id);
     }
 
-    public Instructor findEntityById(Integer id) {
+    public Instructor findEntityById(UUID id) {
         return instructorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor não encontrado: " + id));
     }
+
     public Instructor findEntityByAuthenticatedEmail(String email) {
-        return instructorRepository.findByUserEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"));
+        return instructorRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor não encontrado para o usuário autenticado"));
     }
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
@@ -190,5 +203,11 @@ public class InstructorService {
 
     private InstructorStatusFilter resolveStatus(InstructorStatusFilter status) {
         return status != null ? status : InstructorStatusFilter.ACTIVE;
+    }
+
+    private String resolveEmailHashForSearch(String term) {
+        return term != null && term.contains("@")
+                ? personalDataProtectionService.emailHash(term)
+                : null;
     }
 }

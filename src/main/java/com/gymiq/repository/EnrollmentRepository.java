@@ -1,5 +1,7 @@
 package com.gymiq.repository;
 
+import java.util.UUID;
+
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import org.springframework.data.domain.Page;
@@ -16,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer> {
+public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
 
     @Override
     @EntityGraph(attributePaths = {
@@ -32,14 +34,14 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
             "student.user",
             "plan"
     })
-    Optional<Enrollment> findById(Integer id);
+    Optional<Enrollment> findById(UUID id);
 
     @EntityGraph(attributePaths = {
             "student",
             "student.user",
             "plan"
     })
-    Page<Enrollment> findByStudentStudentId(Integer studentId, Pageable pageable);
+    Page<Enrollment> findByStudentStudentId(UUID studentId, Pageable pageable);
 
     @EntityGraph(attributePaths = {
             "student",
@@ -48,7 +50,53 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
     })
     List<Enrollment> findByStatus(EnrollmentStatus status);
 
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
+    Page<Enrollment> findByStatus(EnrollmentStatus status, Pageable pageable);
+
     long countByStatus(EnrollmentStatus status);
+
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
+            WHERE e.startDate <= :referenceDate
+              AND (
+                    e.status = :activeStatus
+                    OR (e.status = :canceledStatus AND e.canceledAt >= :referenceDateTime)
+              )
+            """)
+    long countActiveCustomersAtDate(
+            @Param("referenceDate") LocalDate referenceDate,
+            @Param("referenceDateTime") LocalDateTime referenceDateTime,
+            @Param("activeStatus") EnrollmentStatus activeStatus,
+            @Param("canceledStatus") EnrollmentStatus canceledStatus);
+
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
+            WHERE e.status = :canceledStatus
+              AND e.canceledAt >= :startDateTime
+              AND e.canceledAt < :endDateTime
+            """)
+    long countCanceledCustomersBetween(
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("canceledStatus") EnrollmentStatus canceledStatus);
+
+    @Query("""
+            SELECT COUNT(e)
+            FROM Enrollment e
+            WHERE e.status = :canceledStatus
+              AND e.canceledAt >= :startDateTime
+              AND e.canceledAt < :endDateTime
+            """)
+    long countCanceledEnrollmentsBetween(
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("canceledStatus") EnrollmentStatus canceledStatus);
 
     @Query("""
             SELECT COUNT(DISTINCT e.student.studentId)
@@ -58,14 +106,59 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Integer>
             """)
     long countDistinctStudentsByStatus(@Param("status") EnrollmentStatus status);
 
+    @Query("""
+            SELECT COUNT(DISTINCT e.student.studentId)
+            FROM Enrollment e
+            WHERE e.status = :status
+              AND e.student.user.active = true
+              AND e.startDate <= :referenceDate
+              AND (e.endDate IS NULL OR e.endDate >= :referenceDate)
+            """)
+    long countActiveStudentsForCurrentOperation(
+            @Param("status") EnrollmentStatus status,
+            @Param("referenceDate") LocalDate referenceDate);
+
     @EntityGraph(attributePaths = {
             "student",
             "student.user",
             "plan"
     })
-    Optional<Enrollment> findByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
+    Optional<Enrollment> findByStudentStudentIdAndStatus(UUID studentId, EnrollmentStatus status);
 
-    boolean existsByStudentStudentIdAndStatus(Integer studentId, EnrollmentStatus status);
+    @EntityGraph(attributePaths = {
+            "student",
+            "student.user",
+            "plan"
+    })
+    Optional<Enrollment> findTopByStudentStudentIdOrderByStartDateDescCreatedAtDesc(UUID studentId);
+
+    boolean existsByStudentStudentIdAndStatus(UUID studentId, EnrollmentStatus status);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM Enrollment e
+            WHERE e.student.studentId = :studentId
+              AND e.status = :status
+              AND e.startDate <= :referenceDate
+              AND (e.endDate IS NULL OR e.endDate >= :referenceDate)
+            """)
+    boolean existsActiveEnrollmentForStudent(
+            @Param("studentId") UUID studentId,
+            @Param("status") EnrollmentStatus status,
+            @Param("referenceDate") LocalDate referenceDate);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+            FROM Enrollment e
+            WHERE e.student.user.userId = :userId
+              AND e.status = :status
+              AND e.startDate <= :referenceDate
+              AND (e.endDate IS NULL OR e.endDate >= :referenceDate)
+            """)
+    boolean existsActiveEnrollmentForStudentUser(
+            @Param("userId") UUID userId,
+            @Param("status") EnrollmentStatus status,
+            @Param("referenceDate") LocalDate referenceDate);
 
     boolean existsByPlanPlanId(Integer planId);
 

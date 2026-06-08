@@ -1,5 +1,7 @@
 package com.gymiq.aop;
 
+import java.util.UUID;
+
 import com.gymiq.enums.ResourceType;
 import com.gymiq.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +38,7 @@ public class AuditAspect {
     @AfterReturning(pointcut = "@annotation(auditable)", returning = "result")
     public void afterSuccessfulAuditableMethod(JoinPoint joinPoint, Auditable auditable, Object result) {
         try {
-            Integer resourceId = resolveResourceId(joinPoint.getArgs(), result, auditable.resourceType());
+            String resourceId = resolveResourceId(joinPoint.getArgs(), result, auditable.resourceType());
             auditLogService.record(
                     auditable.action(),
                     auditable.resourceType(),
@@ -47,8 +49,8 @@ public class AuditAspect {
         }
     }
 
-    private Integer resolveResourceId(Object[] args, Object result, ResourceType resourceType) {
-        Integer idFromResult = resolveResourceIdFromResult(result, resourceType);
+    private String resolveResourceId(Object[] args, Object result, ResourceType resourceType) {
+        String idFromResult = resolveResourceIdFromResult(result, resourceType);
         if (idFromResult != null) {
             return idFromResult;
         }
@@ -58,15 +60,15 @@ public class AuditAspect {
         }
 
         for (Object arg : args) {
-            if (arg instanceof Integer id) {
-                return id;
+            if (arg instanceof Integer || arg instanceof Long || arg instanceof java.util.UUID) {
+                return arg.toString();
             }
         }
 
         return null;
     }
 
-    private Integer resolveResourceIdFromResult(Object result, ResourceType resourceType) {
+    private String resolveResourceIdFromResult(Object result, ResourceType resourceType) {
         if (result == null) {
             return null;
         }
@@ -79,7 +81,7 @@ public class AuditAspect {
         try {
             Method getter = result.getClass().getMethod(getterName);
             Object value = getter.invoke(result);
-            return value instanceof Integer id ? id : null;
+            return value == null ? null : value.toString();
         } catch (ReflectiveOperationException exception) {
             return null;
         }

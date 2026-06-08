@@ -35,7 +35,7 @@ public class BrasilApiCpfClient {
     private String normalizeCpf(String cpf) {
         String digits = cpf == null ? "" : cpf.replaceAll("\\D", "");
         if (digits.length() != 11) {
-            throw new BusinessException("CPF deve conter 11 digitos");
+            throw new BusinessException("CPF deve conter 11 dígitos");
         }
         return digits;
     }

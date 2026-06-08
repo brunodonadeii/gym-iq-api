@@ -7,18 +7,19 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
 public class AuditLogResponse {
 
     private Long auditLogId;
-    private Integer actorUserId;
+    private UUID actorUserId;
     private String actorEmail;
     private String actorRole;
     private AuditAction action;
     private ResourceType resourceType;
-    private Integer resourceId;
+    private String resourceId;
     private String description;
     private String ipAddress;
     private LocalDateTime createdAt;

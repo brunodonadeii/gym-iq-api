@@ -1,7 +1,10 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.CreateWorkoutSheetRequest;
 import com.gymiq.dto.response.WorkoutSheetResponse;
+import com.gymiq.dto.response.WorkoutSheetSummaryResponse;
 import com.gymiq.service.WorkoutSheetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,14 +38,14 @@ public class WorkoutSheetController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findAll(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findAll(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(workoutSheetService.findAll(pageable));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findMine(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findMine(
             Authentication authentication,
             @RequestParam(defaultValue = "true") boolean onlyActive,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -52,7 +55,7 @@ public class WorkoutSheetController {
 
     @GetMapping("/instructor/me")
     @PreAuthorize("hasRole('INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findMineAsInstructor(
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findMineAsInstructor(
             Authentication authentication,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(workoutSheetService.findByAuthenticatedInstructor(authentication.getName(), pageable));
@@ -61,7 +64,7 @@ public class WorkoutSheetController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetResponse> findById(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             Authentication authentication) {
         return ResponseEntity.ok(workoutSheetService.findById(
                 id,
@@ -71,8 +74,8 @@ public class WorkoutSheetController {
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findByStudent(
-            @PathVariable Integer studentId,
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findByStudent(
+            @PathVariable UUID studentId,
             Authentication authentication,
             @RequestParam(defaultValue = "true") boolean onlyActive,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -86,8 +89,8 @@ public class WorkoutSheetController {
 
     @GetMapping("/instructor/{instructorId}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Page<WorkoutSheetResponse>> findByInstructor(
-            @PathVariable Integer instructorId,
+    public ResponseEntity<Page<WorkoutSheetSummaryResponse>> findByInstructor(
+            @PathVariable UUID instructorId,
             Authentication authentication,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(workoutSheetService.findByInstructor(
@@ -100,7 +103,7 @@ public class WorkoutSheetController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetResponse> update(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             Authentication authentication,
             @Valid @RequestBody CreateWorkoutSheetRequest request) {
         return ResponseEntity.ok(workoutSheetService.update(
@@ -113,7 +116,7 @@ public class WorkoutSheetController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<Void> deactivate(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             Authentication authentication) {
         workoutSheetService.deactivate(
                 id,

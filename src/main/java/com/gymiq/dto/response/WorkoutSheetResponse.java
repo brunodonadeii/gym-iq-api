@@ -1,5 +1,7 @@
 package com.gymiq.dto.response;
 
+import java.util.UUID;
+
 import com.gymiq.entity.WorkoutSheet;
 import com.gymiq.entity.WorkoutSheetExercise;
 import lombok.Builder;
@@ -14,10 +16,10 @@ import java.util.List;
 @Builder
 public class WorkoutSheetResponse {
 
-    private Integer workoutSheetId;
-    private Integer studentId;
+    private UUID workoutSheetId;
+    private UUID studentId;
     private String studentName;
-    private Integer instructorId;
+    private UUID instructorId;
     private String instructorName;
     private String name;
     private String goal;
@@ -51,7 +53,9 @@ public class WorkoutSheetResponse {
     private static List<WorkoutSheetExerciseResponse> mapExercises(WorkoutSheet workoutSheet) {
         return workoutSheet.getExercises()
                 .stream()
-                .sorted(Comparator.comparing(WorkoutSheetExercise::getExecutionOrder))
+                .sorted(Comparator
+                        .comparing(WorkoutSheetExercise::getTrainingSection, String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(WorkoutSheetExercise::getExecutionOrder))
                 .map(WorkoutSheetExerciseResponse::fromEntity)
                 .toList();
     }

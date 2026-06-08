@@ -1,8 +1,12 @@
 package com.gymiq.controller;
 
+import com.gymiq.dto.response.AuditActorOptionResponse;
+import com.gymiq.dto.response.AuditFilterOptionResponse;
+import com.gymiq.dto.response.AuditFilterOptionsResponse;
 import com.gymiq.dto.response.AuditLogResponse;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
+import com.gymiq.exception.InvalidParameterException;
 import com.gymiq.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,7 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/audit-logs")
@@ -33,22 +39,55 @@ public class AuditLogController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AuditLogResponse>> filter(
-            @RequestParam(required = false) Integer actorUserId,
-            @RequestParam(required = false) AuditAction action,
-            @RequestParam(required = false) ResourceType resourceType,
-            @RequestParam(required = false) Integer resourceId,
+            @RequestParam(required = false) UUID actorUserId,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String resourceType,
+            @RequestParam(required = false) String resourceId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(auditLogRepository
-                .findAll(buildSpecification(actorUserId, action, resourceType, resourceId, from, to), pageable)
+                .findAll(buildSpecification(
+                        actorUserId,
+                        resolveAuditAction(action),
+                        resolveResourceType(resourceType),
+                        resourceId,
+                        from,
+                        to), pageable)
                 .map(AuditLogResponse::fromEntity));
+    }
+
+    @GetMapping("/filter-options")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AuditFilterOptionsResponse> findFilterOptions() {
+        return ResponseEntity.ok(new AuditFilterOptionsResponse(
+                buildActionOptions(),
+                buildResourceTypeOptions(),
+                auditLogRepository.findActorOptions()));
+    }
+
+    @GetMapping("/actions")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AuditFilterOptionResponse>> findActions() {
+        return ResponseEntity.ok(buildActionOptions());
+    }
+
+    @GetMapping("/resource-types")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AuditFilterOptionResponse>> findResourceTypes() {
+        return ResponseEntity.ok(buildResourceTypeOptions());
+    }
+
+    @GetMapping("/actors")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AuditActorOptionResponse>> findActors() {
+        return ResponseEntity.ok(auditLogRepository.findActorOptions());
     }
 
     @GetMapping("/actor/{actorUserId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AuditLogResponse>> findByActor(
-            @PathVariable Integer actorUserId,
+            @PathVariable UUID actorUserId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(auditLogRepository.findByActorUserId(actorUserId, pageable)
                 .map(AuditLogResponse::fromEntity));
@@ -57,19 +96,19 @@ public class AuditLogController {
     @GetMapping("/resource/{resourceType}/{resourceId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AuditLogResponse>> findByResource(
-            @PathVariable ResourceType resourceType,
-            @PathVariable Integer resourceId,
+            @PathVariable String resourceType,
+            @PathVariable String resourceId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(auditLogRepository
-                .findByResourceTypeAndResourceId(resourceType, resourceId, pageable)
+                .findByResourceTypeAndResourceId(resolveRequiredResourceType(resourceType), resourceId, pageable)
                 .map(AuditLogResponse::fromEntity));
     }
 
     private Specification<com.gymiq.entity.AuditLog> buildSpecification(
-            Integer actorUserId,
+            UUID actorUserId,
             AuditAction action,
             ResourceType resourceType,
-            Integer resourceId,
+            String resourceId,
             LocalDateTime from,
             LocalDateTime to) {
         return (root, query, criteriaBuilder) -> {
@@ -96,5 +135,53 @@ public class AuditLogController {
 
             return criteriaBuilder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
+    }
+
+    private AuditAction resolveAuditAction(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalizedValue = normalizeEnumValue(value);
+        return Arrays.stream(AuditAction.values())
+                .filter(action -> action.name().equals(normalizedValue))
+                .findFirst()
+                .orElseThrow(() -> new InvalidParameterException(
+                        "Parâmetro inválido: action deve ser uma das opções disponíveis em /api/audit-logs/actions"));
+    }
+
+    private ResourceType resolveResourceType(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return resolveRequiredResourceType(value);
+    }
+
+    private ResourceType resolveRequiredResourceType(String value) {
+        String normalizedValue = normalizeEnumValue(value);
+        return Arrays.stream(ResourceType.values())
+                .filter(resourceType -> resourceType.name().equals(normalizedValue))
+                .findFirst()
+                .orElseThrow(() -> new InvalidParameterException(
+                        "Parâmetro inválido: resourceType deve ser uma das opções disponíveis em /api/audit-logs/resource-types"));
+    }
+
+    private String normalizeEnumValue(String value) {
+        return value.trim()
+                .replace("-", "_")
+                .replace(" ", "_")
+                .toUpperCase();
+    }
+
+    private List<AuditFilterOptionResponse> buildActionOptions() {
+        return Arrays.stream(AuditAction.values())
+                .map(action -> new AuditFilterOptionResponse(action.name(), action.getLabel()))
+                .toList();
+    }
+
+    private List<AuditFilterOptionResponse> buildResourceTypeOptions() {
+        return Arrays.stream(ResourceType.values())
+                .map(resourceType -> new AuditFilterOptionResponse(resourceType.name(), resourceType.getLabel()))
+                .toList();
     }
 }

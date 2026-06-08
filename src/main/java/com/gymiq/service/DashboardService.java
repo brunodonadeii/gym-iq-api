@@ -8,6 +8,7 @@ import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment.PaymentStatus;
 import com.gymiq.entity.RetentionAlert.AlertStatus;
 import com.gymiq.entity.RetentionAlert.RiskLevel;
+import com.gymiq.exception.BusinessException;
 import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.PaymentRepository;
 import com.gymiq.repository.PresenceRepository;
@@ -23,14 +24,17 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
 public class DashboardService {
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final int INACTIVITY_DAYS_THRESHOLD = 15;
     private static final int TOP_RISK_LIMIT = 5;
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
+    private static final int RATE_SCALE = 2;
 
     private final RetentionAlertRepository retentionAlertRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -40,17 +44,36 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public RetentionDashboardResponse getRetentionDashboard() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        LocalDate currentMonthStart = today.withDayOfMonth(1);
+        LocalDate currentMonthEnd = today.withDayOfMonth(today.lengthOfMonth());
+        LocalDateTime currentMonthStartDateTime = currentMonthStart.atStartOfDay();
+        LocalDateTime nextMonthStartDateTime = currentMonthEnd.plusDays(1).atStartOfDay();
         LocalDateTime inactivityLimit = today.minusDays(INACTIVITY_DAYS_THRESHOLD).atStartOfDay();
+        Long activeCustomersAtMonthStart = enrollmentRepository.countActiveCustomersAtDate(
+                currentMonthStart,
+                currentMonthStartDateTime,
+                EnrollmentStatus.ACTIVE,
+                EnrollmentStatus.CANCELED);
+        Long canceledEnrollmentsCurrentMonth = enrollmentRepository.countCanceledEnrollmentsBetween(
+                currentMonthStartDateTime,
+                nextMonthStartDateTime,
+                EnrollmentStatus.CANCELED);
 
         return RetentionDashboardResponse.builder()
-                .activeStudents(enrollmentRepository.countDistinctStudentsByStatus(EnrollmentStatus.ACTIVE))
-                .openAlerts(retentionAlertRepository.countByStatus(AlertStatus.OPEN))
+                .activeStudents(enrollmentRepository.countActiveStudentsForCurrentOperation(
+                        EnrollmentStatus.ACTIVE,
+                        today))
+                .openAlerts(retentionAlertRepository.countOpenAlertsForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE))
                 .lowRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.LOW))
                 .mediumRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.MEDIUM))
                 .highRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.HIGH))
                 .criticalRiskStudents(countOpenAlertsByRiskLevel(RiskLevel.CRITICAL))
-                .averageRiskScore(retentionAlertRepository.averageRiskScoreByStatus(AlertStatus.OPEN).orElse(0.0))
+                .averageRiskScore(retentionAlertRepository.averageRiskScoreForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE).orElse(0.0))
                 .studentsWithoutCheckInOver15Days(
                         enrollmentRepository.countActiveStudentsWithoutCheckInSince(inactivityLimit))
                 .studentsWithOverduePayments((long) paymentRepository.findActiveStudentIdsWithOverduePayments(
@@ -58,20 +81,21 @@ public class DashboardService {
                         PaymentStatus.OVERDUE,
                         PaymentStatus.PENDING,
                         today).size())
+                .activeCustomersAtPeriodStart(activeCustomersAtMonthStart)
+                .canceledEnrollmentsCurrentMonth(canceledEnrollmentsCurrentMonth)
+                .churnRateCurrentMonth(calculateChurnRate(canceledEnrollmentsCurrentMonth, activeCustomersAtMonthStart))
                 .topRiskStudents(findTopRiskStudents())
-                .generatedAt(LocalDateTime.now())
+                .generatedAt(LocalDateTime.now(BUSINESS_ZONE))
                 .build();
     }
 
     @Transactional(readOnly = true)
-    public FinancialDashboardResponse getFinancialDashboard() {
-        LocalDate today = LocalDate.now();
-        LocalDate startDate = today.withDayOfMonth(1);
-        LocalDate endDate = today.withDayOfMonth(today.lengthOfMonth());
+    public FinancialDashboardResponse getFinancialDashboard(LocalDate startDate, LocalDate endDate) {
+        DateRange dateRange = resolveDateRange(startDate, endDate);
 
-        BigDecimal paidAmount = sumAmountByStatus(PaymentStatus.PAID, startDate, endDate);
-        BigDecimal pendingAmount = sumAmountByStatus(PaymentStatus.PENDING, startDate, endDate);
-        BigDecimal overdueAmount = sumAmountByStatus(PaymentStatus.OVERDUE, startDate, endDate);
+        BigDecimal paidAmount = sumAmountByStatus(PaymentStatus.PAID, dateRange.startDate(), dateRange.endDate());
+        BigDecimal pendingAmount = sumAmountByStatus(PaymentStatus.PENDING, dateRange.startDate(), dateRange.endDate());
+        BigDecimal overdueAmount = sumAmountByStatus(PaymentStatus.OVERDUE, dateRange.startDate(), dateRange.endDate());
         BigDecimal projectedRevenue = paidAmount.add(pendingAmount).add(overdueAmount);
 
         return FinancialDashboardResponse.builder()
@@ -79,39 +103,63 @@ public class DashboardService {
                 .pendingAmountCurrentMonth(pendingAmount)
                 .overdueAmountCurrentMonth(overdueAmount)
                 .projectedRevenueCurrentMonth(projectedRevenue)
-                .paidPaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.PAID, startDate, endDate))
-                .pendingPaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.PENDING, startDate, endDate))
-                .overduePaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.OVERDUE, startDate, endDate))
+                .paidPaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.PAID, dateRange.startDate(), dateRange.endDate()))
+                .pendingPaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.PENDING, dateRange.startDate(), dateRange.endDate()))
+                .overduePaymentsCurrentMonth(countPaymentsByStatus(PaymentStatus.OVERDUE, dateRange.startDate(), dateRange.endDate()))
                 .defaultRate(calculateDefaultRate(overdueAmount, projectedRevenue))
-                .generatedAt(LocalDateTime.now())
+                .generatedAt(LocalDateTime.now(BUSINESS_ZONE))
                 .build();
     }
 
     @Transactional(readOnly = true)
-    public OperationsDashboardResponse getOperationsDashboard() {
-        LocalDate today = LocalDate.now();
-        LocalDateTime startOfToday = today.atStartOfDay();
-        LocalDateTime startOfTomorrow = today.plusDays(1).atStartOfDay();
-        LocalDateTime startOfMonth = today.withDayOfMonth(1).atStartOfDay();
-        LocalDateTime startOfNextMonth = today.plusMonths(1).withDayOfMonth(1).atStartOfDay();
+    public OperationsDashboardResponse getOperationsDashboard(LocalDate startDate, LocalDate endDate) {
+        DateRange dateRange = resolveDateRange(startDate, endDate);
+        LocalDateTime startDateTime = dateRange.startDate().atStartOfDay();
+        LocalDateTime endDateTimeExclusive = dateRange.endDate().plusDays(1).atStartOfDay();
+        Long activeCustomersAtPeriodStart = enrollmentRepository.countActiveCustomersAtDate(
+                dateRange.startDate(),
+                startDateTime,
+                EnrollmentStatus.ACTIVE,
+                EnrollmentStatus.CANCELED);
+        Long lostCustomersInPeriod = enrollmentRepository.countCanceledCustomersBetween(
+                startDateTime,
+                endDateTimeExclusive,
+                EnrollmentStatus.CANCELED);
 
         return OperationsDashboardResponse.builder()
-                .checkInsToday(presenceRepository.countCheckInsBetween(startOfToday, startOfTomorrow))
-                .openCheckIns(presenceRepository.countByCheckOutAtIsNull())
+                .checkInsToday(presenceRepository.countCheckInsBetween(startDateTime, endDateTimeExclusive))
                 .activeEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.ACTIVE))
                 .suspendedEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.SUSPENDED))
                 .canceledEnrollments(enrollmentRepository.countByStatus(EnrollmentStatus.CANCELED))
                 .enrollmentsExpiringInNext7Days(enrollmentRepository.countByStatusAndEndDateBetween(
                         EnrollmentStatus.ACTIVE,
-                        today,
-                        today.plusDays(7)))
-                .newStudentsCurrentMonth(studentRepository.countCreatedBetween(startOfMonth, startOfNextMonth))
-                .generatedAt(LocalDateTime.now())
+                        dateRange.startDate(),
+                        dateRange.endDate()))
+                .newStudentsCurrentMonth(studentRepository.countCreatedBetween(startDateTime, endDateTimeExclusive))
+                .activeCustomersAtPeriodStart(activeCustomersAtPeriodStart)
+                .lostCustomersInPeriod(lostCustomersInPeriod)
+                .churnRate(calculateChurnRate(lostCustomersInPeriod, activeCustomersAtPeriodStart))
+                .generatedAt(LocalDateTime.now(BUSINESS_ZONE))
                 .build();
     }
 
+    private DateRange resolveDateRange(LocalDate startDate, LocalDate endDate) {
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        LocalDate resolvedStartDate = startDate != null ? startDate : today.withDayOfMonth(1);
+        LocalDate resolvedEndDate = endDate != null ? endDate : today.withDayOfMonth(today.lengthOfMonth());
+
+        if (resolvedStartDate.isAfter(resolvedEndDate)) {
+            throw new BusinessException("Data inicial não pode ser posterior à data final");
+        }
+
+        return new DateRange(resolvedStartDate, resolvedEndDate);
+    }
+
     private Long countOpenAlertsByRiskLevel(RiskLevel riskLevel) {
-        return retentionAlertRepository.countByStatusAndRiskLevel(AlertStatus.OPEN, riskLevel);
+        return retentionAlertRepository.countOpenAlertsForActiveStudentsByRiskLevel(
+                AlertStatus.OPEN,
+                EnrollmentStatus.ACTIVE,
+                riskLevel);
     }
 
     private BigDecimal sumAmountByStatus(PaymentStatus status, LocalDate startDate, LocalDate endDate) {
@@ -130,7 +178,17 @@ public class DashboardService {
 
         return overdueAmount
                 .multiply(ONE_HUNDRED)
-                .divide(projectedRevenue, 2, RoundingMode.HALF_UP);
+                .divide(projectedRevenue, RATE_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateChurnRate(Long lostCustomers, Long activeCustomersAtStart) {
+        if (activeCustomersAtStart == null || activeCustomersAtStart == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        return BigDecimal.valueOf(lostCustomers)
+                .multiply(ONE_HUNDRED)
+                .divide(BigDecimal.valueOf(activeCustomersAtStart), RATE_SCALE, RoundingMode.HALF_UP);
     }
 
     private java.util.List<RetentionAlertResponse> findTopRiskStudents() {
@@ -139,8 +197,14 @@ public class DashboardService {
                 TOP_RISK_LIMIT,
                 Sort.by(Sort.Order.desc("riskScore"), Sort.Order.desc("updatedAt")));
 
-        return retentionAlertRepository.findByStatus(AlertStatus.OPEN, topRiskPage)
+        return retentionAlertRepository.findOpenAlertsForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE,
+                        topRiskPage)
                 .map(RetentionAlertResponse::fromEntity)
                 .toList();
+    }
+
+    private record DateRange(LocalDate startDate, LocalDate endDate) {
     }
 }

@@ -1,5 +1,7 @@
 package com.gymiq.dto.response;
 
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -7,7 +9,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class StudentOptionResponse {
 
-    private Integer studentId;
+    private UUID studentId;
     private String name;
     private String email;
     private String cpf;

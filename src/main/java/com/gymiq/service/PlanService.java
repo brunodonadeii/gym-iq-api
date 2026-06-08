@@ -29,7 +29,7 @@ public class PlanService {
     @Auditable(action = AuditAction.CREATE_PLAN, resourceType = ResourceType.PLAN, description = "Criou plano")
     public PlanResponse create(CreatePlanRequest request) {
         if (planRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new BusinessException("Ja existe um plano com o nome: " + request.getName());
+            throw new BusinessException("Já existe um plano com o nome: " + request.getName());
         }
 
         Plan plan = Plan.builder()
@@ -72,7 +72,7 @@ public class PlanService {
                         && !p.getPlanId().equals(id))
                 .findFirst()
                 .ifPresent(p -> {
-                    throw new BusinessException("Nome ja usado por outro plano");
+                    throw new BusinessException("Nome já usado por outro plano");
                 });
 
         plan.setName(request.getName());
@@ -98,7 +98,7 @@ public class PlanService {
         }
 
         if (enrollmentRepository.existsByPlanPlanId(id)) {
-            throw new BusinessException("Nao e possivel excluir fisicamente um plano vinculado a matriculas");
+            throw new BusinessException("Não é possível excluir fisicamente um plano vinculado a matrículas");
         }
 
         planRepository.delete(plan);
@@ -125,6 +125,6 @@ public class PlanService {
 
     public Plan findEntityById(Integer id) {
         return planRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Plano nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado: " + id));
     }
 }

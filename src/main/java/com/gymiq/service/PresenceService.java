@@ -1,7 +1,8 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
-import com.gymiq.dto.request.CheckOutPresenceRequest;
 import com.gymiq.dto.request.CreatePresenceRequest;
 import com.gymiq.dto.request.SelfCheckInRequest;
 import com.gymiq.dto.response.PresenceResponse;
@@ -31,16 +32,19 @@ import java.time.ZoneId;
 public class PresenceService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+    private static final int MAX_DAILY_CHECK_INS = 4;
 
     private final PresenceRepository presenceRepository;
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
+    private final StudentContractService studentContractService;
 
     @Transactional
     @Auditable(action = AuditAction.CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou check-in")
     public PresenceResponse checkIn(CreatePresenceRequest request) {
         Student student = studentRepository.findById(request.getStudentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + request.getStudentId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + request.getStudentId()));
 
         return createPresence(student, request.getCheckInAt(), request.getNotes());
     }
@@ -49,13 +53,15 @@ public class PresenceService {
     @Auditable(action = AuditAction.SELF_CHECK_IN, resourceType = ResourceType.PRESENCE, description = "Registrou auto check-in")
     public PresenceResponse selfCheckIn(SelfCheckInRequest request) {
         String identifier = request.getIdentifier().trim();
+        String cpfHash = resolveCpfHash(identifier);
+        String emailHash = resolveEmailHash(identifier);
 
         Student student = studentRepository
-                .findByCpfOrUserEmailIgnoreCase(identifier, identifier)
-                .orElseThrow(() -> new BusinessException("Identificador ou senha invalidos"));
+                .findByCpfHashOrUserEmailHash(cpfHash, emailHash)
+                .orElseThrow(() -> new BusinessException("Identificador ou senha inválidos"));
 
         if (!passwordEncoder.matches(request.getPassword(), student.getUser().getPasswordHash())) {
-            throw new BusinessException("Identificador ou senha invalidos");
+            throw new BusinessException("Identificador ou senha inválidos");
         }
 
         return createPresence(student, LocalDateTime.now(BUSINESS_ZONE), request.getNotes());
@@ -63,14 +69,16 @@ public class PresenceService {
 
     private PresenceResponse createPresence(Student student, LocalDateTime requestedCheckInAt, String notes) {
         if (Boolean.FALSE.equals(student.getUser().getActive())) {
-            throw new BusinessException("Nao e possivel registrar presenca para aluno inativo");
+            throw new BusinessException("Não é possível registrar presença para aluno inativo");
         }
+
+        studentContractService.validateStudentCheckInAccess(student.getStudentId());
 
         LocalDateTime checkInAt = requestedCheckInAt != null
                 ? requestedCheckInAt
                 : LocalDateTime.now(BUSINESS_ZONE);
 
-        validateDailyCheckIn(student.getStudentId(), checkInAt);
+        validateDailyCheckInLimit(student.getStudentId(), checkInAt.toLocalDate());
 
         Presence presence = Presence.builder()
                 .student(student)
@@ -83,44 +91,18 @@ public class PresenceService {
         return PresenceResponse.fromEntity(presence);
     }
 
-    private void validateDailyCheckIn(Integer studentId, LocalDateTime checkInAt) {
-        LocalDateTime startOfDay = checkInAt.toLocalDate().atStartOfDay();
-        LocalDateTime startOfNextDay = checkInAt.toLocalDate().plusDays(1).atStartOfDay();
+    private void validateDailyCheckInLimit(UUID studentId, LocalDate checkInDate) {
+        LocalDateTime startOfDay = checkInDate.atStartOfDay();
+        LocalDateTime startOfNextDay = checkInDate.plusDays(1).atStartOfDay();
 
-        if (presenceRepository.existsByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+        long dailyCheckIns = presenceRepository.countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
                 studentId,
                 startOfDay,
-                startOfNextDay)) {
-            throw new BusinessException("Aluno ja possui check-in registrado hoje");
+                startOfNextDay);
+
+        if (dailyCheckIns >= MAX_DAILY_CHECK_INS) {
+            throw new BusinessException("Acesso negado. O limite máximo de 4 check-ins diários foi atingido.");
         }
-    }
-
-    @Transactional
-    @Auditable(action = AuditAction.CHECK_OUT, resourceType = ResourceType.PRESENCE, description = "Registrou check-out")
-    public PresenceResponse checkOut(Integer id, CheckOutPresenceRequest request) {
-        Presence presence = findEntityById(id);
-        CheckOutPresenceRequest checkOutRequest = request != null ? request : new CheckOutPresenceRequest();
-
-        if (presence.getCheckOutAt() != null) {
-            throw new BusinessException("Presenca ja possui check-out registrado");
-        }
-
-        LocalDateTime checkOutAt = checkOutRequest.getCheckOutAt() != null
-                ? checkOutRequest.getCheckOutAt()
-                : LocalDateTime.now(BUSINESS_ZONE);
-
-        if (checkOutAt.isBefore(presence.getCheckInAt())) {
-            throw new BusinessException("Check-out nao pode ser anterior ao check-in");
-        }
-
-        presence.setCheckOutAt(checkOutAt);
-        if (checkOutRequest.getNotes() != null) {
-            presence.setNotes(checkOutRequest.getNotes());
-        }
-
-        presenceRepository.save(presence);
-        log.info("Presence check-out registered: id={}, checkOutAt={}", id, presence.getCheckOutAt());
-        return PresenceResponse.fromEntity(presence);
     }
 
     @Transactional(readOnly = true)
@@ -130,14 +112,14 @@ public class PresenceService {
     }
 
     @Transactional(readOnly = true)
-    public PresenceResponse findById(Integer id) {
+    public PresenceResponse findById(UUID id) {
         return PresenceResponse.fromEntity(findEntityById(id));
     }
 
     @Transactional(readOnly = true)
-    public Page<PresenceResponse> findByStudent(Integer studentId, Pageable pageable) {
+    public Page<PresenceResponse> findByStudent(UUID studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+            throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
         }
 
         return presenceRepository.findByStudentStudentId(studentId, pageable)
@@ -146,8 +128,8 @@ public class PresenceService {
 
     @Transactional(readOnly = true)
     public Page<PresenceResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
-        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+        UUID studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado para o usuário autenticado"))
                 .getStudentId();
 
         return presenceRepository.findByStudentStudentId(studentId, pageable)
@@ -163,8 +145,19 @@ public class PresenceService {
                 .map(PresenceResponse::fromEntity);
     }
 
-    private Presence findEntityById(Integer id) {
+    private Presence findEntityById(UUID id) {
         return presenceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Presenca nao encontrada: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Presença não encontrada: " + id));
+    }
+
+    private String resolveCpfHash(String identifier) {
+        String digits = identifier == null ? "" : identifier.replaceAll("\\D", "");
+        return digits.length() == 11 ? personalDataProtectionService.cpfHash(identifier) : null;
+    }
+
+    private String resolveEmailHash(String identifier) {
+        return identifier != null && identifier.contains("@")
+                ? personalDataProtectionService.emailHash(identifier)
+                : null;
     }
 }

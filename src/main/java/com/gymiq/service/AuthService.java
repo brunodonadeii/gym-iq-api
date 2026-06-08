@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,16 +27,24 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final StudentService studentService;
+    private final PersonalDataProtectionService personalDataProtectionService;
+    private final StudentContractService studentContractService;
 
     @Transactional(readOnly = true)
     @Auditable(action = AuditAction.LOGIN, resourceType = ResourceType.USER, description = "Realizou login")
     public AuthResponse login(LoginRequest request) {
-        Authentication auth = authenticationManager.authenticate(
+        authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessException("Usuario nao encontrado"));
+        User user = userRepository.findByEmailHash(personalDataProtectionService.emailHash(request.getEmail()))
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        if (Boolean.FALSE.equals(user.getActive())) {
+            throw new BusinessException("Usuário inativo");
+        }
+
+        studentContractService.validateStudentLoginAccess(user);
 
         String token = jwtUtil.generateToken(
                 user.getEmail(),
@@ -59,7 +66,7 @@ public class AuthService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.REGISTER, resourceType = ResourceType.STUDENT, description = "Registrou aluno via autenticacao")
+    @Auditable(action = AuditAction.REGISTER, resourceType = ResourceType.STUDENT, description = "Registrou aluno via autenticação")
     public StudentResponse registerStudent(CreateStudentRequest request) {
         StudentResponse student = studentService.create(request);
         log.info("Novo aluno registrado via auth: {} (id={})", student.getEmail(), student.getStudentId());

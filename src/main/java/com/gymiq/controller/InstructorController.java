@@ -1,5 +1,7 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.CreateInstructorRequest;
 import com.gymiq.dto.request.InstructorStatusFilter;
 import com.gymiq.dto.request.UpdateInstructorRequest;
@@ -56,33 +58,33 @@ public class InstructorController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<InstructorResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<InstructorResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(instructorService.findById(id));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InstructorResponse> update(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateInstructorRequest request) {
         return ResponseEntity.ok(instructorService.update(id, request));
     }
 
     @PatchMapping("/{id}/inactive")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<InstructorResponse> deactivate(@PathVariable Integer id) {
+    public ResponseEntity<InstructorResponse> deactivate(@PathVariable UUID id) {
         return ResponseEntity.ok(instructorService.deactivate(id));
     }
 
     @PatchMapping("/{id}/activate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<InstructorResponse> activate(@PathVariable Integer id) {
+    public ResponseEntity<InstructorResponse> activate(@PathVariable UUID id) {
         return ResponseEntity.ok(instructorService.activate(id));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
         instructorService.delete(id);
         return ResponseEntity.noContent().build();
     }

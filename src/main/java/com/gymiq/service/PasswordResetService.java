@@ -43,6 +43,7 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
     private final JavaMailSender mailSender;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -79,7 +80,7 @@ public class PasswordResetService {
 
         deleteExpiredTokens(now);
 
-        userRepository.findByEmailIgnoreCase(email)
+        userRepository.findByEmailHash(personalDataProtectionService.emailHash(email))
                 .filter(user -> Boolean.TRUE.equals(user.getActive()))
                 .ifPresent(user -> createTokenAndSendEmail(user, now));
 
@@ -94,16 +95,16 @@ public class PasswordResetService {
 
         PasswordResetToken resetToken = passwordResetTokenRepository
                 .findByTokenHashAndUsedFalse(hashToken(request.getToken().trim()))
-                .orElseThrow(() -> new BusinessException("Token invalido ou expirado"));
+                .orElseThrow(() -> new BusinessException("Token inválido ou expirado"));
 
         if (resetToken.isExpired(now)) {
-            throw new BusinessException("Token invalido ou expirado");
+            throw new BusinessException("Token inválido ou expirado");
         }
 
         User user = resetToken.getUser();
 
         if (!Boolean.TRUE.equals(user.getActive())) {
-            throw new BusinessException("Usuario inativo");
+            throw new BusinessException("Usuário inativo");
         }
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
@@ -175,7 +176,7 @@ public class PasswordResetService {
             mailSender.send(message);
         } catch (MailException ex) {
             log.error("Falha ao enviar e-mail de redefinicao de senha para usuario id={}", user.getUserId(), ex);
-            throw new BusinessException("Nao foi possivel enviar o e-mail de redefinicao de senha");
+            throw new BusinessException("Não foi possível enviar o e-mail de redefinição de senha");
         }
     }
 

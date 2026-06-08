@@ -1,5 +1,7 @@
 package com.gymiq.dto.response;
 
+import java.util.UUID;
+
 import com.gymiq.entity.RetentionAlert;
 import lombok.Builder;
 import lombok.Data;
@@ -10,8 +12,8 @@ import java.time.LocalDateTime;
 @Builder
 public class RetentionAlertResponse {
 
-    private Integer retentionAlertId;
-    private Integer studentId;
+    private UUID retentionAlertId;
+    private UUID studentId;
     private String studentName;
     private String studentEmail;
     private Integer riskScore;

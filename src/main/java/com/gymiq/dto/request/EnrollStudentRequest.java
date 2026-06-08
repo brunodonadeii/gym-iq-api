@@ -1,5 +1,7 @@
 package com.gymiq.dto.request;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -9,7 +11,7 @@ import java.time.LocalDate;
 public class EnrollStudentRequest {
 
     @NotNull(message = "ID do aluno é obrigatório")
-    private Integer studentId;
+    private UUID studentId;
 
     @NotNull(message = "ID do plano é obrigatório")
     private Integer planId;

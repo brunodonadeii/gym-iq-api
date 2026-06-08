@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.response.RetentionAlertResponse;
 import com.gymiq.entity.Enrollment;
@@ -42,14 +44,21 @@ public class RetentionAlertService {
     private static final int INACTIVITY_THRESHOLD_MEDIUM = 15;
     private static final int INACTIVITY_THRESHOLD_HIGH = 30;
 
-    private static final int INACTIVITY_SCORE_LOW = 20;
-    private static final int INACTIVITY_SCORE_MEDIUM = 35;
-    private static final int INACTIVITY_SCORE_HIGH = 50;
+    private static final int INACTIVITY_SCORE_LOW = 10;
+    private static final int INACTIVITY_SCORE_MEDIUM = 25;
+    private static final int INACTIVITY_SCORE_HIGH = 40;
 
-    private static final int POINTS_PER_OVERDUE_PAYMENT = 20;
+    private static final int FREQUENCY_WINDOW_DAYS = 30;
+    private static final int FREQUENCY_MINIMUM_HEALTHY = 8;
+    private static final int FREQUENCY_WARNING = 4;
+
+    private static final int FREQUENCY_SCORE_MEDIUM = 15;
+    private static final int FREQUENCY_SCORE_HIGH = 30;
+
+    private static final int POINTS_PER_OVERDUE_PAYMENT = 15;
 
     private static final int MAX_RISK_SCORE = 100;
-    private static final int MAX_PAYMENT_SCORE = 50;
+    private static final int MAX_PAYMENT_SCORE = 30;
 
     private static final int RISK_THRESHOLD_MEDIUM = 30;
     private static final int RISK_THRESHOLD_HIGH = 60;
@@ -62,14 +71,16 @@ public class RetentionAlertService {
     private final PaymentRepository paymentRepository;
 
     @Transactional
-    @Auditable(action = AuditAction.GENERATE_RETENTION_ALERT, resourceType = ResourceType.STUDENT, description = "Processou geracao de alerta de retencao para aluno")
-    public Optional<RetentionAlertResponse> generateForStudent(Integer studentId) {
+    @Auditable(action = AuditAction.GENERATE_RETENTION_ALERT, resourceType = ResourceType.STUDENT, description = "Processou geração de alerta de retenção para aluno")
+    public Optional<RetentionAlertResponse> generateForStudent(UUID studentId) {
         Student student = findActiveStudent(studentId);
         Enrollment activeEnrollment = findActiveEnrollment(studentId);
 
         Integer inactiveDays = calculateInactiveDays(studentId, activeEnrollment);
+        Integer recentCheckIns = countRecentCheckIns(studentId, activeEnrollment);
+        Integer frequencyWindowDays = calculateFrequencyWindowDays(activeEnrollment);
         Integer overduePayments = countOverduePayments(studentId);
-        Integer riskScore = calculateRiskScore(inactiveDays, overduePayments);
+        Integer riskScore = calculateRiskScore(inactiveDays, recentCheckIns, frequencyWindowDays, overduePayments);
 
         Optional<RetentionAlert> openAlert = retentionAlertRepository
                 .findByStudentStudentIdAndStatus(studentId, AlertStatus.OPEN);
@@ -81,7 +92,7 @@ public class RetentionAlertService {
         }
 
         RiskLevel riskLevel = resolveRiskLevel(riskScore);
-        String message = buildMessage(inactiveDays, overduePayments, riskLevel);
+        String message = buildMessage(inactiveDays, recentCheckIns, frequencyWindowDays, overduePayments, riskLevel);
 
         RetentionAlert alert = openAlert
                 .orElseGet(() -> RetentionAlert.builder()
@@ -116,7 +127,7 @@ public class RetentionAlertService {
     @Transactional
     @Auditable(action = AuditAction.GENERATE_RETENTION_ALERTS, resourceType = ResourceType.JOB, description = "Processou alertas para alunos inadimplentes")
     public List<RetentionAlertResponse> generateForOverdueStudents() {
-        List<Integer> studentIds = paymentRepository.findActiveStudentIdsWithOverduePayments(
+        List<UUID> studentIds = paymentRepository.findActiveStudentIdsWithOverduePayments(
                 EnrollmentStatus.ACTIVE,
                 PaymentStatus.OVERDUE,
                 PaymentStatus.PENDING,
@@ -131,14 +142,17 @@ public class RetentionAlertService {
 
     @Transactional(readOnly = true)
     public Page<RetentionAlertResponse> findOpenAlerts(Pageable pageable) {
-        return retentionAlertRepository.findByStatus(AlertStatus.OPEN, pageable)
+        return retentionAlertRepository.findOpenAlertsForActiveStudents(
+                        AlertStatus.OPEN,
+                        EnrollmentStatus.ACTIVE,
+                        pageable)
                 .map(RetentionAlertResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<RetentionAlertResponse> findByStudent(Integer studentId, Pageable pageable) {
+    public Page<RetentionAlertResponse> findByStudent(UUID studentId, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+            throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
         }
 
         return retentionAlertRepository.findByStudentStudentId(studentId, pageable)
@@ -146,17 +160,17 @@ public class RetentionAlertService {
     }
 
     @Transactional(readOnly = true)
-    public RetentionAlertResponse findById(Integer id) {
+    public RetentionAlertResponse findById(UUID id) {
         return RetentionAlertResponse.fromEntity(findEntityById(id));
     }
 
     @Transactional
-    @Auditable(action = AuditAction.RESOLVE_RETENTION_ALERT, resourceType = ResourceType.RETENTION_ALERT, description = "Resolveu alerta de retencao")
-    public RetentionAlertResponse resolve(Integer id) {
+    @Auditable(action = AuditAction.RESOLVE_RETENTION_ALERT, resourceType = ResourceType.RETENTION_ALERT, description = "Resolveu alerta de retenção")
+    public RetentionAlertResponse resolve(UUID id) {
         RetentionAlert alert = findEntityById(id);
 
         if (alert.getStatus() == AlertStatus.RESOLVED) {
-            throw new BusinessException("Alerta ja foi resolvido");
+            throw new BusinessException("Alerta já foi resolvido");
         }
 
         alert.setStatus(AlertStatus.RESOLVED);
@@ -167,27 +181,27 @@ public class RetentionAlertService {
         return RetentionAlertResponse.fromEntity(alert);
     }
 
-    private RetentionAlert findEntityById(Integer id) {
+    private RetentionAlert findEntityById(UUID id) {
         return retentionAlertRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Alerta de retencao nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Alerta de retenção não encontrado: " + id));
     }
 
-    private Student findActiveStudent(Integer studentId) {
+    private Student findActiveStudent(UUID studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + studentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + studentId));
 
         if (Boolean.FALSE.equals(student.getUser().getActive())) {
-            throw new BusinessException("Aluno inativo nao deve gerar alerta de retencao");
+            throw new BusinessException("Aluno inativo não deve gerar alerta de retenção");
         }
         return student;
     }
 
-    private Enrollment findActiveEnrollment(Integer studentId) {
+    private Enrollment findActiveEnrollment(UUID studentId) {
         return enrollmentRepository.findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessException("Aluno sem matricula ativa nao deve gerar alerta de retencao"));
+                .orElseThrow(() -> new BusinessException("Aluno sem matrícula ativa não deve gerar alerta de retenção"));
     }
 
-    private Integer calculateInactiveDays(Integer studentId, Enrollment activeEnrollment) {
+    private Integer calculateInactiveDays(UUID studentId, Enrollment activeEnrollment) {
         LocalDate today = LocalDate.now();
         LocalDate enrollmentStartDate = activeEnrollment.getStartDate();
 
@@ -204,7 +218,7 @@ public class RetentionAlertService {
         return Math.toIntExact(Math.max(0, ChronoUnit.DAYS.between(startDate, endDate)));
     }
 
-    private Integer countOverduePayments(Integer studentId) {
+    private Integer countOverduePayments(UUID studentId) {
         long manuallyMarkedOverdue = paymentRepository
                 .countByEnrollmentStudentStudentIdAndStatus(studentId, PaymentStatus.OVERDUE);
         long pendingPastDue = paymentRepository
@@ -216,10 +230,39 @@ public class RetentionAlertService {
         return Math.toIntExact(manuallyMarkedOverdue + pendingPastDue);
     }
 
-    private Integer calculateRiskScore(Integer inactiveDays, Integer overduePayments) {
+    private Integer countRecentCheckIns(UUID studentId, Enrollment activeEnrollment) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate = activeEnrollment.getStartDate()
+                .atStartOfDay()
+                .isAfter(now.minusDays(FREQUENCY_WINDOW_DAYS))
+                ? activeEnrollment.getStartDate().atStartOfDay()
+                : now.minusDays(FREQUENCY_WINDOW_DAYS);
+
+        return Math.toIntExact(presenceRepository
+                .countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+                        studentId,
+                        startDate,
+                        now));
+    }
+
+    private Integer calculateFrequencyWindowDays(Enrollment activeEnrollment) {
+        LocalDate windowStartDate = LocalDate.now().minusDays(FREQUENCY_WINDOW_DAYS);
+        LocalDate effectiveStartDate = activeEnrollment.getStartDate().isAfter(windowStartDate)
+                ? activeEnrollment.getStartDate()
+                : windowStartDate;
+
+        return calculateDaysBetween(effectiveStartDate, LocalDate.now());
+    }
+
+    private Integer calculateRiskScore(
+            Integer inactiveDays,
+            Integer recentCheckIns,
+            Integer frequencyWindowDays,
+            Integer overduePayments) {
         int inactivityScore = calculateInactivityScore(inactiveDays);
+        int frequencyScore = calculateFrequencyScore(recentCheckIns, frequencyWindowDays);
         int paymentScore = Math.min(overduePayments * POINTS_PER_OVERDUE_PAYMENT, MAX_PAYMENT_SCORE);
-        return Math.min(inactivityScore + paymentScore, MAX_RISK_SCORE);
+        return Math.min(inactivityScore + frequencyScore + paymentScore, MAX_RISK_SCORE);
     }
 
     private boolean hasActionableRisk(Integer riskScore) {
@@ -239,6 +282,31 @@ public class RetentionAlertService {
         return 0;
     }
 
+    private Integer calculateFrequencyScore(Integer recentCheckIns, Integer frequencyWindowDays) {
+        if (frequencyWindowDays < INACTIVITY_THRESHOLD_LOW) {
+            return 0;
+        }
+
+        int healthyThreshold = calculateProportionalFrequencyThreshold(
+                FREQUENCY_MINIMUM_HEALTHY,
+                frequencyWindowDays);
+        int warningThreshold = calculateProportionalFrequencyThreshold(
+                FREQUENCY_WARNING,
+                frequencyWindowDays);
+
+        if (recentCheckIns < warningThreshold) {
+            return FREQUENCY_SCORE_HIGH;
+        }
+        if (recentCheckIns < healthyThreshold) {
+            return FREQUENCY_SCORE_MEDIUM;
+        }
+        return 0;
+    }
+
+    private Integer calculateProportionalFrequencyThreshold(Integer baseThreshold, Integer frequencyWindowDays) {
+        return Math.max(1, (int) Math.ceil(baseThreshold * (frequencyWindowDays / (double) FREQUENCY_WINDOW_DAYS)));
+    }
+
     private RiskLevel resolveRiskLevel(Integer riskScore) {
         if (riskScore >= RISK_THRESHOLD_CRITICAL) {
             return RiskLevel.CRITICAL;
@@ -252,11 +320,18 @@ public class RetentionAlertService {
         return RiskLevel.LOW;
     }
 
-    private String buildMessage(Integer inactiveDays, Integer overduePayments, RiskLevel riskLevel) {
+    private String buildMessage(
+            Integer inactiveDays,
+            Integer recentCheckIns,
+            Integer frequencyWindowDays,
+            Integer overduePayments,
+            RiskLevel riskLevel) {
         String inactivityText = inactiveDays + " dia(s) sem check-in";
 
         return "Risco " + riskLevel.name() + ": " +
-                inactivityText + " e " +
+                inactivityText + ", " +
+                recentCheckIns + " check-in(s) nos ultimos " +
+                frequencyWindowDays + " dia(s) avaliados e " +
                 overduePayments + " pagamento(s) atrasado(s).";
     }
 
@@ -283,7 +358,7 @@ public class RetentionAlertService {
         log.info("Retention alert automatically resolved: id={}", alert.getRetentionAlertId());
     }
 
-    private void generateAlertSafely(Integer studentId, List<RetentionAlertResponse> generatedAlerts) {
+    private void generateAlertSafely(UUID studentId, List<RetentionAlertResponse> generatedAlerts) {
         try {
             generateForStudent(studentId).ifPresent(generatedAlerts::add);
         } catch (BusinessException | ResourceNotFoundException ex) {

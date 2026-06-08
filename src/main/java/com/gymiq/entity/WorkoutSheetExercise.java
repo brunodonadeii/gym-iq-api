@@ -1,5 +1,7 @@
 package com.gymiq.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -7,7 +9,7 @@ import lombok.*;
 @Table(name = "workout_sheet_exercise",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_workout_sheet_exercise_order",
-                        columnNames = {"workout_sheet_id", "execution_order"})
+                        columnNames = {"workout_sheet_id", "training_section", "execution_order"})
         })
 @Getter
 @Setter
@@ -17,9 +19,9 @@ import lombok.*;
 public class WorkoutSheetExercise {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_workout_sheet_exercise")
-    private Integer workoutSheetExerciseId;
+    private UUID workoutSheetExerciseId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workout_sheet_id", nullable = false,
@@ -39,6 +41,10 @@ public class WorkoutSheetExercise {
 
     @Column(name = "rest_seconds")
     private Integer restSeconds;
+
+    @Column(name = "training_section", nullable = false, length = 40)
+    @Builder.Default
+    private String trainingSection = "A";
 
     @Column(name = "execution_order", nullable = false)
     private Integer executionOrder;

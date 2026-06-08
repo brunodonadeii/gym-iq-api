@@ -1,5 +1,6 @@
 package com.gymiq.entity;
 
+import com.gymiq.entity.converter.EncryptedStringConverter;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import jakarta.persistence.Column;
@@ -19,6 +20,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "audit_log", indexes = {
@@ -40,9 +42,10 @@ public class AuditLog {
     private Long auditLogId;
 
     @Column(name = "actor_user_id")
-    private Integer actorUserId;
+    private UUID actorUserId;
 
-    @Column(name = "actor_email", length = 150)
+    @jakarta.persistence.Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "actor_email", columnDefinition = "TEXT")
     private String actorEmail;
 
     @Column(name = "actor_role", length = 20)
@@ -56,8 +59,8 @@ public class AuditLog {
     @Column(name = "resource_type", length = 40)
     private ResourceType resourceType;
 
-    @Column(name = "resource_id")
-    private Integer resourceId;
+    @Column(name = "resource_id", length = 100)
+    private String resourceId;
 
     @Column(name = "description", length = 500)
     private String description;

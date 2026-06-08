@@ -1,9 +1,12 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.request.CreateWorkoutSheetRequest;
 import com.gymiq.dto.response.WorkoutSheetResponse;
+import com.gymiq.dto.response.WorkoutSheetSummaryResponse;
 import com.gymiq.entity.Exercise;
 import com.gymiq.entity.Instructor;
 import com.gymiq.entity.Student;
@@ -36,10 +39,13 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class WorkoutSheetService {
 
+    private static final String DEFAULT_TRAINING_SECTION = "A";
+
     private final WorkoutSheetRepository workoutSheetRepository;
     private final StudentRepository studentRepository;
     private final InstructorRepository instructorRepository;
     private final ExerciseRepository exerciseRepository;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional
     public WorkoutSheetResponse create(CreateWorkoutSheetRequest request) {
@@ -76,45 +82,45 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findAll(Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findAll(Pageable pageable) {
         return workoutSheetRepository.findAll(pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public WorkoutSheetResponse findById(Integer id) {
+    public WorkoutSheetResponse findById(UUID id) {
         return WorkoutSheetResponse.fromEntity(findEntityById(id));
     }
 
     @Transactional(readOnly = true)
-    public WorkoutSheetResponse findById(Integer id, String authenticatedEmail, boolean admin) {
+    public WorkoutSheetResponse findById(UUID id, String authenticatedEmail, boolean admin) {
         WorkoutSheet workoutSheet = findEntityById(id);
         ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
         return WorkoutSheetResponse.fromEntity(workoutSheet);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByStudent(Integer studentId, boolean onlyActive, Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findByStudent(UUID studentId, boolean onlyActive, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+            throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
         }
 
         Page<WorkoutSheet> workoutSheets = onlyActive
                 ? workoutSheetRepository.findByStudentStudentIdAndActiveTrue(studentId, pageable)
                 : workoutSheetRepository.findByStudentStudentId(studentId, pageable);
 
-        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
+        return workoutSheets.map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByStudent(
-            Integer studentId,
+    public Page<WorkoutSheetSummaryResponse> findByStudent(
+            UUID studentId,
             boolean onlyActive,
             Pageable pageable,
             String authenticatedEmail,
             boolean admin) {
         if (!studentRepository.existsById(studentId)) {
-            throw new ResourceNotFoundException("Aluno nao encontrado: " + studentId);
+            throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
         }
 
         if (admin) {
@@ -122,67 +128,67 @@ public class WorkoutSheetService {
         }
 
         Page<WorkoutSheet> workoutSheets = onlyActive
-                ? workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCaseAndActiveTrue(
-                        studentId, authenticatedEmail, pageable)
-                : workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailIgnoreCase(
-                        studentId, authenticatedEmail, pageable);
+                ? workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailHashAndActiveTrue(
+                        studentId, personalDataProtectionService.emailHash(authenticatedEmail), pageable)
+                : workoutSheetRepository.findByStudentStudentIdAndInstructorUserEmailHash(
+                        studentId, personalDataProtectionService.emailHash(authenticatedEmail), pageable);
 
-        return workoutSheets.map(WorkoutSheetResponse::fromEntity);
+        return workoutSheets.map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByAuthenticatedStudent(String email, boolean onlyActive, Pageable pageable) {
-        Integer studentId = studentRepository.findByUserEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado para o usuario autenticado"))
+    public Page<WorkoutSheetSummaryResponse> findByAuthenticatedStudent(String email, boolean onlyActive, Pageable pageable) {
+        UUID studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado para o usuário autenticado"))
                 .getStudentId();
 
         return findByStudent(studentId, onlyActive, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByInstructor(Integer instructorId, Pageable pageable) {
+    public Page<WorkoutSheetSummaryResponse> findByInstructor(UUID instructorId, Pageable pageable) {
         if (!instructorRepository.existsById(instructorId)) {
-            throw new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId);
+            throw new ResourceNotFoundException("Instrutor não encontrado: " + instructorId);
         }
 
         return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByInstructor(
-            Integer instructorId,
+    public Page<WorkoutSheetSummaryResponse> findByInstructor(
+            UUID instructorId,
             Pageable pageable,
             String authenticatedEmail,
             boolean admin) {
         Instructor instructor = instructorRepository.findById(instructorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId));
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor não encontrado: " + instructorId));
 
         ensureInstructorCanManage(instructor, authenticatedEmail, admin);
 
         return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
-        Integer instructorId = instructorRepository.findByUserEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado para o usuario autenticado"))
+    public Page<WorkoutSheetSummaryResponse> findByAuthenticatedInstructor(String email, Pageable pageable) {
+        UUID instructorId = instructorRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor não encontrado para o usuário autenticado"))
                 .getInstructorId();
 
         return workoutSheetRepository.findByInstructorInstructorId(instructorId, pageable)
-                .map(WorkoutSheetResponse::fromEntity);
+                .map(WorkoutSheetSummaryResponse::fromEntity);
     }
 
     @Transactional
-    public WorkoutSheetResponse update(Integer id, CreateWorkoutSheetRequest request) {
+    public WorkoutSheetResponse update(UUID id, CreateWorkoutSheetRequest request) {
         return update(id, request, null, true);
     }
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Atualizou ficha de treino")
     public WorkoutSheetResponse update(
-            Integer id,
+            UUID id,
             CreateWorkoutSheetRequest request,
             String authenticatedEmail,
             boolean admin) {
@@ -212,13 +218,13 @@ public class WorkoutSheetService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    public void deactivate(UUID id) {
         deactivate(id, null, true);
     }
 
     @Transactional
     @Auditable(action = AuditAction.DEACTIVATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Inativou ficha de treino")
-    public void deactivate(Integer id, String authenticatedEmail, boolean admin) {
+    public void deactivate(UUID id, String authenticatedEmail, boolean admin) {
         WorkoutSheet workoutSheet = findEntityById(id);
         ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
         workoutSheet.setActive(false);
@@ -226,27 +232,27 @@ public class WorkoutSheetService {
         log.info("Workout sheet deactivated: id={}", id);
     }
 
-    private WorkoutSheet findEntityById(Integer id) {
+    private WorkoutSheet findEntityById(UUID id) {
         return workoutSheetRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino nao encontrada: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino não encontrada: " + id));
     }
 
-    private Student findActiveStudent(Integer studentId) {
+    private Student findActiveStudent(UUID studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado: " + studentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado: " + studentId));
 
         if (Boolean.FALSE.equals(student.getUser().getActive())) {
-            throw new BusinessException("Aluno inativo nao pode receber ficha de treino");
+            throw new BusinessException("Aluno inativo não pode receber ficha de treino");
         }
         return student;
     }
 
-    private Instructor findActiveInstructor(Integer instructorId) {
+    private Instructor findActiveInstructor(UUID instructorId) {
         Instructor instructor = instructorRepository.findById(instructorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Instrutor nao encontrado: " + instructorId));
+                .orElseThrow(() -> new ResourceNotFoundException("Instrutor não encontrado: " + instructorId));
 
         if (Boolean.FALSE.equals(instructor.getUser().getActive())) {
-            throw new BusinessException("Instrutor inativo nao pode criar ficha de treino");
+            throw new BusinessException("Instrutor inativo não pode criar ficha de treino");
         }
         return instructor;
     }
@@ -258,7 +264,7 @@ public class WorkoutSheetService {
 
         if (authenticatedEmail == null
                 || !instructor.getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
-            throw new AccessDeniedException("Instrutor nao tem permissao para acessar esta ficha");
+            throw new AccessDeniedException("Instrutor não tem permissão para acessar esta ficha");
         }
     }
 
@@ -276,7 +282,7 @@ public class WorkoutSheetService {
             CreateWorkoutSheetExerciseRequest request) {
 
         Exercise exercise = exerciseRepository.findById(request.getExerciseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + request.getExerciseId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Exercício não encontrado: " + request.getExerciseId()));
 
         return WorkoutSheetExercise.builder()
                 .workoutSheet(workoutSheet)
@@ -284,6 +290,7 @@ public class WorkoutSheetService {
                 .sets(request.getSets())
                 .repetitions(request.getRepetitions())
                 .restSeconds(request.getRestSeconds())
+                .trainingSection(resolveTrainingSection(request.getTrainingSection()))
                 .executionOrder(request.getExecutionOrder())
                 .notes(request.getNotes())
                 .build();
@@ -296,21 +303,29 @@ public class WorkoutSheetService {
 
         LocalDate startDate = resolveStartDate(request.getStartDate());
         if (request.getEndDate().isBefore(startDate)) {
-            throw new BusinessException("Data final nao pode ser anterior a data inicial");
+            throw new BusinessException("Data final não pode ser anterior à data inicial");
         }
     }
 
     private void validateExerciseOrders(List<CreateWorkoutSheetExerciseRequest> exercises) {
         if (exercises == null) {
-            throw new BusinessException("A ficha deve possuir pelo menos um exercicio");
+            throw new BusinessException("A ficha deve possuir pelo menos um exercício");
         }
 
-        Set<Integer> orders = new HashSet<>();
+        Set<String> orders = new HashSet<>();
         for (CreateWorkoutSheetExerciseRequest exercise : exercises) {
-            if (!orders.add(exercise.getExecutionOrder())) {
-                throw new BusinessException("Ordem de execucao duplicada: " + exercise.getExecutionOrder());
+            String orderKey = resolveTrainingSection(exercise.getTrainingSection()).toLowerCase() + ":" + exercise.getExecutionOrder();
+            if (!orders.add(orderKey)) {
+                throw new BusinessException("Ordem de execução duplicada no treino "
+                        + resolveTrainingSection(exercise.getTrainingSection()) + ": " + exercise.getExecutionOrder());
             }
         }
+    }
+
+    private String resolveTrainingSection(String trainingSection) {
+        return trainingSection == null || trainingSection.isBlank()
+                ? DEFAULT_TRAINING_SECTION
+                : trainingSection.trim();
     }
 
     private LocalDate resolveStartDate(LocalDate startDate) {

@@ -1,5 +1,7 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateExerciseRequest;
 import com.gymiq.dto.response.ExerciseResponse;
@@ -79,7 +81,7 @@ public class ExerciseService {
         Exercise exercise = findEntityById(id);
 
         if (workoutSheetExerciseRepository.existsByExerciseExerciseId(id)) {
-            throw new BusinessException("Nao e possivel excluir um exercicio vinculado a fichas de treino");
+            throw new BusinessException("Não é possível excluir um exercício vinculado a fichas de treino");
         }
 
         exerciseRepository.delete(exercise);
@@ -88,14 +90,14 @@ public class ExerciseService {
 
     public Exercise findEntityById(Integer id) {
         return exerciseRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Exercício não encontrado: " + id));
     }
 
     private void ensureNameIsAvailable(String name, Integer currentExerciseId) {
         exerciseRepository.findByNameIgnoreCase(name)
                 .filter(exercise -> !exercise.getExerciseId().equals(currentExerciseId))
                 .ifPresent(exercise -> {
-                    throw new BusinessException("Ja existe um exercicio com o nome: " + name);
+            throw new BusinessException("Já existe um exercício com o nome: " + name);
                 });
     }
 }

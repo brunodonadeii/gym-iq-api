@@ -1,5 +1,7 @@
 package com.gymiq.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -18,9 +20,9 @@ import java.time.LocalDateTime;
 public class Enrollment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_enrollment")
-    private Integer enrollmentId;
+    private UUID enrollmentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false,
@@ -42,6 +44,9 @@ public class Enrollment {
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private EnrollmentStatus status = EnrollmentStatus.ACTIVE;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

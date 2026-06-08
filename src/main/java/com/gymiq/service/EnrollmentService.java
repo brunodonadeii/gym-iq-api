@@ -1,12 +1,14 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.EnrollStudentRequest;
 import com.gymiq.dto.response.EnrollmentResponse;
-import com.gymiq.entity.Student;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Plan;
+import com.gymiq.entity.Student;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -35,15 +38,25 @@ public class EnrollmentService {
     private final PaymentService paymentService;
     private final PaymentRepository paymentRepository;
 
-
     @Transactional(readOnly = true)
     public Page<EnrollmentResponse> findAll(Pageable pageable) {
+        return findActive(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findActive(Pageable pageable) {
+        return enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE, pageable)
+                .map(EnrollmentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findHistory(Pageable pageable) {
         return enrollmentRepository.findAll(pageable)
                 .map(EnrollmentResponse::fromEntity);
     }
 
     @Transactional
-    @Auditable(action = AuditAction.CREATE_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Criou matricula")
+    @Auditable(action = AuditAction.CREATE_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Criou matrícula")
     public EnrollmentResponse enroll(EnrollStudentRequest request) {
         Student student = studentService.findEntityById(request.getStudentId());
         Plan plan = planService.findEntityById(request.getPlanId());
@@ -80,12 +93,12 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public EnrollmentResponse findById(Integer enrollmentId) {
+    public EnrollmentResponse findById(UUID enrollmentId) {
         return buildResponseWithPayments(findEntityById(enrollmentId));
     }
 
     @Transactional(readOnly = true)
-    public Page<EnrollmentResponse> findByStudent(Integer studentId, Pageable pageable) {
+    public Page<EnrollmentResponse> findByStudent(UUID studentId, Pageable pageable) {
         studentService.findEntityById(studentId);
         return enrollmentRepository.findByStudentStudentId(studentId, pageable)
                 .map(EnrollmentResponse::fromEntity);
@@ -99,7 +112,7 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
-    public EnrollmentResponse findActiveByStudent(Integer studentId) {
+    public EnrollmentResponse findActiveByStudent(UUID studentId) {
         return enrollmentRepository
                 .findByStudentStudentIdAndStatus(studentId, EnrollmentStatus.ACTIVE)
                 .map(this::buildResponseWithPayments)
@@ -114,13 +127,14 @@ public class EnrollmentService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.UPDATE_ENROLLMENT_STATUS, resourceType = ResourceType.ENROLLMENT, description = "Alterou status da matricula")
-    public EnrollmentResponse changeStatus(Integer enrollmentId, EnrollmentStatus newStatus) {
+    @Auditable(action = AuditAction.UPDATE_ENROLLMENT_STATUS, resourceType = ResourceType.ENROLLMENT, description = "Alterou status da matrícula")
+    public EnrollmentResponse changeStatus(UUID enrollmentId, EnrollmentStatus newStatus) {
         Enrollment enrollment = findEntityById(enrollmentId);
 
         validateStatusTransition(enrollment.getStatus(), newStatus);
 
         enrollment.setStatus(newStatus);
+        enrollment.setCanceledAt(newStatus == EnrollmentStatus.CANCELED ? LocalDateTime.now() : null);
         enrollmentRepository.save(enrollment);
         log.info("Status da matrícula id={} alterado para {}", enrollmentId, newStatus);
 
@@ -128,8 +142,8 @@ public class EnrollmentService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.RENEW_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Renovou matricula")
-    public EnrollmentResponse renew(Integer enrollmentId, Integer newPlanId) {
+    @Auditable(action = AuditAction.RENEW_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Renovou matrícula")
+    public EnrollmentResponse renew(UUID enrollmentId, Integer newPlanId) {
         Enrollment oldEnrollment = findEntityById(enrollmentId);
 
         if (oldEnrollment.getStatus() == EnrollmentStatus.CANCELED) {
@@ -137,7 +151,7 @@ public class EnrollmentService {
         }
 
         if (oldEnrollment.getEndDate() == null) {
-            throw new BusinessException("Matricula mensal recorrente nao precisa de renovacao");
+            throw new BusinessException("Matrícula mensal recorrente não precisa de renovação");
         }
 
         Plan newPlan = newPlanId != null
@@ -149,6 +163,7 @@ public class EnrollmentService {
         }
 
         oldEnrollment.setStatus(EnrollmentStatus.CANCELED);
+        oldEnrollment.setCanceledAt(LocalDateTime.now());
         enrollmentRepository.save(oldEnrollment);
 
         LocalDate start = LocalDate.now();
@@ -173,7 +188,7 @@ public class EnrollmentService {
         return buildResponseWithPayments(newEnrollment);
     }
 
-    private Enrollment findEntityById(Integer id) {
+    private Enrollment findEntityById(UUID id) {
         return enrollmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Matrícula não encontrada: " + id));
     }
@@ -198,12 +213,12 @@ public class EnrollmentService {
     private void validateStatusTransition(EnrollmentStatus current, EnrollmentStatus next) {
         boolean invalid = switch (current) {
             case CANCELED -> true;
-            case ACTIVE   -> next == EnrollmentStatus.ACTIVE;
-            case SUSPENDED-> next == EnrollmentStatus.SUSPENDED;
+            case ACTIVE -> next == EnrollmentStatus.ACTIVE;
+            case SUSPENDED -> next == EnrollmentStatus.SUSPENDED;
         };
         if (invalid) {
             throw new BusinessException(
-                    "Transição de status inválida: %s → %s".formatted(current, next));
+                    "Transição de status inválida: %s -> %s".formatted(current, next));
         }
     }
 }

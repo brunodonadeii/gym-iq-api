@@ -2,6 +2,7 @@ package com.gymiq.security;
 
 import com.gymiq.entity.User;
 import com.gymiq.repository.UserRepository;
+import com.gymiq.service.PersonalDataProtectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
@@ -15,11 +16,12 @@ import java.util.List;
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "Usuário não encontrado com e-mail: " + email));
 

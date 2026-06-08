@@ -1,5 +1,7 @@
 package com.gymiq.dto.response;
 
+import java.util.UUID;
+
 import com.gymiq.entity.Payment;
 import lombok.Builder;
 import lombok.Data;
@@ -12,10 +14,10 @@ import java.time.LocalDateTime;
 @Builder
 public class PaymentResponse {
 
-    private Integer paymentId;
-    private Integer enrollmentId;
+    private UUID paymentId;
+    private UUID enrollmentId;
 
-    private Integer studentId;
+    private UUID studentId;
     private String studentName;
     private String studentEmail;
 

@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -32,6 +33,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PersonalDataProtectionService personalDataProtectionService;
 
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(Pageable pageable) {
@@ -40,7 +42,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse findById(Integer id) {
+    public UserResponse findById(UUID id) {
         return UserResponse.fromEntity(findAdministrativeUser(id));
     }
 
@@ -49,13 +51,16 @@ public class UserService {
     public UserResponse createAdministrativeUser(CreateUserRequest request) {
         validateAdministrativeRole(request.getRole());
 
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+
+        if (userRepository.existsByEmailHash(emailHash)) {
+            throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
         }
 
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
+                .emailHash(emailHash)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .active(true)
@@ -71,19 +76,22 @@ public class UserService {
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_USER, resourceType = ResourceType.USER, description = "Atualizou usuario administrativo")
-    public UserResponse updateAdministrativeUser(Integer id, UpdateUserRequest request) {
+    public UserResponse updateAdministrativeUser(UUID id, UpdateUserRequest request) {
         validateAdministrativeRole(request.getRole());
 
         User user = findAdministrativeUser(id);
 
-        userRepository.findByEmailIgnoreCase(request.getEmail())
+        String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+
+        userRepository.findByEmailHash(emailHash)
                 .filter(existingUser -> !existingUser.getUserId().equals(id))
                 .ifPresent(existingUser -> {
-                    throw new BusinessException("E-mail ja cadastrado: " + request.getEmail());
+                    throw new BusinessException("E-mail já cadastrado: " + request.getEmail());
                 });
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
+        user.setEmailHash(emailHash);
         user.setRole(request.getRole());
         user.setLgpdAccepted(request.getLgpdAccepted());
         if (Boolean.TRUE.equals(request.getLgpdAccepted()) && user.getLgpdAcceptedAt() == null) {
@@ -100,7 +108,7 @@ public class UserService {
 
     @Transactional
     @Auditable(action = AuditAction.DELETE_USER, resourceType = ResourceType.USER, description = "Excluiu usuario administrativo")
-    public void deleteAdministrativeUser(Integer id) {
+    public void deleteAdministrativeUser(UUID id) {
         User user = findAdministrativeUser(id);
         userRepository.delete(user);
         log.info("Usuario administrativo removido: id={}, role={}", user.getUserId(), user.getRole());
@@ -108,13 +116,13 @@ public class UserService {
 
     private void validateAdministrativeRole(User.Role role) {
         if (role == User.Role.STUDENT || role == User.Role.INSTRUCTOR) {
-            throw new BusinessException("Use as rotas especificas para criar alunos ou instrutores");
+            throw new BusinessException("Use as rotas específicas para criar alunos ou instrutores");
         }
     }
 
-    private User findAdministrativeUser(Integer id) {
+    private User findAdministrativeUser(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado: " + id));
 
         validateAdministrativeRole(user.getRole());
         return user;

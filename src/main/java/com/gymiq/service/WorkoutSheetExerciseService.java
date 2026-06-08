@@ -22,32 +22,35 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkoutSheetExerciseService {
 
+    private static final String DEFAULT_TRAINING_SECTION = "A";
+
     private final WorkoutSheetExerciseRepository workoutSheetExerciseRepository;
     private final WorkoutSheetRepository workoutSheetRepository;
     private final ExerciseRepository exerciseRepository;
 
     @Transactional
-    public WorkoutSheetExerciseResponse addExercise(Integer workoutSheetId, CreateWorkoutSheetExerciseRequest request) {
+    public WorkoutSheetExerciseResponse addExercise(UUID workoutSheetId, CreateWorkoutSheetExerciseRequest request) {
         return addExercise(workoutSheetId, request, null, true);
     }
 
     @Transactional
     @Auditable(action = AuditAction.ADD_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Adicionou exercicio na ficha")
     public WorkoutSheetExerciseResponse addExercise(
-            Integer workoutSheetId,
+            UUID workoutSheetId,
             CreateWorkoutSheetExerciseRequest request,
             String authenticatedEmail,
             boolean admin) {
         WorkoutSheet workoutSheet = findActiveWorkoutSheet(workoutSheetId);
         ensureInstructorCanManage(workoutSheet, authenticatedEmail, admin);
         Exercise exercise = findExercise(request.getExerciseId());
-        ensureOrderIsAvailable(workoutSheetId, request.getExecutionOrder(), null);
+        ensureOrderIsAvailable(workoutSheetId, resolveTrainingSection(request.getTrainingSection()), request.getExecutionOrder(), null);
 
         WorkoutSheetExercise item = buildWorkoutSheetExercise(workoutSheet, exercise, request);
         workoutSheetExerciseRepository.save(item);
@@ -58,7 +61,7 @@ public class WorkoutSheetExerciseService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WorkoutSheetExerciseResponse> findByWorkoutSheet(Integer workoutSheetId, Pageable pageable) {
+    public Page<WorkoutSheetExerciseResponse> findByWorkoutSheet(UUID workoutSheetId, Pageable pageable) {
         findWorkoutSheet(workoutSheetId);
 
         return workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
@@ -67,7 +70,7 @@ public class WorkoutSheetExerciseService {
 
     @Transactional(readOnly = true)
     public Page<WorkoutSheetExerciseResponse> findByWorkoutSheet(
-            Integer workoutSheetId,
+            UUID workoutSheetId,
             Pageable pageable,
             String authenticatedEmail,
             boolean admin,
@@ -81,29 +84,30 @@ public class WorkoutSheetExerciseService {
     }
 
     @Transactional
-    public WorkoutSheetExerciseResponse update(Integer id, CreateWorkoutSheetExerciseRequest request) {
+    public WorkoutSheetExerciseResponse update(UUID id, CreateWorkoutSheetExerciseRequest request) {
         return update(id, request, null, true);
     }
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Atualizou exercicio da ficha")
     public WorkoutSheetExerciseResponse update(
-            Integer id,
+            UUID id,
             CreateWorkoutSheetExerciseRequest request,
             String authenticatedEmail,
             boolean admin) {
         WorkoutSheetExercise item = findEntityById(id);
         Exercise exercise = findExercise(request.getExerciseId());
-        Integer workoutSheetId = item.getWorkoutSheet().getWorkoutSheetId();
+        UUID workoutSheetId = item.getWorkoutSheet().getWorkoutSheetId();
 
         ensureWorkoutSheetIsActive(item.getWorkoutSheet());
         ensureInstructorCanManage(item.getWorkoutSheet(), authenticatedEmail, admin);
-        ensureOrderIsAvailable(workoutSheetId, request.getExecutionOrder(), id);
+        ensureOrderIsAvailable(workoutSheetId, resolveTrainingSection(request.getTrainingSection()), request.getExecutionOrder(), id);
 
         item.setExercise(exercise);
         item.setSets(request.getSets());
         item.setRepetitions(request.getRepetitions());
         item.setRestSeconds(request.getRestSeconds());
+        item.setTrainingSection(resolveTrainingSection(request.getTrainingSection()));
         item.setExecutionOrder(request.getExecutionOrder());
         item.setNotes(request.getNotes());
 
@@ -113,13 +117,13 @@ public class WorkoutSheetExerciseService {
     }
 
     @Transactional
-    public void delete(Integer id) {
+    public void delete(UUID id) {
         delete(id, null, true);
     }
 
     @Transactional
     @Auditable(action = AuditAction.DELETE_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Removeu exercicio da ficha")
-    public void delete(Integer id, String authenticatedEmail, boolean admin) {
+    public void delete(UUID id, String authenticatedEmail, boolean admin) {
         WorkoutSheetExercise item = findEntityById(id);
         ensureWorkoutSheetIsActive(item.getWorkoutSheet());
         ensureInstructorCanManage(item.getWorkoutSheet(), authenticatedEmail, admin);
@@ -127,31 +131,31 @@ public class WorkoutSheetExerciseService {
         log.info("Workout sheet exercise deleted: id={}", id);
     }
 
-    private WorkoutSheetExercise findEntityById(Integer id) {
+    private WorkoutSheetExercise findEntityById(UUID id) {
         return workoutSheetExerciseRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Item da ficha nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Item da ficha não encontrado: " + id));
     }
 
-    private WorkoutSheet findActiveWorkoutSheet(Integer workoutSheetId) {
+    private WorkoutSheet findActiveWorkoutSheet(UUID workoutSheetId) {
         WorkoutSheet workoutSheet = findWorkoutSheet(workoutSheetId);
 
         ensureWorkoutSheetIsActive(workoutSheet);
         return workoutSheet;
     }
 
-    private WorkoutSheet findWorkoutSheet(Integer workoutSheetId) {
+    private WorkoutSheet findWorkoutSheet(UUID workoutSheetId) {
         return workoutSheetRepository.findById(workoutSheetId)
-                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino nao encontrada: " + workoutSheetId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino não encontrada: " + workoutSheetId));
     }
 
     private Exercise findExercise(Integer exerciseId) {
         return exerciseRepository.findById(exerciseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + exerciseId));
+                .orElseThrow(() -> new ResourceNotFoundException("Exercício não encontrado: " + exerciseId));
     }
 
     private void ensureWorkoutSheetIsActive(WorkoutSheet workoutSheet) {
         if (Boolean.FALSE.equals(workoutSheet.getActive())) {
-            throw new BusinessException("Ficha de treino inativa nao pode ser alterada");
+            throw new BusinessException("Ficha de treino inativa não pode ser alterada");
         }
     }
 
@@ -173,42 +177,52 @@ public class WorkoutSheetExerciseService {
             return;
         }
 
-        throw new AccessDeniedException("Usuario nao tem permissao para acessar esta ficha");
+            throw new AccessDeniedException("Usuário não tem permissão para acessar esta ficha");
     }
 
-    private void ensureInstructorCanManage(WorkoutSheet workoutSheet, String authenticatedEmail, boolean admin) {
+    private void ensureInstructorCanManage(
+            WorkoutSheet workoutSheet,
+            String authenticatedEmail,
+            boolean admin) {
         if (admin) {
             return;
         }
 
         if (authenticatedEmail == null
                 || !workoutSheet.getInstructor().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
-            throw new AccessDeniedException("Instrutor nao tem permissao para alterar esta ficha");
+            throw new AccessDeniedException("Instrutor não tem permissão para alterar esta ficha");
         }
     }
 
-    private void ensureOrderIsAvailable(Integer workoutSheetId, Integer order, Integer currentItemId) {
-        workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetIdOrderByExecutionOrderAsc(workoutSheetId)
+    private void ensureOrderIsAvailable(UUID workoutSheetId, String trainingSection, Integer order, UUID currentItemId) {
+        workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetIdOrderByTrainingSectionAscExecutionOrderAsc(workoutSheetId)
                 .stream()
+                .filter(item -> item.getTrainingSection().equalsIgnoreCase(trainingSection))
                 .filter(item -> item.getExecutionOrder().equals(order))
-                .filter(item -> !item.getWorkoutSheetExerciseId().equals(currentItemId))
+                .filter(item -> currentItemId == null || !item.getWorkoutSheetExerciseId().equals(currentItemId))
                 .findFirst()
                 .ifPresent(item -> {
-                    throw new BusinessException("Ordem de execucao ja usada nesta ficha: " + order);
+            throw new BusinessException("Ordem de execução já usada no treino " + trainingSection + ": " + order);
                 });
+    }
+
+    private String resolveTrainingSection(String trainingSection) {
+        return trainingSection == null || trainingSection.isBlank()
+                ? DEFAULT_TRAINING_SECTION
+                : trainingSection.trim();
     }
 
     private WorkoutSheetExercise buildWorkoutSheetExercise(
             WorkoutSheet workoutSheet,
             Exercise exercise,
             CreateWorkoutSheetExerciseRequest request) {
-
         return WorkoutSheetExercise.builder()
                 .workoutSheet(workoutSheet)
                 .exercise(exercise)
                 .sets(request.getSets())
                 .repetitions(request.getRepetitions())
                 .restSeconds(request.getRestSeconds())
+                .trainingSection(resolveTrainingSection(request.getTrainingSection()))
                 .executionOrder(request.getExecutionOrder())
                 .notes(request.getNotes())
                 .build();

@@ -11,22 +11,22 @@ import lombok.Data;
 @Data
 public class CreateUserRequest {
 
-    @NotBlank(message = "Nome e obrigatorio")
+    @NotBlank(message = "Nome é obrigatório")
     @Size(min = 2, max = 100, message = "Nome deve ter entre 2 e 100 caracteres")
     private String name;
 
-    @NotBlank(message = "E-mail e obrigatorio")
-    @Email(message = "E-mail invalido")
+    @NotBlank(message = "E-mail é obrigatório")
+    @Email(message = "E-mail inválido")
     private String email;
 
-    @NotBlank(message = "Senha e obrigatoria")
-    @Size(min = 6, message = "Senha deve ter no minimo 6 caracteres")
+    @NotBlank(message = "Senha é obrigatória")
+    @Size(min = 6, message = "Senha deve ter no mínimo 6 caracteres")
     private String password;
 
-    @NotNull(message = "Perfil e obrigatorio")
+    @NotNull(message = "Perfil é obrigatório")
     private Role role;
 
-    @NotNull(message = "Aceite LGPD e obrigatorio")
-    @AssertTrue(message = "E necessario aceitar os termos de LGPD para concluir o cadastro")
+    @NotNull(message = "Aceite LGPD é obrigatório")
+    @AssertTrue(message = "É necessário aceitar os termos de LGPD para concluir o cadastro")
     private Boolean lgpdAccepted;
 }
