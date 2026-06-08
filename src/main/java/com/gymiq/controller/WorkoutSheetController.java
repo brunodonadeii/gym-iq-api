@@ -62,14 +62,16 @@ public class WorkoutSheetController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
     public ResponseEntity<WorkoutSheetResponse> findById(
             @PathVariable UUID id,
             Authentication authentication) {
         return ResponseEntity.ok(workoutSheetService.findById(
                 id,
                 authentication.getName(),
-                hasRole(authentication, "ADMIN")));
+                hasRole(authentication, "ADMIN"),
+                hasRole(authentication, "INSTRUCTOR"),
+                hasRole(authentication, "STUDENT")));
     }
 
     @GetMapping("/student/{studentId}")

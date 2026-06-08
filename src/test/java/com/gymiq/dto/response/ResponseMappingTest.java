@@ -70,16 +70,20 @@ class ResponseMappingTest {
 
         WorkoutSheetResponse detail = WorkoutSheetResponse.fromEntity(workoutSheet);
         WorkoutSheetSummaryResponse summary = WorkoutSheetSummaryResponse.fromEntity(workoutSheet);
-        WorkoutSheetExerciseResponse item = WorkoutSheetExerciseResponse.fromEntity(workoutSheet.getExercises().get(0));
+        WorkoutSheetExerciseResponse item = WorkoutSheetExerciseResponse.fromEntity(
+                workoutSheet.getBlocks().get(0).getExercises().get(0));
 
         assertThat(detail.getWorkoutSheetId()).isEqualTo(workoutSheet.getWorkoutSheetId());
         assertThat(detail.getStudentName()).isEqualTo("Ana Silva");
         assertThat(detail.getInstructorName()).isEqualTo("Carlos Trainer");
+        assertThat(detail.getBlocks()).hasSize(1);
         assertThat(detail.getExercises()).hasSize(1);
         assertThat(summary.getName()).isEqualTo("Ficha Hipertrofia");
         assertThat(summary.getGoal()).isEqualTo("Ganho de massa");
+        assertThat(summary.getBlockCount()).isEqualTo(1);
+        assertThat(summary.getExerciseCount()).isEqualTo(1);
         assertThat(item.getExerciseName()).isEqualTo("Supino");
-        assertThat(item.getTrainingSection()).isEqualTo("A");
+        assertThat(item.getBlockName()).isEqualTo("Treino A");
     }
 
     @Test

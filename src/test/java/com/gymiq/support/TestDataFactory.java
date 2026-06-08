@@ -9,6 +9,7 @@ import com.gymiq.entity.Presence;
 import com.gymiq.entity.RetentionAlert;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
+import com.gymiq.entity.WorkoutBlock;
 import com.gymiq.entity.WorkoutSheet;
 import com.gymiq.entity.WorkoutSheetExercise;
 
@@ -151,23 +152,38 @@ public final class TestDataFactory {
                 .endDate(LocalDate.of(2026, 8, 1))
                 .active(true)
                 .notes("Ajustar cargas semanalmente")
-                .exercises(new ArrayList<>())
+                .blocks(new ArrayList<>())
                 .build();
         workoutSheet.setWorkoutSheetId(UUID.fromString("00000000-0000-0000-0000-000000000008"));
 
-        WorkoutSheetExercise exerciseItem = workoutSheetExercise(workoutSheet);
-        workoutSheet.getExercises().add(exerciseItem);
+        WorkoutBlock block = workoutBlock(workoutSheet);
+        workoutSheet.getBlocks().add(block);
         return workoutSheet;
     }
 
-    public static WorkoutSheetExercise workoutSheetExercise(WorkoutSheet workoutSheet) {
-        WorkoutSheetExercise item = WorkoutSheetExercise.builder()
+    public static WorkoutBlock workoutBlock(WorkoutSheet workoutSheet) {
+        WorkoutBlock block = WorkoutBlock.builder()
                 .workoutSheet(workoutSheet)
+                .name("Treino A")
+                .description("Peito, ombro e triceps")
+                .executionOrder(1)
+                .active(true)
+                .exercises(new ArrayList<>())
+                .build();
+        block.setWorkoutBlockId(UUID.fromString("00000000-0000-0000-0000-000000000088"));
+
+        WorkoutSheetExercise exerciseItem = workoutSheetExercise(block);
+        block.getExercises().add(exerciseItem);
+        return block;
+    }
+
+    public static WorkoutSheetExercise workoutSheetExercise(WorkoutBlock workoutBlock) {
+        WorkoutSheetExercise item = WorkoutSheetExercise.builder()
+                .workoutBlock(workoutBlock)
                 .exercise(exercise())
                 .sets(4)
                 .repetitions("10")
                 .restSeconds(60)
-                .trainingSection("A")
                 .executionOrder(1)
                 .notes("Controlar movimento")
                 .build();

@@ -22,6 +22,8 @@ public class WorkoutSheetSummaryResponse {
     private LocalDate startDate;
     private LocalDate endDate;
     private Boolean active;
+    private Integer blockCount;
+    private Integer exerciseCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -37,8 +39,17 @@ public class WorkoutSheetSummaryResponse {
                 .startDate(workoutSheet.getStartDate())
                 .endDate(workoutSheet.getEndDate())
                 .active(workoutSheet.getActive())
+                .blockCount(workoutSheet.getBlocks().size())
+                .exerciseCount(countExercises(workoutSheet))
                 .createdAt(workoutSheet.getCreatedAt())
                 .updatedAt(workoutSheet.getUpdatedAt())
                 .build();
+    }
+
+    private static Integer countExercises(WorkoutSheet workoutSheet) {
+        return workoutSheet.getBlocks()
+                .stream()
+                .mapToInt(block -> block.getExercises().size())
+                .sum();
     }
 }

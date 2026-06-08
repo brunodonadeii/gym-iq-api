@@ -80,6 +80,9 @@ class WorkoutSheetServiceTest {
         CreateWorkoutSheetRequest request = validRequest(student, instructor);
         request.setExercises(List.of(exerciseItem("A", 1), exerciseItem("A", 1)));
 
+        when(studentRepository.findById(student.getStudentId())).thenReturn(Optional.of(student));
+        when(instructorRepository.findById(instructor.getInstructorId())).thenReturn(Optional.of(instructor));
+
         assertThatThrownBy(() -> workoutSheetService.create(request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("duplicada");

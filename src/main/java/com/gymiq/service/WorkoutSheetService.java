@@ -102,6 +102,18 @@ public class WorkoutSheetService {
     }
 
     @Transactional(readOnly = true)
+    public WorkoutSheetResponse findById(
+            UUID id,
+            String authenticatedEmail,
+            boolean admin,
+            boolean instructor,
+            boolean student) {
+        WorkoutSheet workoutSheet = findEntityById(id);
+        ensureCanViewWorkoutSheet(workoutSheet, authenticatedEmail, admin, instructor, student);
+        return WorkoutSheetResponse.fromEntity(workoutSheet);
+    }
+
+    @Transactional(readOnly = true)
     public Page<WorkoutSheetSummaryResponse> findByStudent(UUID studentId, boolean onlyActive, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
