@@ -7,6 +7,7 @@ import com.gymiq.entity.Plan;
 import com.gymiq.entity.Student;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.repository.EnrollmentRepository;
+import com.gymiq.repository.PaymentRepository;
 import com.gymiq.support.TestDataFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,6 +40,9 @@ class EnrollmentServiceTest {
     @Mock
     private PaymentService paymentService;
 
+    @Mock
+    private PaymentRepository paymentRepository;
+
     @InjectMocks
     private EnrollmentService enrollmentService;
 
@@ -56,15 +61,15 @@ class EnrollmentServiceTest {
                 student.getStudentId(), Enrollment.EnrollmentStatus.ACTIVE)).thenReturn(false);
         when(enrollmentRepository.save(any(Enrollment.class))).thenAnswer(invocation -> {
             Enrollment enrollment = invocation.getArgument(0);
-            enrollment.setEnrollmentId(3);
+            enrollment.setEnrollmentId(UUID.fromString("00000000-0000-0000-0000-000000000003"));
             return enrollment;
         });
 
         EnrollmentResponse response = enrollmentService.enroll(request);
 
-        assertThat(response.getEnrollmentId()).isEqualTo(3);
+        assertThat(response.getEnrollmentId()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000003"));
         assertThat(response.getStatus()).isEqualTo("ACTIVE");
-        assertThat(response.getEndDate()).isEqualTo(request.getStartDate().plusDays(plan.getDurationDays()));
+        assertThat(response.getEndDate()).isNull();
         verify(paymentService).createFirstPaymentForEnrollment(any(Enrollment.class));
     }
 
@@ -101,12 +106,14 @@ class EnrollmentServiceTest {
     @Test
     void renewShouldCancelOldEnrollmentAndCreateNewOne() {
         Enrollment oldEnrollment = TestDataFactory.activeEnrollment();
+        oldEnrollment.getPlan().setDurationMonths(3);
+        oldEnrollment.setEndDate(LocalDate.now().plusMonths(3));
 
         when(enrollmentRepository.findById(oldEnrollment.getEnrollmentId())).thenReturn(Optional.of(oldEnrollment));
         when(enrollmentRepository.save(any(Enrollment.class))).thenAnswer(invocation -> {
             Enrollment enrollment = invocation.getArgument(0);
             if (enrollment.getEnrollmentId() == null) {
-                enrollment.setEnrollmentId(4);
+                enrollment.setEnrollmentId(UUID.fromString("00000000-0000-0000-0000-000000000004"));
             }
             return enrollment;
         });
@@ -114,7 +121,7 @@ class EnrollmentServiceTest {
         EnrollmentResponse response = enrollmentService.renew(oldEnrollment.getEnrollmentId(), null);
 
         assertThat(oldEnrollment.getStatus()).isEqualTo(Enrollment.EnrollmentStatus.CANCELED);
-        assertThat(response.getEnrollmentId()).isEqualTo(4);
+        assertThat(response.getEnrollmentId()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000004"));
         assertThat(response.getStatus()).isEqualTo("ACTIVE");
         verify(paymentService).createFirstPaymentForEnrollment(any(Enrollment.class));
     }

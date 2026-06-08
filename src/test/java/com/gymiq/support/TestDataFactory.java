@@ -1,16 +1,22 @@
 package com.gymiq.support;
 
 import com.gymiq.entity.Enrollment;
+import com.gymiq.entity.Exercise;
+import com.gymiq.entity.Instructor;
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Plan;
 import com.gymiq.entity.Presence;
 import com.gymiq.entity.RetentionAlert;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
+import com.gymiq.entity.WorkoutSheet;
+import com.gymiq.entity.WorkoutSheetExercise;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.UUID;
 
 public final class TestDataFactory {
 
@@ -26,7 +32,33 @@ public final class TestDataFactory {
                 .active(true)
                 .lgpdAccepted(false)
                 .build();
-        user.setUserId(10);
+        user.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000010"));
+        return user;
+    }
+
+    public static User activeInstructorUser() {
+        User user = User.builder()
+                .name("Carlos Trainer")
+                .email("carlos@gymiq.com")
+                .passwordHash("encoded-password")
+                .role(User.Role.INSTRUCTOR)
+                .active(true)
+                .lgpdAccepted(true)
+                .build();
+        user.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000020"));
+        return user;
+    }
+
+    public static User activeAdminUser() {
+        User user = User.builder()
+                .name("Admin GymIQ")
+                .email("admin@gymiq.com")
+                .passwordHash("encoded-password")
+                .role(User.Role.ADMIN)
+                .active(true)
+                .lgpdAccepted(true)
+                .build();
+        user.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000030"));
         return user;
     }
 
@@ -39,7 +71,7 @@ public final class TestDataFactory {
                 .zipCode("01001-000")
                 .address("Praca da Se")
                 .build();
-        student.setStudentId(1);
+        student.setStudentId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         return student;
     }
 
@@ -48,11 +80,32 @@ public final class TestDataFactory {
                 .name("Mensal")
                 .description("Plano mensal")
                 .monthlyPrice(BigDecimal.valueOf(99.90))
-                .durationDays(30)
+                .durationMonths(1)
                 .active(true)
                 .build();
         plan.setPlanId(2);
         return plan;
+    }
+
+    public static Instructor activeInstructor() {
+        Instructor instructor = Instructor.builder()
+                .user(activeInstructorUser())
+                .cref("123456-G/SP")
+                .phone("11988887777")
+                .specialty("Musculacao")
+                .build();
+        instructor.setInstructorId(UUID.fromString("00000000-0000-0000-0000-000000000002"));
+        return instructor;
+    }
+
+    public static Exercise exercise() {
+        Exercise exercise = Exercise.builder()
+                .name("Supino")
+                .muscleGroup("Peito")
+                .description("Exercicio de forca")
+                .build();
+        exercise.setExerciseId(7);
+        return exercise;
     }
 
     public static Enrollment activeEnrollment() {
@@ -63,7 +116,7 @@ public final class TestDataFactory {
                 .endDate(LocalDate.now().plusDays(20))
                 .status(Enrollment.EnrollmentStatus.ACTIVE)
                 .build();
-        enrollment.setEnrollmentId(3);
+        enrollment.setEnrollmentId(UUID.fromString("00000000-0000-0000-0000-000000000003"));
         return enrollment;
     }
 
@@ -74,7 +127,7 @@ public final class TestDataFactory {
                 .dueDate(LocalDate.now().plusDays(5))
                 .status(Payment.PaymentStatus.PENDING)
                 .build();
-        payment.setPaymentId(4);
+        payment.setPaymentId(UUID.fromString("00000000-0000-0000-0000-000000000004"));
         return payment;
     }
 
@@ -84,8 +137,42 @@ public final class TestDataFactory {
                 .checkInAt(LocalDateTime.now().minusHours(1))
                 .notes("Treino livre")
                 .build();
-        presence.setPresenceId(5);
+        presence.setPresenceId(UUID.fromString("00000000-0000-0000-0000-000000000005"));
         return presence;
+    }
+
+    public static WorkoutSheet workoutSheet() {
+        WorkoutSheet workoutSheet = WorkoutSheet.builder()
+                .student(activeStudent())
+                .instructor(activeInstructor())
+                .name("Ficha Hipertrofia")
+                .goal("Ganho de massa")
+                .startDate(LocalDate.of(2026, 5, 1))
+                .endDate(LocalDate.of(2026, 8, 1))
+                .active(true)
+                .notes("Ajustar cargas semanalmente")
+                .exercises(new ArrayList<>())
+                .build();
+        workoutSheet.setWorkoutSheetId(UUID.fromString("00000000-0000-0000-0000-000000000008"));
+
+        WorkoutSheetExercise exerciseItem = workoutSheetExercise(workoutSheet);
+        workoutSheet.getExercises().add(exerciseItem);
+        return workoutSheet;
+    }
+
+    public static WorkoutSheetExercise workoutSheetExercise(WorkoutSheet workoutSheet) {
+        WorkoutSheetExercise item = WorkoutSheetExercise.builder()
+                .workoutSheet(workoutSheet)
+                .exercise(exercise())
+                .sets(4)
+                .repetitions("10")
+                .restSeconds(60)
+                .trainingSection("A")
+                .executionOrder(1)
+                .notes("Controlar movimento")
+                .build();
+        item.setWorkoutSheetExerciseId(UUID.fromString("00000000-0000-0000-0000-000000000009"));
+        return item;
     }
 
     public static RetentionAlert openRetentionAlert() {
@@ -98,7 +185,7 @@ public final class TestDataFactory {
                 .message("Risco LOW: 8 dia(s) sem check-in e 1 pagamento(s) atrasado(s).")
                 .status(RetentionAlert.AlertStatus.OPEN)
                 .build();
-        alert.setRetentionAlertId(6);
+        alert.setRetentionAlertId(UUID.fromString("00000000-0000-0000-0000-000000000006"));
         return alert;
     }
 }

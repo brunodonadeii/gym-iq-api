@@ -15,9 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,19 +84,4 @@ class PaymentServiceTest {
                 .hasMessageContaining("pago");
     }
 
-    @Test
-    void refreshOverdueShouldMovePastDuePendingPaymentsToOverdue() {
-        Payment payment = TestDataFactory.pendingPayment();
-        payment.setDueDate(LocalDate.now().minusDays(1));
-
-        when(paymentRepository.findByStatusAndDueDateBefore(Payment.PaymentStatus.PENDING, LocalDate.now()))
-                .thenReturn(List.of(payment));
-
-        List<PaymentResponse> responses = paymentService.refreshOverdue();
-
-        assertThat(payment.getStatus()).isEqualTo(Payment.PaymentStatus.OVERDUE);
-        assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).getStatus()).isEqualTo("OVERDUE");
-        verify(paymentRepository).saveAll(List.of(payment));
-    }
 }

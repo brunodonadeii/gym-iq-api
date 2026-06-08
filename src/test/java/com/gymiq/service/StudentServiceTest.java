@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,6 +40,9 @@ class StudentServiceTest {
     @Mock
     private StudentDataService studentDataService;
 
+    @Mock
+    private PersonalDataProtectionService personalDataProtectionService;
+
     @InjectMocks
     private StudentService studentService;
 
@@ -47,27 +51,29 @@ class StudentServiceTest {
         CreateStudentRequest request = validCreateStudentRequest();
 
         doNothing().when(studentDataService).validateCpf(request.getCpf());
-        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
-        when(studentRepository.existsByCpf(request.getCpf())).thenReturn(false);
+        when(personalDataProtectionService.emailHash(request.getEmail())).thenReturn("email-hash");
+        when(personalDataProtectionService.cpfHash(request.getCpf())).thenReturn("cpf-hash");
+        when(userRepository.existsByEmailHash("email-hash")).thenReturn(false);
+        when(studentRepository.existsByCpfHash("cpf-hash")).thenReturn(false);
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encoded-password");
         when(studentDataService.resolveAddress(request.getZipCode(), request.getAddress()))
                 .thenReturn("Praca da Se, Sao Paulo - SP");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
-            user.setUserId(10);
+            user.setUserId(UUID.fromString("00000000-0000-0000-0000-000000000010"));
             return user;
         });
         when(studentRepository.save(any(Student.class))).thenAnswer(invocation -> {
             Student student = invocation.getArgument(0);
-            student.setStudentId(1);
+            student.setStudentId(UUID.fromString("00000000-0000-0000-0000-000000000001"));
             return student;
         });
 
         StudentResponse response = studentService.create(request);
 
-        assertThat(response.getStudentId()).isEqualTo(1);
-        assertThat(response.getEmail()).isEqualTo("ana@gymiq.com");
-        assertThat(response.getAddress()).isEqualTo("Praca da Se, Sao Paulo - SP");
+        assertThat(response.getStudentId()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        assertThat(response.getEmail()).isEqualTo("an***@gymiq.com");
+        assertThat(response.getAddress()).isNull();
         verify(userRepository).save(any(User.class));
         verify(studentRepository).save(any(Student.class));
     }
@@ -77,7 +83,9 @@ class StudentServiceTest {
         CreateStudentRequest request = validCreateStudentRequest();
 
         doNothing().when(studentDataService).validateCpf(request.getCpf());
-        when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
+        when(personalDataProtectionService.emailHash(request.getEmail())).thenReturn("email-hash");
+        when(personalDataProtectionService.cpfHash(request.getCpf())).thenReturn("cpf-hash");
+        when(userRepository.existsByEmailHash("email-hash")).thenReturn(true);
 
         assertThatThrownBy(() -> studentService.create(request))
                 .isInstanceOf(BusinessException.class)

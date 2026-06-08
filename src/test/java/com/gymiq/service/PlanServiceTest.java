@@ -66,7 +66,7 @@ class PlanServiceTest {
         Plan plan = Plan.builder()
                 .name("Mensal")
                 .monthlyPrice(BigDecimal.valueOf(99.90))
-                .durationDays(30)
+                .durationMonths(1)
                 .active(true)
                 .build();
         plan.setPlanId(2);
@@ -84,7 +84,7 @@ class PlanServiceTest {
         request.setName("Mensal");
         request.setDescription("Plano mensal");
         request.setMonthlyPrice(BigDecimal.valueOf(99.90));
-        request.setDurationDays(30);
+        request.setDurationMonths(1);
         return request;
     }
 }

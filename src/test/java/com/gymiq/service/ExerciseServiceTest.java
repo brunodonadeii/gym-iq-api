@@ -5,13 +5,13 @@ import com.gymiq.dto.response.ExerciseResponse;
 import com.gymiq.entity.Exercise;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.repository.ExerciseRepository;
+import com.gymiq.repository.WorkoutSheetExerciseRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,11 +26,14 @@ class ExerciseServiceTest {
     @Mock
     private ExerciseRepository exerciseRepository;
 
+    @Mock
+    private WorkoutSheetExerciseRepository workoutSheetExerciseRepository;
+
     @InjectMocks
     private ExerciseService exerciseService;
 
     @Test
-    void createShouldPersistActiveExercise() {
+    void createShouldPersistExercise() {
         CreateExerciseRequest request = exerciseRequest("Supino");
 
         when(exerciseRepository.findByNameIgnoreCase(request.getName())).thenReturn(Optional.empty());
@@ -44,7 +47,6 @@ class ExerciseServiceTest {
 
         assertThat(response.getExerciseId()).isEqualTo(7);
         assertThat(response.getName()).isEqualTo("Supino");
-        assertThat(response.getActive()).isTrue();
     }
 
     @Test
@@ -53,7 +55,6 @@ class ExerciseServiceTest {
         Exercise existing = Exercise.builder()
                 .name("Supino")
                 .muscleGroup("Peito")
-                .active(true)
                 .build();
         existing.setExerciseId(7);
 
@@ -61,41 +62,39 @@ class ExerciseServiceTest {
 
         assertThatThrownBy(() -> exerciseService.create(request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("exercicio");
+                .hasMessageContaining("nome");
     }
 
     @Test
-    void findActiveShouldMapRepositoryResult() {
-        Exercise exercise = Exercise.builder()
-                .name("Agachamento")
-                .muscleGroup("Pernas")
-                .active(true)
-                .build();
-        exercise.setExerciseId(8);
-
-        when(exerciseRepository.findByActiveTrueOrderByNameAsc()).thenReturn(List.of(exercise));
-
-        List<ExerciseResponse> responses = exerciseService.findActive();
-
-        assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).getName()).isEqualTo("Agachamento");
-    }
-
-    @Test
-    void deactivateShouldMarkExerciseAsInactive() {
+    void deleteShouldRemoveExerciseWhenNotLinkedToWorkoutSheet() {
         Exercise exercise = Exercise.builder()
                 .name("Remada")
                 .muscleGroup("Costas")
-                .active(true)
                 .build();
         exercise.setExerciseId(9);
 
         when(exerciseRepository.findById(exercise.getExerciseId())).thenReturn(Optional.of(exercise));
+        when(workoutSheetExerciseRepository.existsByExerciseExerciseId(exercise.getExerciseId())).thenReturn(false);
 
-        exerciseService.deactivate(exercise.getExerciseId());
+        exerciseService.delete(exercise.getExerciseId());
 
-        assertThat(exercise.getActive()).isFalse();
-        verify(exerciseRepository).save(exercise);
+        verify(exerciseRepository).delete(exercise);
+    }
+
+    @Test
+    void deleteShouldRejectExerciseLinkedToWorkoutSheet() {
+        Exercise exercise = Exercise.builder()
+                .name("Remada")
+                .muscleGroup("Costas")
+                .build();
+        exercise.setExerciseId(9);
+
+        when(exerciseRepository.findById(exercise.getExerciseId())).thenReturn(Optional.of(exercise));
+        when(workoutSheetExerciseRepository.existsByExerciseExerciseId(exercise.getExerciseId())).thenReturn(true);
+
+        assertThatThrownBy(() -> exerciseService.delete(exercise.getExerciseId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("fichas");
     }
 
     private CreateExerciseRequest exerciseRequest(String name) {

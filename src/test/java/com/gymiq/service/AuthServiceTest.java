@@ -18,6 +18,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,6 +41,12 @@ class AuthServiceTest {
     @Mock
     private StudentService studentService;
 
+    @Mock
+    private PersonalDataProtectionService personalDataProtectionService;
+
+    @Mock
+    private StudentContractService studentContractService;
+
     @InjectMocks
     private AuthService authService;
 
@@ -51,7 +58,8 @@ class AuthServiceTest {
 
         User user = TestDataFactory.activeStudentUser();
 
-        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+        when(personalDataProtectionService.emailHash(request.getEmail())).thenReturn("email-hash");
+        when(userRepository.findByEmailHash("email-hash")).thenReturn(Optional.of(user));
         when(jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getUserId()))
                 .thenReturn("jwt-token");
 
@@ -67,7 +75,7 @@ class AuthServiceTest {
     void registerStudentShouldDelegateStudentCreation() {
         CreateStudentRequest request = new CreateStudentRequest();
         StudentResponse expected = StudentResponse.builder()
-                .studentId(1)
+                .studentId(UUID.fromString("00000000-0000-0000-0000-000000000001"))
                 .email("ana@gymiq.com")
                 .build();
 
@@ -79,18 +87,4 @@ class AuthServiceTest {
         verify(studentService).create(request);
     }
 
-    @Test
-    void registerLgpdAcceptanceShouldRejectAlreadyAcceptedUser() {
-        User user = TestDataFactory.activeStudentUser();
-        user.setLgpdAccepted(true);
-
-        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
-
-        assertThatThrownBy(() -> authService.registerLgpdAcceptance(user.getUserId()))
-
-
-
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("LGPD");
-    }
 }

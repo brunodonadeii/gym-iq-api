@@ -18,12 +18,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,12 +53,16 @@ class RetentionAlertServiceTest {
     @Test
     void generateForStudentShouldCreateOpenAlertWhenStudentHasOverduePayment() {
         Student student = TestDataFactory.activeStudent();
+        Enrollment enrollment = TestDataFactory.activeEnrollment();
 
         when(studentRepository.findById(student.getStudentId())).thenReturn(Optional.of(student));
-        when(enrollmentRepository.existsByStudentStudentIdAndStatus(
-                student.getStudentId(), Enrollment.EnrollmentStatus.ACTIVE)).thenReturn(true);
-        when(presenceRepository.findFirstByStudentStudentIdOrderByCheckInAtDesc(student.getStudentId()))
+        when(enrollmentRepository.findByStudentStudentIdAndStatus(
+                student.getStudentId(), Enrollment.EnrollmentStatus.ACTIVE)).thenReturn(Optional.of(enrollment));
+        when(presenceRepository.findFirstByStudentStudentIdAndCheckInAtGreaterThanEqualOrderByCheckInAtDesc(
+                eq(student.getStudentId()), any(LocalDateTime.class)))
                 .thenReturn(Optional.empty());
+        when(presenceRepository.countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+                eq(student.getStudentId()), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(0L);
         when(paymentRepository.countByEnrollmentStudentStudentIdAndStatus(
                 student.getStudentId(), Payment.PaymentStatus.OVERDUE)).thenReturn(1L);
         when(paymentRepository.countByEnrollmentStudentStudentIdAndStatusAndDueDateBefore(
@@ -65,33 +70,43 @@ class RetentionAlertServiceTest {
         when(retentionAlertRepository.findByStudentStudentIdAndStatus(
                 student.getStudentId(), RetentionAlert.AlertStatus.OPEN)).thenReturn(Optional.empty());
 
-        RetentionAlertResponse response = retentionAlertService.generateForStudent(student.getStudentId());
+        Optional<RetentionAlertResponse> response = retentionAlertService.generateForStudent(student.getStudentId());
 
-        assertThat(response.getStatus()).isEqualTo("OPEN");
-        assertThat(response.getOverduePayments()).isEqualTo(1);
-        assertThat(response.getRiskScore()).isGreaterThanOrEqualTo(20);
+        assertThat(response).isPresent();
+        assertThat(response.get().getStatus()).isEqualTo("OPEN");
+        assertThat(response.get().getOverduePayments()).isEqualTo(1);
+        assertThat(response.get().getRiskScore()).isGreaterThanOrEqualTo(15);
         verify(retentionAlertRepository).save(any(RetentionAlert.class));
     }
 
     @Test
     void generateForOverdueStudentsShouldGenerateAlertForEachOverdueStudent() {
+        UUID firstStudentId = UUID.fromString("00000000-0000-0000-0000-000000000101");
+        UUID secondStudentId = UUID.fromString("00000000-0000-0000-0000-000000000102");
         when(paymentRepository.findActiveStudentIdsWithOverduePayments(
                 Enrollment.EnrollmentStatus.ACTIVE,
                 Payment.PaymentStatus.OVERDUE,
                 Payment.PaymentStatus.PENDING,
-                LocalDate.now())).thenReturn(List.of(1, 2));
-        when(studentRepository.findById(anyInt())).thenAnswer(invocation ->
+                LocalDate.now())).thenReturn(List.of(firstStudentId, secondStudentId));
+        when(studentRepository.findById(any(UUID.class))).thenAnswer(invocation ->
                 Optional.of(activeStudentWithId(invocation.getArgument(0))));
-        when(enrollmentRepository.existsByStudentStudentIdAndStatus(
-                anyInt(), eq(Enrollment.EnrollmentStatus.ACTIVE))).thenReturn(true);
-        when(presenceRepository.findFirstByStudentStudentIdOrderByCheckInAtDesc(anyInt()))
+        when(enrollmentRepository.findByStudentStudentIdAndStatus(
+                any(UUID.class), eq(Enrollment.EnrollmentStatus.ACTIVE))).thenAnswer(invocation -> {
+            Enrollment enrollment = TestDataFactory.activeEnrollment();
+            enrollment.setStudent(activeStudentWithId(invocation.getArgument(0)));
+            return Optional.of(enrollment);
+        });
+        when(presenceRepository.findFirstByStudentStudentIdAndCheckInAtGreaterThanEqualOrderByCheckInAtDesc(
+                any(UUID.class), any(LocalDateTime.class)))
                 .thenReturn(Optional.empty());
+        when(presenceRepository.countByStudentStudentIdAndCheckInAtGreaterThanEqualAndCheckInAtLessThan(
+                any(UUID.class), any(LocalDateTime.class), any(LocalDateTime.class))).thenReturn(0L);
         when(paymentRepository.countByEnrollmentStudentStudentIdAndStatus(
-                anyInt(), eq(Payment.PaymentStatus.OVERDUE))).thenReturn(1L);
+                any(UUID.class), eq(Payment.PaymentStatus.OVERDUE))).thenReturn(1L);
         when(paymentRepository.countByEnrollmentStudentStudentIdAndStatusAndDueDateBefore(
-                anyInt(), eq(Payment.PaymentStatus.PENDING), any(LocalDate.class))).thenReturn(1L);
+                any(UUID.class), eq(Payment.PaymentStatus.PENDING), any(LocalDate.class))).thenReturn(1L);
         when(retentionAlertRepository.findByStudentStudentIdAndStatus(
-                anyInt(), eq(RetentionAlert.AlertStatus.OPEN))).thenReturn(Optional.empty());
+                any(UUID.class), eq(RetentionAlert.AlertStatus.OPEN))).thenReturn(Optional.empty());
 
         List<RetentionAlertResponse> responses = retentionAlertService.generateForOverdueStudents();
 
@@ -102,10 +117,10 @@ class RetentionAlertServiceTest {
         });
     }
 
-    private Student activeStudentWithId(Integer studentId) {
+    private Student activeStudentWithId(UUID studentId) {
         Student student = TestDataFactory.activeStudent();
         student.setStudentId(studentId);
-        student.getUser().setUserId(studentId + 10);
+        student.getUser().setUserId(UUID.randomUUID());
         student.getUser().setEmail("student" + studentId + "@gymiq.com");
         return student;
     }
