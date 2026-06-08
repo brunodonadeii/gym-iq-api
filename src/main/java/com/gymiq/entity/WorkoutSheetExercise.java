@@ -9,7 +9,7 @@ import lombok.*;
 @Table(name = "workout_sheet_exercise",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_workout_sheet_exercise_order",
-                        columnNames = {"workout_sheet_id", "training_section", "execution_order"})
+                        columnNames = {"workout_block_id", "execution_order"})
         })
 @Getter
 @Setter
@@ -24,9 +24,9 @@ public class WorkoutSheetExercise {
     private UUID workoutSheetExerciseId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workout_sheet_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_workout_sheet_exercise_sheet"))
-    private WorkoutSheet workoutSheet;
+    @JoinColumn(name = "workout_block_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_workout_sheet_exercise_block"))
+    private WorkoutBlock workoutBlock;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exercise_id", nullable = false,
@@ -41,10 +41,6 @@ public class WorkoutSheetExercise {
 
     @Column(name = "rest_seconds")
     private Integer restSeconds;
-
-    @Column(name = "training_section", nullable = false, length = 40)
-    @Builder.Default
-    private String trainingSection = "A";
 
     @Column(name = "execution_order", nullable = false)
     private Integer executionOrder;

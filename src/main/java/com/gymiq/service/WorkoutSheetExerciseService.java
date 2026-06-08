@@ -4,6 +4,7 @@ import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.response.WorkoutSheetExerciseResponse;
 import com.gymiq.entity.Exercise;
+import com.gymiq.entity.WorkoutBlock;
 import com.gymiq.entity.WorkoutSheet;
 import com.gymiq.entity.WorkoutSheetExercise;
 import com.gymiq.enums.AuditAction;
@@ -11,17 +12,15 @@ import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
+import com.gymiq.repository.WorkoutBlockRepository;
 import com.gymiq.repository.WorkoutSheetExerciseRepository;
-import com.gymiq.repository.WorkoutSheetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -29,10 +28,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WorkoutSheetExerciseService {
 
-    private static final String DEFAULT_TRAINING_SECTION = "A";
+    private static final String DEFAULT_TRAINING_SECTION = "Treino A";
 
     private final WorkoutSheetExerciseRepository workoutSheetExerciseRepository;
-    private final WorkoutSheetRepository workoutSheetRepository;
+    private final WorkoutBlockRepository workoutBlockRepository;
+    private final WorkoutSheetService workoutSheetService;
     private final ExerciseRepository exerciseRepository;
 
     @Transactional
@@ -47,24 +47,36 @@ public class WorkoutSheetExerciseService {
             CreateWorkoutSheetExerciseRequest request,
             String authenticatedEmail,
             boolean admin) {
-        WorkoutSheet workoutSheet = findActiveWorkoutSheet(workoutSheetId);
-        ensureInstructorCanManage(workoutSheet, authenticatedEmail, admin);
-        Exercise exercise = findExercise(request.getExerciseId());
-        ensureOrderIsAvailable(workoutSheetId, resolveTrainingSection(request.getTrainingSection()), request.getExecutionOrder(), null);
+        WorkoutSheet workoutSheet = workoutSheetService.findEntityById(workoutSheetId);
+        workoutSheetService.ensureWorkoutSheetIsActive(workoutSheet);
+        workoutSheetService.ensureInstructorCanManage(workoutSheet, authenticatedEmail, admin);
 
-        WorkoutSheetExercise item = buildWorkoutSheetExercise(workoutSheet, exercise, request);
-        workoutSheetExerciseRepository.save(item);
+        WorkoutBlock block = findOrCreateBlock(workoutSheet, resolveTrainingSection(request.getTrainingSection()));
+        return addExerciseToBlock(block, request);
+    }
 
-        log.info("Workout sheet exercise added: id={}, sheet={}",
-                item.getWorkoutSheetExerciseId(), workoutSheetId);
-        return WorkoutSheetExerciseResponse.fromEntity(item);
+    @Transactional
+    public WorkoutSheetExerciseResponse addExerciseToBlock(UUID workoutBlockId, CreateWorkoutSheetExerciseRequest request) {
+        return addExerciseToBlock(workoutBlockId, request, null, true);
+    }
+
+    @Transactional
+    @Auditable(action = AuditAction.ADD_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Adicionou exercicio no treino")
+    public WorkoutSheetExerciseResponse addExerciseToBlock(
+            UUID workoutBlockId,
+            CreateWorkoutSheetExerciseRequest request,
+            String authenticatedEmail,
+            boolean admin) {
+        WorkoutBlock block = findActiveBlock(workoutBlockId);
+        workoutSheetService.ensureInstructorCanManage(block.getWorkoutSheet(), authenticatedEmail, admin);
+        return addExerciseToBlock(block, request);
     }
 
     @Transactional(readOnly = true)
     public Page<WorkoutSheetExerciseResponse> findByWorkoutSheet(UUID workoutSheetId, Pageable pageable) {
-        findWorkoutSheet(workoutSheetId);
+        workoutSheetService.findEntityById(workoutSheetId);
 
-        return workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
+        return workoutSheetExerciseRepository.findByWorkoutBlockWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
                 .map(WorkoutSheetExerciseResponse::fromEntity);
     }
 
@@ -76,10 +88,25 @@ public class WorkoutSheetExerciseService {
             boolean admin,
             boolean instructor,
             boolean student) {
-        WorkoutSheet workoutSheet = findWorkoutSheet(workoutSheetId);
-        ensureCanViewWorkoutSheet(workoutSheet, authenticatedEmail, admin, instructor, student);
+        WorkoutSheet workoutSheet = workoutSheetService.findEntityById(workoutSheetId);
+        workoutSheetService.ensureCanViewWorkoutSheet(workoutSheet, authenticatedEmail, admin, instructor, student);
 
-        return workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
+        return workoutSheetExerciseRepository.findByWorkoutBlockWorkoutSheetWorkoutSheetId(workoutSheetId, pageable)
+                .map(WorkoutSheetExerciseResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WorkoutSheetExerciseResponse> findByWorkoutBlock(
+            UUID workoutBlockId,
+            Pageable pageable,
+            String authenticatedEmail,
+            boolean admin,
+            boolean instructor,
+            boolean student) {
+        WorkoutBlock block = findBlock(workoutBlockId);
+        workoutSheetService.ensureCanViewWorkoutSheet(block.getWorkoutSheet(), authenticatedEmail, admin, instructor, student);
+
+        return workoutSheetExerciseRepository.findByWorkoutBlockWorkoutBlockId(workoutBlockId, pageable)
                 .map(WorkoutSheetExerciseResponse::fromEntity);
     }
 
@@ -96,18 +123,26 @@ public class WorkoutSheetExerciseService {
             String authenticatedEmail,
             boolean admin) {
         WorkoutSheetExercise item = findEntityById(id);
+        WorkoutSheet workoutSheet = item.getWorkoutBlock().getWorkoutSheet();
         Exercise exercise = findExercise(request.getExerciseId());
-        UUID workoutSheetId = item.getWorkoutSheet().getWorkoutSheetId();
 
-        ensureWorkoutSheetIsActive(item.getWorkoutSheet());
-        ensureInstructorCanManage(item.getWorkoutSheet(), authenticatedEmail, admin);
-        ensureOrderIsAvailable(workoutSheetId, resolveTrainingSection(request.getTrainingSection()), request.getExecutionOrder(), id);
+        workoutSheetService.ensureWorkoutSheetIsActive(workoutSheet);
+        workoutSheetService.ensureInstructorCanManage(workoutSheet, authenticatedEmail, admin);
 
+        WorkoutBlock block = item.getWorkoutBlock();
+        if (request.getTrainingSection() != null && !request.getTrainingSection().isBlank()
+                && !block.getName().equalsIgnoreCase(request.getTrainingSection())) {
+            block = findOrCreateBlock(workoutSheet, resolveTrainingSection(request.getTrainingSection()));
+        }
+
+        ensureBlockIsActive(block);
+        ensureOrderIsAvailable(block.getWorkoutBlockId(), request.getExecutionOrder(), id);
+
+        item.setWorkoutBlock(block);
         item.setExercise(exercise);
         item.setSets(request.getSets());
         item.setRepetitions(request.getRepetitions());
         item.setRestSeconds(request.getRestSeconds());
-        item.setTrainingSection(resolveTrainingSection(request.getTrainingSection()));
         item.setExecutionOrder(request.getExecutionOrder());
         item.setNotes(request.getNotes());
 
@@ -125,10 +160,32 @@ public class WorkoutSheetExerciseService {
     @Auditable(action = AuditAction.DELETE_WORKOUT_SHEET_EXERCISE, resourceType = ResourceType.WORKOUT_SHEET_EXERCISE, description = "Removeu exercicio da ficha")
     public void delete(UUID id, String authenticatedEmail, boolean admin) {
         WorkoutSheetExercise item = findEntityById(id);
-        ensureWorkoutSheetIsActive(item.getWorkoutSheet());
-        ensureInstructorCanManage(item.getWorkoutSheet(), authenticatedEmail, admin);
+        workoutSheetService.ensureWorkoutSheetIsActive(item.getWorkoutBlock().getWorkoutSheet());
+        workoutSheetService.ensureInstructorCanManage(item.getWorkoutBlock().getWorkoutSheet(), authenticatedEmail, admin);
         workoutSheetExerciseRepository.delete(item);
         log.info("Workout sheet exercise deleted: id={}", id);
+    }
+
+    private WorkoutSheetExerciseResponse addExerciseToBlock(WorkoutBlock block, CreateWorkoutSheetExerciseRequest request) {
+        ensureBlockIsActive(block);
+        Exercise exercise = findExercise(request.getExerciseId());
+        ensureOrderIsAvailable(block.getWorkoutBlockId(), request.getExecutionOrder(), null);
+
+        WorkoutSheetExercise item = WorkoutSheetExercise.builder()
+                .workoutBlock(block)
+                .exercise(exercise)
+                .sets(request.getSets())
+                .repetitions(request.getRepetitions())
+                .restSeconds(request.getRestSeconds())
+                .executionOrder(request.getExecutionOrder())
+                .notes(request.getNotes())
+                .build();
+
+        workoutSheetExerciseRepository.save(item);
+
+        log.info("Workout sheet exercise added: id={}, block={}",
+                item.getWorkoutSheetExerciseId(), block.getWorkoutBlockId());
+        return WorkoutSheetExerciseResponse.fromEntity(item);
     }
 
     private WorkoutSheetExercise findEntityById(UUID id) {
@@ -136,16 +193,16 @@ public class WorkoutSheetExerciseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Item da ficha não encontrado: " + id));
     }
 
-    private WorkoutSheet findActiveWorkoutSheet(UUID workoutSheetId) {
-        WorkoutSheet workoutSheet = findWorkoutSheet(workoutSheetId);
-
-        ensureWorkoutSheetIsActive(workoutSheet);
-        return workoutSheet;
+    private WorkoutBlock findActiveBlock(UUID workoutBlockId) {
+        WorkoutBlock block = findBlock(workoutBlockId);
+        workoutSheetService.ensureWorkoutSheetIsActive(block.getWorkoutSheet());
+        ensureBlockIsActive(block);
+        return block;
     }
 
-    private WorkoutSheet findWorkoutSheet(UUID workoutSheetId) {
-        return workoutSheetRepository.findById(workoutSheetId)
-                .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino não encontrada: " + workoutSheetId));
+    private WorkoutBlock findBlock(UUID workoutBlockId) {
+        return workoutBlockRepository.findById(workoutBlockId)
+                .orElseThrow(() -> new ResourceNotFoundException("Treino não encontrado: " + workoutBlockId));
     }
 
     private Exercise findExercise(Integer exerciseId) {
@@ -153,56 +210,43 @@ public class WorkoutSheetExerciseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Exercício não encontrado: " + exerciseId));
     }
 
-    private void ensureWorkoutSheetIsActive(WorkoutSheet workoutSheet) {
-        if (Boolean.FALSE.equals(workoutSheet.getActive())) {
-            throw new BusinessException("Ficha de treino inativa não pode ser alterada");
-        }
+    private WorkoutBlock findOrCreateBlock(WorkoutSheet workoutSheet, String blockName) {
+        return workoutBlockRepository
+                .findByWorkoutSheetWorkoutSheetIdAndNameIgnoreCase(workoutSheet.getWorkoutSheetId(), blockName)
+                .orElseGet(() -> createBlock(workoutSheet, blockName));
     }
 
-    private void ensureCanViewWorkoutSheet(
-            WorkoutSheet workoutSheet,
-            String authenticatedEmail,
-            boolean admin,
-            boolean instructor,
-            boolean student) {
-        if (admin) {
-            return;
-        }
-
-        if (instructor && workoutSheet.getInstructor().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
-            return;
-        }
-
-        if (student && workoutSheet.getStudent().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
-            return;
-        }
-
-            throw new AccessDeniedException("Usuário não tem permissão para acessar esta ficha");
-    }
-
-    private void ensureInstructorCanManage(
-            WorkoutSheet workoutSheet,
-            String authenticatedEmail,
-            boolean admin) {
-        if (admin) {
-            return;
-        }
-
-        if (authenticatedEmail == null
-                || !workoutSheet.getInstructor().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
-            throw new AccessDeniedException("Instrutor não tem permissão para alterar esta ficha");
-        }
-    }
-
-    private void ensureOrderIsAvailable(UUID workoutSheetId, String trainingSection, Integer order, UUID currentItemId) {
-        workoutSheetExerciseRepository.findByWorkoutSheetWorkoutSheetIdOrderByTrainingSectionAscExecutionOrderAsc(workoutSheetId)
+    private WorkoutBlock createBlock(WorkoutSheet workoutSheet, String blockName) {
+        int nextOrder = workoutBlockRepository
+                .findByWorkoutSheetWorkoutSheetIdOrderByExecutionOrderAsc(workoutSheet.getWorkoutSheetId())
                 .stream()
-                .filter(item -> item.getTrainingSection().equalsIgnoreCase(trainingSection))
+                .mapToInt(WorkoutBlock::getExecutionOrder)
+                .max()
+                .orElse(0) + 1;
+
+        WorkoutBlock block = WorkoutBlock.builder()
+                .workoutSheet(workoutSheet)
+                .name(blockName)
+                .executionOrder(nextOrder)
+                .active(true)
+                .build();
+        return workoutBlockRepository.save(block);
+    }
+
+    private void ensureBlockIsActive(WorkoutBlock block) {
+        if (Boolean.FALSE.equals(block.getActive())) {
+            throw new BusinessException("Treino inativo não pode ser alterado");
+        }
+    }
+
+    private void ensureOrderIsAvailable(UUID workoutBlockId, Integer order, UUID currentItemId) {
+        workoutSheetExerciseRepository.findByWorkoutBlockWorkoutBlockId(workoutBlockId, Pageable.unpaged())
+                .stream()
                 .filter(item -> item.getExecutionOrder().equals(order))
                 .filter(item -> currentItemId == null || !item.getWorkoutSheetExerciseId().equals(currentItemId))
                 .findFirst()
                 .ifPresent(item -> {
-            throw new BusinessException("Ordem de execução já usada no treino " + trainingSection + ": " + order);
+                    throw new BusinessException("Ordem de execução já usada neste treino: " + order);
                 });
     }
 
@@ -210,21 +254,5 @@ public class WorkoutSheetExerciseService {
         return trainingSection == null || trainingSection.isBlank()
                 ? DEFAULT_TRAINING_SECTION
                 : trainingSection.trim();
-    }
-
-    private WorkoutSheetExercise buildWorkoutSheetExercise(
-            WorkoutSheet workoutSheet,
-            Exercise exercise,
-            CreateWorkoutSheetExerciseRequest request) {
-        return WorkoutSheetExercise.builder()
-                .workoutSheet(workoutSheet)
-                .exercise(exercise)
-                .sets(request.getSets())
-                .repetitions(request.getRepetitions())
-                .restSeconds(request.getRestSeconds())
-                .trainingSection(resolveTrainingSection(request.getTrainingSection()))
-                .executionOrder(request.getExecutionOrder())
-                .notes(request.getNotes())
-                .build();
     }
 }

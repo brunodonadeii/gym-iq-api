@@ -52,6 +52,35 @@ public class WorkoutSheetExerciseController {
                 hasRole(authentication, "STUDENT")));
     }
 
+    @PostMapping("/api/workout-blocks/{workoutBlockId}/exercises")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<WorkoutSheetExerciseResponse> addExerciseToBlock(
+            @PathVariable UUID workoutBlockId,
+            Authentication authentication,
+            @Valid @RequestBody CreateWorkoutSheetExerciseRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(workoutSheetExerciseService.addExerciseToBlock(
+                        workoutBlockId,
+                        request,
+                        authentication.getName(),
+                        hasRole(authentication, "ADMIN")));
+    }
+
+    @GetMapping("/api/workout-blocks/{workoutBlockId}/exercises")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR','STUDENT')")
+    public ResponseEntity<Page<WorkoutSheetExerciseResponse>> findByWorkoutBlock(
+            @PathVariable UUID workoutBlockId,
+            Authentication authentication,
+            @PageableDefault(size = 10, sort = "executionOrder", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(workoutSheetExerciseService.findByWorkoutBlock(
+                workoutBlockId,
+                pageable,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN"),
+                hasRole(authentication, "INSTRUCTOR"),
+                hasRole(authentication, "STUDENT")));
+    }
+
     @PutMapping("/api/workout-sheet-exercises/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<WorkoutSheetExerciseResponse> update(

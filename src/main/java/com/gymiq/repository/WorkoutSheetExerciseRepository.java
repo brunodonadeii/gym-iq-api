@@ -12,9 +12,11 @@ import java.util.UUID;
 @Repository
 public interface WorkoutSheetExerciseRepository extends JpaRepository<WorkoutSheetExercise, UUID> {
 
-    List<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetIdOrderByTrainingSectionAscExecutionOrderAsc(UUID workoutSheetId);
+    List<WorkoutSheetExercise> findByWorkoutBlockWorkoutSheetWorkoutSheetIdOrderByWorkoutBlockExecutionOrderAscExecutionOrderAsc(UUID workoutSheetId);
 
-    Page<WorkoutSheetExercise> findByWorkoutSheetWorkoutSheetId(UUID workoutSheetId, Pageable pageable);
+    Page<WorkoutSheetExercise> findByWorkoutBlockWorkoutSheetWorkoutSheetId(UUID workoutSheetId, Pageable pageable);
+
+    Page<WorkoutSheetExercise> findByWorkoutBlockWorkoutBlockId(UUID workoutBlockId, Pageable pageable);
 
     boolean existsByExerciseExerciseId(Integer exerciseId);
 }
