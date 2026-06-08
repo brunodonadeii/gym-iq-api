@@ -1,8 +1,7 @@
 package com.gymiq.service;
 
-import java.util.UUID;
-
 import com.gymiq.aop.Auditable;
+import com.gymiq.dto.request.CreateWorkoutBlockRequest;
 import com.gymiq.dto.request.CreateWorkoutSheetExerciseRequest;
 import com.gymiq.dto.request.CreateWorkoutSheetRequest;
 import com.gymiq.dto.response.WorkoutSheetResponse;
@@ -10,6 +9,7 @@ import com.gymiq.dto.response.WorkoutSheetSummaryResponse;
 import com.gymiq.entity.Exercise;
 import com.gymiq.entity.Instructor;
 import com.gymiq.entity.Student;
+import com.gymiq.entity.WorkoutBlock;
 import com.gymiq.entity.WorkoutSheet;
 import com.gymiq.entity.WorkoutSheetExercise;
 import com.gymiq.enums.AuditAction;
@@ -31,15 +31,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkoutSheetService {
 
-    private static final String DEFAULT_TRAINING_SECTION = "A";
+    private static final String DEFAULT_TRAINING_SECTION = "Treino A";
 
     private final WorkoutSheetRepository workoutSheetRepository;
     private final StudentRepository studentRepository;
@@ -56,7 +59,6 @@ public class WorkoutSheetService {
     @Auditable(action = AuditAction.CREATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Criou ficha de treino")
     public WorkoutSheetResponse create(CreateWorkoutSheetRequest request, String authenticatedEmail, boolean admin) {
         validateDates(request);
-        validateExerciseOrders(request.getExercises());
 
         Student student = findActiveStudent(request.getStudentId());
         Instructor instructor = findActiveInstructor(request.getInstructorId());
@@ -73,7 +75,7 @@ public class WorkoutSheetService {
                 .notes(request.getNotes())
                 .build();
 
-        workoutSheet.setExercises(new ArrayList<>(buildExerciseItems(workoutSheet, request.getExercises())));
+        workoutSheet.setBlocks(new ArrayList<>(buildBlocks(workoutSheet, request)));
         workoutSheetRepository.save(workoutSheet);
 
         log.info("Workout sheet created: id={}, student={}, instructor={}",
@@ -193,7 +195,6 @@ public class WorkoutSheetService {
             String authenticatedEmail,
             boolean admin) {
         validateDates(request);
-        validateExerciseOrders(request.getExercises());
 
         WorkoutSheet workoutSheet = findEntityById(id);
         ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
@@ -209,8 +210,8 @@ public class WorkoutSheetService {
         workoutSheet.setStartDate(resolveStartDate(request.getStartDate()));
         workoutSheet.setEndDate(request.getEndDate());
         workoutSheet.setNotes(request.getNotes());
-        workoutSheet.getExercises().clear();
-        workoutSheet.getExercises().addAll(buildExerciseItems(workoutSheet, request.getExercises()));
+        workoutSheet.getBlocks().clear();
+        workoutSheet.getBlocks().addAll(buildBlocks(workoutSheet, request));
 
         workoutSheetRepository.save(workoutSheet);
         log.info("Workout sheet updated: id={}", id);
@@ -232,9 +233,40 @@ public class WorkoutSheetService {
         log.info("Workout sheet deactivated: id={}", id);
     }
 
-    private WorkoutSheet findEntityById(UUID id) {
+    WorkoutSheet findEntityById(UUID id) {
         return workoutSheetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino não encontrada: " + id));
+    }
+
+    void ensureWorkoutSheetIsActive(WorkoutSheet workoutSheet) {
+        if (Boolean.FALSE.equals(workoutSheet.getActive())) {
+            throw new BusinessException("Ficha de treino inativa não pode ser alterada");
+        }
+    }
+
+    void ensureCanViewWorkoutSheet(
+            WorkoutSheet workoutSheet,
+            String authenticatedEmail,
+            boolean admin,
+            boolean instructor,
+            boolean student) {
+        if (admin) {
+            return;
+        }
+
+        if (instructor && workoutSheet.getInstructor().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            return;
+        }
+
+        if (student && workoutSheet.getStudent().getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            return;
+        }
+
+        throw new AccessDeniedException("Usuário não tem permissão para acessar esta ficha");
+    }
+
+    void ensureInstructorCanManage(WorkoutSheet workoutSheet, String authenticatedEmail, boolean admin) {
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
     }
 
     private Student findActiveStudent(UUID studentId) {
@@ -268,32 +300,116 @@ public class WorkoutSheetService {
         }
     }
 
-    private List<WorkoutSheetExercise> buildExerciseItems(
-            WorkoutSheet workoutSheet,
-            List<CreateWorkoutSheetExerciseRequest> itemRequests) {
+    private List<WorkoutBlock> buildBlocks(WorkoutSheet workoutSheet, CreateWorkoutSheetRequest request) {
+        List<BlockDraft> blockDrafts = resolveBlockDrafts(request);
+        validateBlockDrafts(blockDrafts);
 
-        return itemRequests.stream()
-                .map(itemRequest -> buildExerciseItem(workoutSheet, itemRequest))
+        return blockDrafts.stream()
+                .map(blockDraft -> buildBlock(workoutSheet, blockDraft))
                 .toList();
     }
 
+    private WorkoutBlock buildBlock(WorkoutSheet workoutSheet, BlockDraft blockDraft) {
+        WorkoutBlock block = WorkoutBlock.builder()
+                .workoutSheet(workoutSheet)
+                .name(blockDraft.name())
+                .description(blockDraft.description())
+                .executionOrder(blockDraft.executionOrder())
+                .active(true)
+                .build();
+
+        block.setExercises(new ArrayList<>(blockDraft.exercises()
+                .stream()
+                .map(itemRequest -> buildExerciseItem(block, itemRequest))
+                .toList()));
+
+        return block;
+    }
+
     private WorkoutSheetExercise buildExerciseItem(
-            WorkoutSheet workoutSheet,
+            WorkoutBlock workoutBlock,
             CreateWorkoutSheetExerciseRequest request) {
 
         Exercise exercise = exerciseRepository.findById(request.getExerciseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Exercício não encontrado: " + request.getExerciseId()));
 
         return WorkoutSheetExercise.builder()
-                .workoutSheet(workoutSheet)
+                .workoutBlock(workoutBlock)
                 .exercise(exercise)
                 .sets(request.getSets())
                 .repetitions(request.getRepetitions())
                 .restSeconds(request.getRestSeconds())
-                .trainingSection(resolveTrainingSection(request.getTrainingSection()))
                 .executionOrder(request.getExecutionOrder())
                 .notes(request.getNotes())
                 .build();
+    }
+
+    private List<BlockDraft> resolveBlockDrafts(CreateWorkoutSheetRequest request) {
+        if (request.getBlocks() != null && !request.getBlocks().isEmpty()) {
+            return request.getBlocks()
+                    .stream()
+                    .map(block -> new BlockDraft(
+                            normalizeName(block.getName()),
+                            block.getDescription(),
+                            block.getExecutionOrder(),
+                            block.getExercises() == null ? List.of() : block.getExercises()))
+                    .toList();
+        }
+
+        if (request.getExercises() == null || request.getExercises().isEmpty()) {
+            throw new BusinessException("A ficha deve possuir pelo menos um treino com exercícios");
+        }
+
+        Map<String, List<CreateWorkoutSheetExerciseRequest>> groupedExercises = new LinkedHashMap<>();
+        request.getExercises().forEach(exercise -> groupedExercises
+                .computeIfAbsent(resolveTrainingSection(exercise.getTrainingSection()), key -> new ArrayList<>())
+                .add(exercise));
+
+        List<BlockDraft> drafts = new ArrayList<>();
+        int order = 1;
+        for (Map.Entry<String, List<CreateWorkoutSheetExerciseRequest>> entry : groupedExercises.entrySet()) {
+            drafts.add(new BlockDraft(entry.getKey(), null, order, entry.getValue()));
+            order++;
+        }
+        return drafts;
+    }
+
+    private void validateBlockDrafts(List<BlockDraft> blocks) {
+        if (blocks == null || blocks.isEmpty()) {
+            throw new BusinessException("A ficha deve possuir pelo menos um treino");
+        }
+
+        Set<String> blockNames = new HashSet<>();
+        Set<Integer> blockOrders = new HashSet<>();
+        for (BlockDraft block : blocks) {
+            if (block.name() == null || block.name().isBlank()) {
+                throw new BusinessException("Nome do treino é obrigatório");
+            }
+            if (block.executionOrder() == null) {
+                throw new BusinessException("Ordem do treino é obrigatória");
+            }
+            if (!blockNames.add(block.name().toLowerCase())) {
+                throw new BusinessException("Nome de treino duplicado: " + block.name());
+            }
+            if (!blockOrders.add(block.executionOrder())) {
+                throw new BusinessException("Ordem de treino duplicada: " + block.executionOrder());
+            }
+            validateExerciseOrders(block);
+        }
+    }
+
+    private void validateExerciseOrders(BlockDraft block) {
+        if (block.exercises() == null || block.exercises().isEmpty()) {
+            return;
+        }
+
+        Set<Integer> orders = new HashSet<>();
+        for (CreateWorkoutSheetExerciseRequest exercise : block.exercises()) {
+            if (!orders.add(exercise.getExecutionOrder())) {
+                throw new BusinessException("Ordem de execução duplicada no treino "
+                        + block.name() + ": " + exercise.getExecutionOrder());
+            }
+        }
     }
 
     private void validateDates(CreateWorkoutSheetRequest request) {
@@ -307,28 +423,24 @@ public class WorkoutSheetService {
         }
     }
 
-    private void validateExerciseOrders(List<CreateWorkoutSheetExerciseRequest> exercises) {
-        if (exercises == null) {
-            throw new BusinessException("A ficha deve possuir pelo menos um exercício");
-        }
-
-        Set<String> orders = new HashSet<>();
-        for (CreateWorkoutSheetExerciseRequest exercise : exercises) {
-            String orderKey = resolveTrainingSection(exercise.getTrainingSection()).toLowerCase() + ":" + exercise.getExecutionOrder();
-            if (!orders.add(orderKey)) {
-                throw new BusinessException("Ordem de execução duplicada no treino "
-                        + resolveTrainingSection(exercise.getTrainingSection()) + ": " + exercise.getExecutionOrder());
-            }
-        }
-    }
-
     private String resolveTrainingSection(String trainingSection) {
         return trainingSection == null || trainingSection.isBlank()
                 ? DEFAULT_TRAINING_SECTION
-                : trainingSection.trim();
+                : normalizeName(trainingSection);
+    }
+
+    private String normalizeName(String name) {
+        return name == null ? "" : name.trim();
     }
 
     private LocalDate resolveStartDate(LocalDate startDate) {
         return startDate != null ? startDate : LocalDate.now();
+    }
+
+    private record BlockDraft(
+            String name,
+            String description,
+            Integer executionOrder,
+            List<CreateWorkoutSheetExerciseRequest> exercises) {
     }
 }

@@ -65,5 +65,5 @@ public class WorkoutSheet {
 
     @Builder.Default
     @OneToMany(mappedBy = "workoutSheet", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<WorkoutSheetExercise> exercises = new ArrayList<>();
+    private List<WorkoutBlock> blocks = new ArrayList<>();
 }

@@ -1,13 +1,14 @@
 package com.gymiq.dto.request;
 
-import java.util.UUID;
-
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 public class CreateWorkoutSheetRequest {
@@ -32,6 +33,7 @@ public class CreateWorkoutSheetRequest {
     @Size(max = 500, message = "Observações devem ter no máximo 500 caracteres")
     private String notes;
 
-    @NotEmpty(message = "A ficha deve possuir pelo menos um exercício")
+    private List<@Valid CreateWorkoutBlockRequest> blocks;
+
     private List<@Valid CreateWorkoutSheetExerciseRequest> exercises;
 }

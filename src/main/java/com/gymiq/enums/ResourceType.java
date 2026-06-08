@@ -10,6 +10,7 @@ public enum ResourceType {
     PRESENCE("Presenca"),
     EXERCISE("Exercicio"),
     WORKOUT_SHEET("Ficha de treino"),
+    WORKOUT_BLOCK("Treino da ficha"),
     WORKOUT_SHEET_EXERCISE("Exercicio da ficha"),
     RETENTION_ALERT("Alerta de retencao"),
     JOB("Job");
