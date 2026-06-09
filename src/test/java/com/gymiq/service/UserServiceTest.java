@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -85,14 +86,104 @@ class UserServiceTest {
     }
 
     @Test
+    void updateAdministrativeUserShouldRejectSeededAdminIdentityChange() {
+        User seededAdmin = administrativeUser(
+                UUID.fromString("00000000-0000-0000-0000-000000000037"),
+                "admin@gymiq.com",
+                "seeded-admin-email-hash",
+                User.Role.ADMIN);
+        UpdateUserRequest request = updateUserRequest();
+
+        when(userRepository.findById(seededAdmin.getUserId())).thenReturn(Optional.of(seededAdmin));
+        when(personalDataProtectionService.emailHash(request.getEmail())).thenReturn("updated-email-hash");
+        when(personalDataProtectionService.emailHash("admin@gymiq.com")).thenReturn("seeded-admin-email-hash");
+
+        assertThatThrownBy(() -> userService.updateAdministrativeUser(seededAdmin.getUserId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("administrador padrão");
+
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
     void deleteAdministrativeUserShouldRemoveOnlyAdministrativeUser() {
-        User user = TestDataFactory.activeAdminUser();
+        User user = administrativeUser(
+                UUID.fromString("00000000-0000-0000-0000-000000000032"),
+                "recepcao@gymiq.com",
+                "target-email-hash",
+                User.Role.RECEPTION);
+        User authenticatedUser = administrativeUser(
+                UUID.fromString("00000000-0000-0000-0000-000000000033"),
+                "admin2@gymiq.com",
+                "authenticated-email-hash",
+                User.Role.ADMIN);
 
         when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+        when(personalDataProtectionService.emailHash("admin2@gymiq.com")).thenReturn("authenticated-email-hash");
+        when(userRepository.findByEmailHash("authenticated-email-hash")).thenReturn(Optional.of(authenticatedUser));
+        when(personalDataProtectionService.emailHash("admin@gymiq.com")).thenReturn("seeded-admin-email-hash");
 
-        userService.deleteAdministrativeUser(user.getUserId());
+        userService.deleteAdministrativeUser(user.getUserId(), "admin2@gymiq.com");
 
         verify(userRepository).delete(user);
+    }
+
+    @Test
+    void deleteAdministrativeUserShouldRejectSelfDeletion() {
+        User user = administrativeUser(
+                UUID.fromString("00000000-0000-0000-0000-000000000034"),
+                "admin2@gymiq.com",
+                "authenticated-email-hash",
+                User.Role.ADMIN);
+
+        when(userRepository.findById(user.getUserId())).thenReturn(Optional.of(user));
+        when(personalDataProtectionService.emailHash("admin2@gymiq.com")).thenReturn("authenticated-email-hash");
+        when(userRepository.findByEmailHash("authenticated-email-hash")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.deleteAdministrativeUser(user.getUserId(), "admin2@gymiq.com"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("próprio usuário administrador");
+
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    @Test
+    void deleteAdministrativeUserShouldRejectSeededAdminDeletion() {
+        User seededAdmin = administrativeUser(
+                UUID.fromString("00000000-0000-0000-0000-000000000035"),
+                "admin@gymiq.com",
+                "seeded-admin-email-hash",
+                User.Role.ADMIN);
+        User authenticatedUser = administrativeUser(
+                UUID.fromString("00000000-0000-0000-0000-000000000036"),
+                "admin2@gymiq.com",
+                "authenticated-email-hash",
+                User.Role.ADMIN);
+
+        when(userRepository.findById(seededAdmin.getUserId())).thenReturn(Optional.of(seededAdmin));
+        when(personalDataProtectionService.emailHash("admin2@gymiq.com")).thenReturn("authenticated-email-hash");
+        when(userRepository.findByEmailHash("authenticated-email-hash")).thenReturn(Optional.of(authenticatedUser));
+        when(personalDataProtectionService.emailHash("admin@gymiq.com")).thenReturn("seeded-admin-email-hash");
+
+        assertThatThrownBy(() -> userService.deleteAdministrativeUser(seededAdmin.getUserId(), "admin2@gymiq.com"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("administrador padrão");
+
+        verify(userRepository, never()).delete(any(User.class));
+    }
+
+    private User administrativeUser(UUID userId, String email, String emailHash, User.Role role) {
+        User user = User.builder()
+                .name("Usuario Administrativo")
+                .email(email)
+                .emailHash(emailHash)
+                .passwordHash("encoded-password")
+                .role(role)
+                .active(true)
+                .lgpdAccepted(true)
+                .build();
+        user.setUserId(userId);
+        return user;
     }
 
     private CreateUserRequest createUserRequest(User.Role role) {

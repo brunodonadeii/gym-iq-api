@@ -27,6 +27,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
 
+    private static final String SEEDED_ADMIN_EMAIL = "admin@gymiq.com";
+
     private static final List<User.Role> ADMINISTRATIVE_ROLES = List.of(
             User.Role.ADMIN,
             User.Role.RECEPTION);
@@ -82,6 +84,7 @@ public class UserService {
         User user = findAdministrativeUser(id);
 
         String emailHash = personalDataProtectionService.emailHash(request.getEmail());
+        ensureSeededAdminIdentityIsPreserved(user, request.getRole(), emailHash);
 
         userRepository.findByEmailHash(emailHash)
                 .filter(existingUser -> !existingUser.getUserId().equals(id))
@@ -108,10 +111,49 @@ public class UserService {
 
     @Transactional
     @Auditable(action = AuditAction.DELETE_USER, resourceType = ResourceType.USER, description = "Excluiu usuario administrativo")
-    public void deleteAdministrativeUser(UUID id) {
+    public void deleteAdministrativeUser(UUID id, String authenticatedEmail) {
         User user = findAdministrativeUser(id);
+        ensureCanDeleteAdministrativeUser(user, authenticatedEmail);
         userRepository.delete(user);
         log.info("Usuario administrativo removido: id={}, role={}", user.getUserId(), user.getRole());
+    }
+
+    private void ensureCanDeleteAdministrativeUser(User user, String authenticatedEmail) {
+        User authenticatedUser = findAuthenticatedUser(authenticatedEmail);
+
+        if (user.getUserId().equals(authenticatedUser.getUserId())) {
+            throw new BusinessException("Não é possível excluir o próprio usuário administrador.");
+        }
+
+        if (isSeededAdmin(user)) {
+            throw new BusinessException("O administrador padrão do sistema não pode ser excluído.");
+        }
+    }
+
+    private User findAuthenticatedUser(String authenticatedEmail) {
+        String authenticatedEmailHash = personalDataProtectionService.emailHash(authenticatedEmail);
+        return userRepository.findByEmailHash(authenticatedEmailHash)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário autenticado não encontrado"));
+    }
+
+    private boolean isSeededAdmin(User user) {
+        String seededAdminEmailHash = personalDataProtectionService.emailHash(SEEDED_ADMIN_EMAIL);
+        return User.Role.ADMIN == user.getRole()
+                && seededAdminEmailHash != null
+                && seededAdminEmailHash.equals(user.getEmailHash());
+    }
+
+    private void ensureSeededAdminIdentityIsPreserved(User user, User.Role newRole, String newEmailHash) {
+        if (!isSeededAdmin(user)) {
+            return;
+        }
+
+        boolean roleChanged = User.Role.ADMIN != newRole;
+        boolean emailChanged = !user.getEmailHash().equals(newEmailHash);
+
+        if (roleChanged || emailChanged) {
+            throw new BusinessException("O administrador padrão do sistema não pode ter e-mail ou perfil alterado.");
+        }
     }
 
     private void validateAdministrativeRole(User.Role role) {
