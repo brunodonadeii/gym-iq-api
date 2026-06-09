@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,6 +20,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentJobServiceTest {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     @Mock
     private PaymentRepository paymentRepository;
@@ -32,9 +35,10 @@ class PaymentJobServiceTest {
     @Test
     void refreshOverduePaymentsShouldMovePastDuePendingPaymentsToOverdue() {
         Payment payment = TestDataFactory.pendingPayment();
-        payment.setDueDate(LocalDate.now().minusDays(1));
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        payment.setDueDate(today.minusDays(1));
 
-        when(paymentRepository.findByStatusAndDueDateBefore(Payment.PaymentStatus.PENDING, LocalDate.now()))
+        when(paymentRepository.findByStatusAndDueDateBefore(Payment.PaymentStatus.PENDING, today))
                 .thenReturn(List.of(payment));
 
         int affectedPayments = paymentJobService.refreshOverduePayments();

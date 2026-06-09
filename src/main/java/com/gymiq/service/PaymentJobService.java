@@ -15,12 +15,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentJobService {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final PaymentRepository paymentRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -29,7 +32,7 @@ public class PaymentJobService {
     @Auditable(action = AuditAction.REFRESH_OVERDUE_PAYMENTS, resourceType = ResourceType.JOB, description = "Atualizou pagamentos vencidos")
     public int refreshOverduePayments() {
         List<Payment> overduePayments = paymentRepository
-                .findByStatusAndDueDateBefore(PaymentStatus.PENDING, LocalDate.now());
+                .findByStatusAndDueDateBefore(PaymentStatus.PENDING, today());
 
         overduePayments.forEach(payment -> payment.setStatus(PaymentStatus.OVERDUE));
         paymentRepository.saveAll(overduePayments);
@@ -41,7 +44,7 @@ public class PaymentJobService {
     @Transactional
     @Auditable(action = AuditAction.GENERATE_MONTHLY_PAYMENTS, resourceType = ResourceType.JOB, description = "Gerou mensalidades automaticas")
     public int generateMonthlyPayments() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = today();
         List<Enrollment> activeEnrollments = enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE);
         int createdPayments = 0;
 
@@ -83,6 +86,10 @@ public class PaymentJobService {
     }
 
     private PaymentStatus resolveInitialStatus(LocalDate dueDate) {
-        return dueDate.isBefore(LocalDate.now()) ? PaymentStatus.OVERDUE : PaymentStatus.PENDING;
+        return dueDate.isBefore(today()) ? PaymentStatus.OVERDUE : PaymentStatus.PENDING;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(BUSINESS_ZONE);
     }
 }

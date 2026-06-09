@@ -24,12 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EnrollmentService {
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final int MONTHLY_PLAN_DURATION_MONTHS = 1;
 
     private final EnrollmentRepository enrollmentRepository;
@@ -72,7 +74,7 @@ public class EnrollmentService {
             throw new BusinessException("Aluno já possui uma matrícula ativa. Cancele antes de criar outra.");
         }
 
-        LocalDate start = request.getStartDate() != null ? request.getStartDate() : LocalDate.now();
+        LocalDate start = request.getStartDate() != null ? request.getStartDate() : today();
         LocalDate end = calculateEndDate(start, plan);
 
         Enrollment enrollment = Enrollment.builder()
@@ -134,7 +136,7 @@ public class EnrollmentService {
         validateStatusTransition(enrollment.getStatus(), newStatus);
 
         enrollment.setStatus(newStatus);
-        enrollment.setCanceledAt(newStatus == EnrollmentStatus.CANCELED ? LocalDateTime.now() : null);
+        enrollment.setCanceledAt(newStatus == EnrollmentStatus.CANCELED ? now() : null);
         enrollmentRepository.save(enrollment);
         log.info("Status da matrícula id={} alterado para {}", enrollmentId, newStatus);
 
@@ -163,10 +165,10 @@ public class EnrollmentService {
         }
 
         oldEnrollment.setStatus(EnrollmentStatus.CANCELED);
-        oldEnrollment.setCanceledAt(LocalDateTime.now());
+        oldEnrollment.setCanceledAt(now());
         enrollmentRepository.save(oldEnrollment);
 
-        LocalDate start = LocalDate.now();
+        LocalDate start = today();
         LocalDate end = calculateEndDate(start, newPlan);
 
         Enrollment newEnrollment = Enrollment.builder()
@@ -208,6 +210,14 @@ public class EnrollmentService {
 
     private boolean isMonthlyPlan(Plan plan) {
         return MONTHLY_PLAN_DURATION_MONTHS == plan.getDurationMonths();
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(BUSINESS_ZONE);
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(BUSINESS_ZONE);
     }
 
     private void validateStatusTransition(EnrollmentStatus current, EnrollmentStatus next) {

@@ -24,11 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     private final PaymentRepository paymentRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -121,7 +124,7 @@ public class PaymentService {
         validatePaymentMethod(payRequest);
 
         payment.setStatus(PaymentStatus.PAID);
-        payment.setPaidAt(payRequest.getPaidAt() != null ? payRequest.getPaidAt() : LocalDateTime.now());
+        payment.setPaidAt(payRequest.getPaidAt() != null ? payRequest.getPaidAt() : now());
         payment.setPaymentMethod(payRequest.getPaymentMethod().trim());
         if (payRequest.getNotes() != null) {
             payment.setNotes(payRequest.getNotes());
@@ -164,6 +167,14 @@ public class PaymentService {
     }
 
     private PaymentStatus resolveInitialStatus(LocalDate dueDate) {
-        return dueDate.isBefore(LocalDate.now()) ? PaymentStatus.OVERDUE : PaymentStatus.PENDING;
+        return dueDate.isBefore(today()) ? PaymentStatus.OVERDUE : PaymentStatus.PENDING;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(BUSINESS_ZONE);
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(BUSINESS_ZONE);
     }
 }

@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,6 +28,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class EnrollmentServiceTest {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
 
     @Mock
     private EnrollmentRepository enrollmentRepository;
@@ -107,7 +110,7 @@ class EnrollmentServiceTest {
     void renewShouldCancelOldEnrollmentAndCreateNewOne() {
         Enrollment oldEnrollment = TestDataFactory.activeEnrollment();
         oldEnrollment.getPlan().setDurationMonths(3);
-        oldEnrollment.setEndDate(LocalDate.now().plusMonths(3));
+        oldEnrollment.setEndDate(LocalDate.now(BUSINESS_ZONE).plusMonths(3));
 
         when(enrollmentRepository.findById(oldEnrollment.getEnrollmentId())).thenReturn(Optional.of(oldEnrollment));
         when(enrollmentRepository.save(any(Enrollment.class))).thenAnswer(invocation -> {
