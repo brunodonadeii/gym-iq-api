@@ -1,6 +1,7 @@
 package com.gymiq.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gymiq.exception.GlobalExceptionHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class JwtAuthEntryPoint implements AuthenticationEntryPoint {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("statusCode", 401);
-        body.put("error", "UNAUTHORIZED");
+        body.put("error", GlobalExceptionHandler.NAO_AUTORIZADO);
         body.put("message", "Token JWT ausente ou inválido. Faça login em /api/auth/login");
         body.put("path", request.getRequestURI());
 

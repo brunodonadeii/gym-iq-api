@@ -20,6 +20,15 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    public static final String ERRO_VALIDACAO = "ERRO_VALIDACAO";
+    public static final String REGRA_NEGOCIO_VIOLADA = "REGRA_NEGOCIO_VIOLADA";
+    public static final String RECURSO_NAO_ENCONTRADO = "RECURSO_NAO_ENCONTRADO";
+    public static final String PARAMETRO_INVALIDO = "PARAMETRO_INVALIDO";
+    public static final String CREDENCIAIS_INVALIDAS = "CREDENCIAIS_INVALIDAS";
+    public static final String NAO_AUTORIZADO = "NAO_AUTORIZADO";
+    public static final String ACESSO_NEGADO = "ACESSO_NEGADO";
+    public static final String ERRO_INTERNO = "ERRO_INTERNO";
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException ex, WebRequest request) {
@@ -34,7 +43,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(errorBody(
                 400,
-                "VALIDATION_ERROR",
+                ERRO_VALIDACAO,
                 "Corrija os campos indicados",
                 request.getDescription(false),
                 fields));
@@ -45,7 +54,7 @@ public class GlobalExceptionHandler {
             BusinessException ex, WebRequest request) {
         return ResponseEntity.unprocessableEntity().body(errorBody(
                 422,
-                "BUSINESS_RULE_VIOLATION",
+                REGRA_NEGOCIO_VIOLADA,
                 ex.getMessage(),
                 request.getDescription(false),
                 null));
@@ -56,7 +65,7 @@ public class GlobalExceptionHandler {
             ResourceNotFoundException ex, WebRequest request) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody(
                 404,
-                "RESOURCE_NOT_FOUND",
+                RECURSO_NAO_ENCONTRADO,
                 ex.getMessage(),
                 request.getDescription(false),
                 null));
@@ -75,7 +84,7 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.badRequest().body(errorBody(
                 400,
-                "INVALID_PARAMETER",
+                PARAMETRO_INVALIDO,
                 message,
                 request.getDescription(false),
                 null));
@@ -86,7 +95,7 @@ public class GlobalExceptionHandler {
             InvalidParameterException ex, WebRequest request) {
         return ResponseEntity.badRequest().body(errorBody(
                 400,
-                "INVALID_PARAMETER",
+                PARAMETRO_INVALIDO,
                 ex.getMessage(),
                 request.getDescription(false),
                 null));
@@ -97,7 +106,7 @@ public class GlobalExceptionHandler {
             BadCredentialsException ex, WebRequest request) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody(
                 401,
-                "INVALID_CREDENTIALS",
+                CREDENCIAIS_INVALIDAS,
                 "E-mail ou senha incorretos",
                 request.getDescription(false),
                 null));
@@ -108,7 +117,7 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex, WebRequest request) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorBody(
                 403,
-                "ACCESS_DENIED",
+                ACESSO_NEGADO,
                 "Seu perfil não tem permissão para esta operação",
                 request.getDescription(false),
                 null));
@@ -117,10 +126,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(
             Exception ex, WebRequest request) {
-        log.error("Erro interno nao tratado", ex);
+        log.error("Erro interno não tratado", ex);
         return ResponseEntity.internalServerError().body(errorBody(
                 500,
-                "INTERNAL_ERROR",
+                ERRO_INTERNO,
                 "Ocorreu um erro inesperado. Tente novamente.",
                 request.getDescription(false),
                 null));

@@ -31,7 +31,7 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleBusiness(new BusinessException("Regra inválida"), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-        assertBody(response.getBody(), 422, "BUSINESS_RULE_VIOLATION", "Regra inválida");
+        assertBody(response.getBody(), 422, GlobalExceptionHandler.REGRA_NEGOCIO_VIOLADA, "Regra inválida");
     }
 
     @Test
@@ -39,7 +39,7 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleNotFound(new ResourceNotFoundException("Registro não encontrado"), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertBody(response.getBody(), 404, "RESOURCE_NOT_FOUND", "Registro não encontrado");
+        assertBody(response.getBody(), 404, GlobalExceptionHandler.RECURSO_NAO_ENCONTRADO, "Registro não encontrado");
     }
 
     @Test
@@ -54,7 +54,7 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleTypeMismatch(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertBody(response.getBody(), 400, "INVALID_PARAMETER", "Parâmetro inválido: id deve ser do tipo Integer");
+        assertBody(response.getBody(), 400, GlobalExceptionHandler.PARAMETRO_INVALIDO, "Parâmetro inválido: id deve ser do tipo Integer");
     }
 
     @Test
@@ -62,7 +62,7 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleInvalidParameter(new InvalidParameterException("Filtro inválido"), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertBody(response.getBody(), 400, "INVALID_PARAMETER", "Filtro inválido");
+        assertBody(response.getBody(), 400, GlobalExceptionHandler.PARAMETRO_INVALIDO, "Filtro inválido");
     }
 
     @Test
@@ -70,7 +70,7 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleBadCredentials(new BadCredentialsException("bad credentials"), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertBody(response.getBody(), 401, "INVALID_CREDENTIALS", "E-mail ou senha incorretos");
+        assertBody(response.getBody(), 401, GlobalExceptionHandler.CREDENCIAIS_INVALIDAS, "E-mail ou senha incorretos");
     }
 
     @Test
@@ -78,7 +78,7 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleAccessDenied(new AccessDeniedException("denied"), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertBody(response.getBody(), 403, "ACCESS_DENIED", "Seu perfil não tem permissão para esta operação");
+        assertBody(response.getBody(), 403, GlobalExceptionHandler.ACESSO_NEGADO, "Seu perfil não tem permissão para esta operação");
     }
 
     @Test
@@ -86,7 +86,7 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleGeneric(new RuntimeException("Erro técnico"), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertBody(response.getBody(), 500, "INTERNAL_ERROR", "Ocorreu um erro inesperado. Tente novamente.");
+        assertBody(response.getBody(), 500, GlobalExceptionHandler.ERRO_INTERNO, "Ocorreu um erro inesperado. Tente novamente.");
     }
 
     private void assertBody(Map<String, Object> body, int statusCode, String error, String message) {
