@@ -4,6 +4,7 @@ import com.gymiq.dto.response.AuditActorOptionResponse;
 import com.gymiq.dto.response.AuditFilterOptionResponse;
 import com.gymiq.dto.response.AuditFilterOptionsResponse;
 import com.gymiq.dto.response.AuditLogResponse;
+import com.gymiq.entity.AuditLog;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.InvalidParameterException;
@@ -26,7 +27,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -63,7 +68,7 @@ public class AuditLogController {
         return ResponseEntity.ok(new AuditFilterOptionsResponse(
                 buildActionOptions(),
                 buildResourceTypeOptions(),
-                auditLogRepository.findActorOptions()));
+                buildActorOptions()));
     }
 
     @GetMapping("/actions")
@@ -81,7 +86,7 @@ public class AuditLogController {
     @GetMapping("/actors")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<AuditActorOptionResponse>> findActors() {
-        return ResponseEntity.ok(auditLogRepository.findActorOptions());
+        return ResponseEntity.ok(buildActorOptions());
     }
 
     @GetMapping("/actor/{actorUserId}")
@@ -182,6 +187,26 @@ public class AuditLogController {
     private List<AuditFilterOptionResponse> buildResourceTypeOptions() {
         return Arrays.stream(ResourceType.values())
                 .map(resourceType -> new AuditFilterOptionResponse(resourceType.name(), resourceType.getLabel()))
+                .toList();
+    }
+
+    private List<AuditActorOptionResponse> buildActorOptions() {
+        Map<UUID, AuditActorOptionResponse> uniqueActors = new LinkedHashMap<>();
+
+        for (AuditLog auditLog : auditLogRepository.findByActorUserIdIsNotNullOrderByCreatedAtDesc()) {
+            uniqueActors.computeIfAbsent(
+                    auditLog.getActorUserId(),
+                    ignored -> new AuditActorOptionResponse(
+                            auditLog.getActorUserId(),
+                            auditLog.getActorEmail(),
+                            auditLog.getActorRole()));
+        }
+
+        return uniqueActors.values().stream()
+                .sorted(Comparator.comparing(
+                        option -> option.getActorEmail() == null
+                                ? ""
+                                : option.getActorEmail().toLowerCase(Locale.ROOT)))
                 .toList();
     }
 }
