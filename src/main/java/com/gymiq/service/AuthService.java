@@ -1,10 +1,8 @@
 package com.gymiq.service;
 
 import com.gymiq.aop.Auditable;
-import com.gymiq.dto.request.CreateStudentRequest;
 import com.gymiq.dto.request.LoginRequest;
 import com.gymiq.dto.response.AuthResponse;
-import com.gymiq.dto.response.StudentResponse;
 import com.gymiq.entity.User;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
@@ -26,7 +24,6 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
-    private final StudentService studentService;
     private final PersonalDataProtectionService personalDataProtectionService;
     private final StudentContractService studentContractService;
 
@@ -65,11 +62,4 @@ public class AuthService {
                 .build();
     }
 
-    @Transactional
-    @Auditable(action = AuditAction.REGISTER, resourceType = ResourceType.STUDENT, description = "Registrou aluno via autenticação")
-    public StudentResponse registerStudent(CreateStudentRequest request) {
-        StudentResponse student = studentService.create(request);
-        log.info("Novo aluno registrado via auth: {} (id={})", student.getEmail(), student.getStudentId());
-        return student;
-    }
 }

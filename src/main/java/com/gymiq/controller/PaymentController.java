@@ -61,13 +61,6 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.findByStudent(studentId, pageable));
     }
 
-    @GetMapping("/overdue")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<Page<PaymentResponse>> findOverdue(
-            @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findOverdue(pageable));
-    }
-
     @PatchMapping("/refresh-overdue")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<PaymentJobResponse> refreshOverdue() {

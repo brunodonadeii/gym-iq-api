@@ -71,24 +71,6 @@ public class AuditLogController {
                 buildActorOptions()));
     }
 
-    @GetMapping("/actions")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AuditFilterOptionResponse>> findActions() {
-        return ResponseEntity.ok(buildActionOptions());
-    }
-
-    @GetMapping("/resource-types")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AuditFilterOptionResponse>> findResourceTypes() {
-        return ResponseEntity.ok(buildResourceTypeOptions());
-    }
-
-    @GetMapping("/actors")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AuditActorOptionResponse>> findActors() {
-        return ResponseEntity.ok(buildActorOptions());
-    }
-
     @GetMapping("/actor/{actorUserId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<AuditLogResponse>> findByActor(
@@ -152,7 +134,7 @@ public class AuditLogController {
                 .filter(action -> action.name().equals(normalizedValue))
                 .findFirst()
                 .orElseThrow(() -> new InvalidParameterException(
-                        "Parâmetro inválido: action deve ser uma das opções disponíveis em /api/audit-logs/actions"));
+                        "Parâmetro inválido: action deve ser uma das opções disponíveis em /api/audit-logs/filter-options"));
     }
 
     private ResourceType resolveResourceType(String value) {
@@ -168,7 +150,7 @@ public class AuditLogController {
                 .filter(resourceType -> resourceType.name().equals(normalizedValue))
                 .findFirst()
                 .orElseThrow(() -> new InvalidParameterException(
-                        "Parâmetro inválido: resourceType deve ser uma das opções disponíveis em /api/audit-logs/resource-types"));
+                        "Parâmetro inválido: resourceType deve ser uma das opções disponíveis em /api/audit-logs/filter-options"));
     }
 
     private String normalizeEnumValue(String value) {

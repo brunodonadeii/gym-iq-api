@@ -32,13 +32,6 @@ public class EnrollmentController {
         return ResponseEntity.ok(enrollmentService.findActive(pageable));
     }
 
-    @GetMapping("/history")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<Page<EnrollmentResponse>> findHistory(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(enrollmentService.findHistory(pageable));
-    }
-
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<EnrollmentResponse> enroll(

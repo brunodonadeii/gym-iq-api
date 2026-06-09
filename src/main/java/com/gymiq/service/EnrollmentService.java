@@ -55,12 +55,6 @@ public class EnrollmentService {
                 .map(EnrollmentResponse::fromEntity);
     }
 
-    @Transactional(readOnly = true)
-    public Page<EnrollmentResponse> findHistory(Pageable pageable) {
-        return enrollmentRepository.findAll(pageable)
-                .map(EnrollmentResponse::fromEntity);
-    }
-
     @Transactional
     @Auditable(action = AuditAction.CREATE_ENROLLMENT, resourceType = ResourceType.ENROLLMENT, description = "Criou matrícula")
     public EnrollmentResponse enroll(EnrollStudentRequest request) {

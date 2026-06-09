@@ -114,12 +114,6 @@ public class PaymentService {
                 .map(PaymentResponse::fromEntity);
     }
 
-    @Transactional(readOnly = true)
-    public Page<PaymentResponse> findOverdue(Pageable pageable) {
-        return paymentRepository.findByStatus(PaymentStatus.OVERDUE, pageable)
-                .map(PaymentResponse::fromEntity);
-    }
-
     @Transactional
     @Auditable(action = AuditAction.PAY_PAYMENT, resourceType = ResourceType.PAYMENT, description = "Quitou pagamento")
     public PaymentResponse pay(UUID id, PayPaymentRequest request) {

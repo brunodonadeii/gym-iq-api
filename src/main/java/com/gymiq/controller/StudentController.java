@@ -118,12 +118,6 @@ public class StudentController {
         return ResponseEntity.ok(studentService.activate(id));
     }
 
-    @PatchMapping("/{id}/anonymize")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<StudentResponse> anonymize(@PathVariable UUID id) {
-        return ResponseEntity.ok(studentService.anonymize(id));
-    }
-
     @DeleteMapping("/{id}/personal-data")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<StudentResponse> anonymizePersonalData(@PathVariable UUID id) {
