@@ -49,6 +49,15 @@ public class PaymentService {
             return null;
         }
 
+        if (paymentRepository.existsByStudentPlanAndDueDate(
+                enrollment.getStudent().getStudentId(),
+                enrollment.getPlan().getPlanId(),
+                dueDate)) {
+            log.info("Pagamento inicial ja existe para aluno={}, plano={} e vencimento={}",
+                    enrollment.getStudent().getStudentId(), enrollment.getPlan().getPlanId(), dueDate);
+            return null;
+        }
+
         Payment payment = Payment.builder()
                 .enrollment(enrollment)
                 .amount(enrollment.getPlan().getMonthlyPrice())

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -133,6 +134,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
     Optional<Enrollment> findTopByStudentStudentIdOrderByStartDateDescCreatedAtDesc(UUID studentId);
 
     boolean existsByStudentStudentIdAndStatus(UUID studentId, EnrollmentStatus status);
+
+    boolean existsByStudentStudentIdAndStatusIn(UUID studentId, Collection<EnrollmentStatus> statuses);
 
     @Query("""
             SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END

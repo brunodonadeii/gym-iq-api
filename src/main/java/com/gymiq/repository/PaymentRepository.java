@@ -104,6 +104,18 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     boolean existsByEnrollmentEnrollmentIdAndDueDate(UUID enrollmentId, LocalDate dueDate);
 
+    @Query("""
+            SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END
+            FROM Payment p
+            WHERE p.enrollment.student.studentId = :studentId
+              AND p.enrollment.plan.planId = :planId
+              AND p.dueDate = :dueDate
+            """)
+    boolean existsByStudentPlanAndDueDate(
+            @Param("studentId") UUID studentId,
+            @Param("planId") Integer planId,
+            @Param("dueDate") LocalDate dueDate);
+
     Optional<Payment> findTopByEnrollmentEnrollmentIdOrderByDueDateDesc(UUID enrollmentId);
 
     long countByEnrollmentStudentStudentIdAndStatus(UUID studentId, PaymentStatus status);

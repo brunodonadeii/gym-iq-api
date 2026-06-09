@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -33,6 +34,9 @@ public class EnrollmentService {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final int MONTHLY_PLAN_DURATION_MONTHS = 1;
+    private static final List<EnrollmentStatus> OPEN_ENROLLMENT_STATUSES = List.of(
+            EnrollmentStatus.ACTIVE,
+            EnrollmentStatus.SUSPENDED);
 
     private final EnrollmentRepository enrollmentRepository;
     private final StudentService studentService;
@@ -69,9 +73,9 @@ public class EnrollmentService {
         if (!student.getUser().getActive()) {
             throw new BusinessException("O aluno está inativo e não pode ser matriculado");
         }
-        if (enrollmentRepository.existsByStudentStudentIdAndStatus(
-                student.getStudentId(), EnrollmentStatus.ACTIVE)) {
-            throw new BusinessException("Aluno já possui uma matrícula ativa. Cancele antes de criar outra.");
+        if (enrollmentRepository.existsByStudentStudentIdAndStatusIn(
+                student.getStudentId(), OPEN_ENROLLMENT_STATUSES)) {
+            throw new BusinessException("Aluno já possui matrícula ativa ou suspensa. Cancele antes de criar outra.");
         }
 
         LocalDate start = request.getStartDate() != null ? request.getStartDate() : today();

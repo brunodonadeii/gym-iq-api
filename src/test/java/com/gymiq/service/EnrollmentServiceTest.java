@@ -23,6 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -60,8 +61,8 @@ class EnrollmentServiceTest {
 
         when(studentService.findEntityById(student.getStudentId())).thenReturn(student);
         when(planService.findEntityById(plan.getPlanId())).thenReturn(plan);
-        when(enrollmentRepository.existsByStudentStudentIdAndStatus(
-                student.getStudentId(), Enrollment.EnrollmentStatus.ACTIVE)).thenReturn(false);
+        when(enrollmentRepository.existsByStudentStudentIdAndStatusIn(
+                eq(student.getStudentId()), any())).thenReturn(false);
         when(enrollmentRepository.save(any(Enrollment.class))).thenAnswer(invocation -> {
             Enrollment enrollment = invocation.getArgument(0);
             enrollment.setEnrollmentId(UUID.fromString("00000000-0000-0000-0000-000000000003"));
@@ -86,12 +87,30 @@ class EnrollmentServiceTest {
 
         when(studentService.findEntityById(student.getStudentId())).thenReturn(student);
         when(planService.findEntityById(plan.getPlanId())).thenReturn(plan);
-        when(enrollmentRepository.existsByStudentStudentIdAndStatus(
-                student.getStudentId(), Enrollment.EnrollmentStatus.ACTIVE)).thenReturn(true);
+        when(enrollmentRepository.existsByStudentStudentIdAndStatusIn(
+                eq(student.getStudentId()), any())).thenReturn(true);
 
         assertThatThrownBy(() -> enrollmentService.enroll(request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("matrícula ativa");
+                .hasMessageContaining("matrícula ativa ou suspensa");
+    }
+
+    @Test
+    void enrollShouldRejectStudentWithSuspendedEnrollment() {
+        Student student = TestDataFactory.activeStudent();
+        Plan plan = TestDataFactory.activePlan();
+        EnrollStudentRequest request = new EnrollStudentRequest();
+        request.setStudentId(student.getStudentId());
+        request.setPlanId(plan.getPlanId());
+
+        when(studentService.findEntityById(student.getStudentId())).thenReturn(student);
+        when(planService.findEntityById(plan.getPlanId())).thenReturn(plan);
+        when(enrollmentRepository.existsByStudentStudentIdAndStatusIn(
+                eq(student.getStudentId()), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> enrollmentService.enroll(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("matrícula ativa ou suspensa");
     }
 
     @Test

@@ -46,6 +46,10 @@ class PaymentServiceTest {
 
         when(paymentRepository.existsByEnrollmentEnrollmentIdAndDueDate(
                 enrollment.getEnrollmentId(), enrollment.getStartDate())).thenReturn(false);
+        when(paymentRepository.existsByStudentPlanAndDueDate(
+                enrollment.getStudent().getStudentId(),
+                enrollment.getPlan().getPlanId(),
+                enrollment.getStartDate())).thenReturn(false);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Payment payment = paymentService.createFirstPaymentForEnrollment(enrollment);
@@ -53,6 +57,23 @@ class PaymentServiceTest {
         assertThat(payment.getEnrollment()).isEqualTo(enrollment);
         assertThat(payment.getAmount()).isEqualByComparingTo(enrollment.getPlan().getMonthlyPrice());
         assertThat(payment.getStatus()).isEqualTo(Payment.PaymentStatus.OVERDUE);
+    }
+
+    @Test
+    void createFirstPaymentForEnrollmentShouldSkipDuplicateStudentPlanDueDate() {
+        Enrollment enrollment = TestDataFactory.activeEnrollment();
+
+        when(paymentRepository.existsByEnrollmentEnrollmentIdAndDueDate(
+                enrollment.getEnrollmentId(), enrollment.getStartDate())).thenReturn(false);
+        when(paymentRepository.existsByStudentPlanAndDueDate(
+                enrollment.getStudent().getStudentId(),
+                enrollment.getPlan().getPlanId(),
+                enrollment.getStartDate())).thenReturn(true);
+
+        Payment payment = paymentService.createFirstPaymentForEnrollment(enrollment);
+
+        assertThat(payment).isNull();
+        verify(paymentRepository, never()).save(any(Payment.class));
     }
 
     @Test
