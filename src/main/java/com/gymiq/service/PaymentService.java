@@ -118,12 +118,11 @@ public class PaymentService {
             throw new BusinessException("Pagamento já foi marcado como pago");
         }
 
+        validatePaymentMethod(payRequest);
+
         payment.setStatus(PaymentStatus.PAID);
         payment.setPaidAt(payRequest.getPaidAt() != null ? payRequest.getPaidAt() : LocalDateTime.now());
-
-        if (payRequest.getPaymentMethod() != null && !payRequest.getPaymentMethod().isBlank()) {
-            payment.setPaymentMethod(payRequest.getPaymentMethod());
-        }
+        payment.setPaymentMethod(payRequest.getPaymentMethod().trim());
         if (payRequest.getNotes() != null) {
             payment.setNotes(payRequest.getNotes());
         }
@@ -132,6 +131,12 @@ public class PaymentService {
         log.info("Pagamento quitado: id={}, pagoEm={}", payment.getPaymentId(), payment.getPaidAt());
 
         return PaymentResponse.fromEntity(payment);
+    }
+
+    private void validatePaymentMethod(PayPaymentRequest request) {
+        if (request.getPaymentMethod() == null || request.getPaymentMethod().isBlank()) {
+            throw new BusinessException("Método de pagamento é obrigatório para quitar o pagamento");
+        }
     }
 
     @Transactional

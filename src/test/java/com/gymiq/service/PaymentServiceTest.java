@@ -21,6 +21,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -82,6 +83,34 @@ class PaymentServiceTest {
         assertThatThrownBy(() -> paymentService.pay(payment.getPaymentId(), null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("pago");
+    }
+
+    @Test
+    void payShouldRejectMissingPaymentMethod() {
+        Payment payment = TestDataFactory.pendingPayment();
+
+        when(paymentRepository.findById(payment.getPaymentId())).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() -> paymentService.pay(payment.getPaymentId(), null))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Método de pagamento");
+
+        verify(paymentRepository, never()).save(any(Payment.class));
+    }
+
+    @Test
+    void payShouldRejectBlankPaymentMethod() {
+        Payment payment = TestDataFactory.pendingPayment();
+        PayPaymentRequest request = new PayPaymentRequest();
+        request.setPaymentMethod("   ");
+
+        when(paymentRepository.findById(payment.getPaymentId())).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() -> paymentService.pay(payment.getPaymentId(), request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Método de pagamento");
+
+        verify(paymentRepository, never()).save(any(Payment.class));
     }
 
 }
