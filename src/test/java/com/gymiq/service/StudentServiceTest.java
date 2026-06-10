@@ -12,6 +12,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
@@ -69,7 +72,7 @@ class StudentServiceTest {
             return student;
         });
 
-        StudentResponse response = studentService.create(request);
+        StudentResponse response = studentService.create(request, authentication("ROLE_RECEPTION"));
 
         assertThat(response.getStudentId()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
         assertThat(response.getEmail()).isEqualTo("an***@gymiq.com");
@@ -87,7 +90,7 @@ class StudentServiceTest {
         when(personalDataProtectionService.cpfHash(request.getCpf())).thenReturn("cpf-hash");
         when(userRepository.existsByEmailHash("email-hash")).thenReturn(true);
 
-        assertThatThrownBy(() -> studentService.create(request))
+        assertThatThrownBy(() -> studentService.create(request, authentication("ROLE_RECEPTION")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("E-mail");
 
@@ -105,5 +108,12 @@ class StudentServiceTest {
         request.setZipCode("01001-000");
         request.setAddress("Endereco manual");
         return request;
+    }
+
+    private Authentication authentication(String role) {
+        return new TestingAuthenticationToken(
+                "recepcao@gymiq.com",
+                null,
+                java.util.List.of(new SimpleGrantedAuthority(role)));
     }
 }

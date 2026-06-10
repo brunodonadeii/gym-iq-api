@@ -15,6 +15,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -67,7 +70,7 @@ class InstructorServiceTest {
             return instructor;
         });
 
-        InstructorResponse response = instructorService.create(request);
+        InstructorResponse response = instructorService.create(request, authentication("ROLE_ADMIN"));
 
         assertThat(response.getInstructorId()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000002"));
         assertThat(response.getName()).isEqualTo("Carlos Trainer");
@@ -152,7 +155,13 @@ class InstructorServiceTest {
         request.setCref("654321-G/SP");
         request.setPhone("11977776666");
         request.setSpecialty("Funcional");
-        request.setLgpdAccepted(true);
         return request;
+    }
+
+    private Authentication authentication(String role) {
+        return new TestingAuthenticationToken(
+                "admin@gymiq.com",
+                null,
+                java.util.List.of(new SimpleGrantedAuthority(role)));
     }
 }

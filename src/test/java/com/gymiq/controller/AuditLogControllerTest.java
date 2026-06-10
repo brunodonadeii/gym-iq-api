@@ -9,7 +9,6 @@ import com.gymiq.exception.InvalidParameterException;
 import com.gymiq.repository.AuditLogRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -102,35 +101,47 @@ class AuditLogControllerTest {
     }
 
     @Test
-    void findByActorShouldDelegateToRepository() {
+    void filterByActorShouldUseMainFilterEndpoint() {
         AuditLogController controller = new AuditLogController(auditLogRepository);
         AuditLog log = auditLog();
 
-        when(auditLogRepository.findByActorUserId(log.getActorUserId(), Pageable.unpaged()))
+        when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
                 .thenReturn(new PageImpl<>(List.of(log)));
 
-        ResponseEntity<Page<AuditLogResponse>> response = controller.findByActor(log.getActorUserId(), Pageable.unpaged());
+        ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
+                log.getActorUserId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                Pageable.unpaged());
 
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getTotalElements()).isEqualTo(1);
-        verify(auditLogRepository).findByActorUserId(log.getActorUserId(), Pageable.unpaged());
+        verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
     }
 
     @Test
-    void findByResourceShouldNormalizeResourceTypeAndDelegateToRepository() {
+    void filterByResourceShouldUseMainFilterEndpoint() {
         AuditLogController controller = new AuditLogController(auditLogRepository);
         AuditLog log = auditLog();
 
-        when(auditLogRepository.findByResourceTypeAndResourceId(ResourceType.USER, log.getResourceId(), Pageable.unpaged()))
+        when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
                 .thenReturn(new PageImpl<>(List.of(log)));
 
-        ResponseEntity<Page<AuditLogResponse>> response = controller.findByResource("user", log.getResourceId(), Pageable.unpaged());
+        ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
+                null,
+                null,
+                "user",
+                log.getResourceId(),
+                null,
+                null,
+                Pageable.unpaged());
 
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getContent().get(0).getResourceType()).isEqualTo(ResourceType.USER);
-        ArgumentCaptor<ResourceType> resourceTypeCaptor = ArgumentCaptor.forClass(ResourceType.class);
-        verify(auditLogRepository).findByResourceTypeAndResourceId(resourceTypeCaptor.capture(), eq(log.getResourceId()), eq(Pageable.unpaged()));
-        assertThat(resourceTypeCaptor.getValue()).isEqualTo(ResourceType.USER);
+        verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
     }
 
     private AuditLog auditLog() {

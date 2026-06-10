@@ -12,6 +12,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -52,7 +55,7 @@ class UserServiceTest {
             return user;
         });
 
-        UserResponse response = userService.createAdministrativeUser(request);
+        UserResponse response = userService.createAdministrativeUser(request, authentication("ROLE_ADMIN"));
 
         assertThat(response.getUserId()).isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000031"));
         assertThat(response.getRole()).isEqualTo("RECEPTION");
@@ -63,7 +66,7 @@ class UserServiceTest {
     void createAdministrativeUserShouldRejectStudentRole() {
         CreateUserRequest request = createUserRequest(User.Role.STUDENT);
 
-        assertThatThrownBy(() -> userService.createAdministrativeUser(request))
+        assertThatThrownBy(() -> userService.createAdministrativeUser(request, authentication("ROLE_ADMIN")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("rotas");
     }
@@ -201,7 +204,13 @@ class UserServiceTest {
         request.setName("Recepcao GymIQ");
         request.setEmail("recepcao@gymiq.com");
         request.setRole(User.Role.RECEPTION);
-        request.setLgpdAccepted(true);
         return request;
+    }
+
+    private Authentication authentication(String role) {
+        return new TestingAuthenticationToken(
+                "admin@gymiq.com",
+                null,
+                java.util.List.of(new SimpleGrantedAuthority(role)));
     }
 }
