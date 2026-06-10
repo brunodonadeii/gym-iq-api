@@ -21,7 +21,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Compilar o projeto com Maven
-        run: mvn clean package -DskipTests
+        run: mvn clean package
 
       - name: Enviar o .jar para a AWS
         uses: appleboy/scp-action@master
