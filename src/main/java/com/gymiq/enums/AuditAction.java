@@ -47,6 +47,8 @@ public enum AuditAction {
     CREATE_WORKOUT_SHEET("Criacao de ficha de treino"),
     UPDATE_WORKOUT_SHEET("Atualizacao de ficha de treino"),
     DEACTIVATE_WORKOUT_SHEET("Inativacao de ficha de treino"),
+    ACTIVATE_WORKOUT_SHEET("Ativacao de ficha de treino"),
+    DELETE_WORKOUT_SHEET("Exclusao de ficha de treino"),
 
     CREATE_WORKOUT_BLOCK("Criacao de treino da ficha"),
     UPDATE_WORKOUT_BLOCK("Atualizacao de treino da ficha"),

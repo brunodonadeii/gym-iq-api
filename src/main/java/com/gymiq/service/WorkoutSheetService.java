@@ -245,6 +245,31 @@ public class WorkoutSheetService {
         log.info("Workout sheet deactivated: id={}", id);
     }
 
+    @Transactional
+    @Auditable(action = AuditAction.ACTIVATE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Ativou ficha de treino")
+    public WorkoutSheetResponse activate(UUID id, String authenticatedEmail, boolean admin) {
+        WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
+        workoutSheet.setActive(true);
+        workoutSheetRepository.save(workoutSheet);
+        log.info("Workout sheet activated: id={}", id);
+        return WorkoutSheetResponse.fromEntity(workoutSheet);
+    }
+
+    @Transactional
+    @Auditable(action = AuditAction.DELETE_WORKOUT_SHEET, resourceType = ResourceType.WORKOUT_SHEET, description = "Excluiu ficha de treino")
+    public void delete(UUID id, String authenticatedEmail, boolean admin) {
+        WorkoutSheet workoutSheet = findEntityById(id);
+        ensureInstructorCanManage(workoutSheet.getInstructor(), authenticatedEmail, admin);
+
+        if (Boolean.TRUE.equals(workoutSheet.getActive())) {
+            throw new BusinessException("Não é possível excluir uma ficha de treino ativa. Inative a ficha primeiro.");
+        }
+
+        workoutSheetRepository.delete(workoutSheet);
+        log.info("Workout sheet deleted: id={}", id);
+    }
+
     WorkoutSheet findEntityById(UUID id) {
         return workoutSheetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ficha de treino não encontrada: " + id));

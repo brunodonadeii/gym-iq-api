@@ -115,12 +115,35 @@ public class WorkoutSheetController {
                 hasRole(authentication, "ADMIN")));
     }
 
-    @DeleteMapping("/{id}")
+    @PatchMapping("/{id}/inactive")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<Void> deactivate(
             @PathVariable UUID id,
             Authentication authentication) {
         workoutSheetService.deactivate(
+                id,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN"));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/activate")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<WorkoutSheetResponse> activate(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        return ResponseEntity.ok(workoutSheetService.activate(
+                id,
+                authentication.getName(),
+                hasRole(authentication, "ADMIN")));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
+    public ResponseEntity<Void> delete(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        workoutSheetService.delete(
                 id,
                 authentication.getName(),
                 hasRole(authentication, "ADMIN"));
