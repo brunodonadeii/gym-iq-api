@@ -97,6 +97,7 @@ class InstructorServiceTest {
     @Test
     void deleteShouldRejectInstructorLinkedToWorkoutSheets() {
         Instructor instructor = TestDataFactory.activeInstructor();
+        instructor.getUser().setActive(false);
 
         when(instructorRepository.findById(instructor.getInstructorId())).thenReturn(Optional.of(instructor));
         when(workoutSheetRepository.existsByInstructorInstructorId(instructor.getInstructorId())).thenReturn(true);
@@ -104,6 +105,17 @@ class InstructorServiceTest {
         assertThatThrownBy(() -> instructorService.delete(instructor.getInstructorId()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("fichas");
+    }
+
+    @Test
+    void deleteShouldRejectActiveInstructor() {
+        Instructor instructor = TestDataFactory.activeInstructor();
+
+        when(instructorRepository.findById(instructor.getInstructorId())).thenReturn(Optional.of(instructor));
+
+        assertThatThrownBy(() -> instructorService.delete(instructor.getInstructorId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Inative o instrutor antes de excluir");
     }
 
     @Test
