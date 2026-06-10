@@ -24,6 +24,7 @@ public class StudentResponse {
     private String zipCode;
     private String address;
     private Boolean active;
+    private Boolean anonymized;
     private Boolean lgpdAccepted;
     private LocalDateTime lgpdAcceptedAt;
     private String lgpdPolicyVersion;
@@ -44,6 +45,7 @@ public class StudentResponse {
                 .zipCode(fullDataAllowed ? student.getZipCode() : null)
                 .address(fullDataAllowed ? student.getAddress() : null)
                 .active(student.getUser().getActive())
+                .anonymized(isAnonymized(student))
                 .lgpdAccepted(student.getUser().getLgpdAccepted())
                 .lgpdAcceptedAt(student.getUser().getLgpdAcceptedAt())
                 .lgpdPolicyVersion(student.getUser().getLgpdPolicyVersion())
@@ -52,5 +54,10 @@ public class StudentResponse {
                         : null)
                 .createdAt(student.getCreatedAt())
                 .build();
+    }
+
+    private static boolean isAnonymized(Student student) {
+        String email = student.getUser().getEmail();
+        return email != null && email.endsWith("@deleted.gymiq.com");
     }
 }

@@ -18,6 +18,7 @@ public class StudentSummaryResponse {
     private String name;
     private String email;
     private Boolean active;
+    private Boolean anonymized;
     private Boolean lgpdAccepted;
     private LocalDateTime createdAt;
 
@@ -30,8 +31,14 @@ public class StudentSummaryResponse {
                 .name(student.getUser().getName())
                 .email(fullDataAllowed ? student.getUser().getEmail() : PersonalDataProtection.maskEmail(student.getUser().getEmail()))
                 .active(student.getUser().getActive())
+                .anonymized(isAnonymized(student))
                 .lgpdAccepted(student.getUser().getLgpdAccepted())
                 .createdAt(student.getCreatedAt())
                 .build();
+    }
+
+    private static boolean isAnonymized(Student student) {
+        String email = student.getUser().getEmail();
+        return email != null && email.endsWith("@deleted.gymiq.com");
     }
 }
