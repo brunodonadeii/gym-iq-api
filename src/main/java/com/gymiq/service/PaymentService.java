@@ -1,10 +1,5 @@
 package com.gymiq.service;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.UUID;
-
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.PayPaymentRequest;
 import com.gymiq.dto.response.PaymentResponse;
@@ -25,6 +20,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.UUID;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -43,7 +43,7 @@ public class PaymentService {
 
         if (paymentRepository.existsByEnrollmentEnrollmentIdAndDueDate(
                 enrollment.getEnrollmentId(), dueDate)) {
-            log.info("Pagamento inicial ja existe para matricula id={} e vencimento={}",
+            log.info("Pagamento inicial já existe para matrícula id={} e vencimento={}",
                     enrollment.getEnrollmentId(), dueDate);
             return null;
         }
@@ -52,7 +52,7 @@ public class PaymentService {
                 enrollment.getStudent().getStudentId(),
                 enrollment.getPlan().getPlanId(),
                 dueDate)) {
-            log.info("Pagamento inicial ja existe para aluno={}, plano={} e vencimento={}",
+            log.info("Pagamento inicial já existe para aluno={}, plano={} e vencimento={}",
                     enrollment.getStudent().getStudentId(), enrollment.getPlan().getPlanId(), dueDate);
             return null;
         }
@@ -62,7 +62,7 @@ public class PaymentService {
                 .amount(enrollment.getPlan().getMonthlyPrice())
                 .dueDate(enrollment.getStartDate())
                 .status(resolveInitialStatus(enrollment.getStartDate()))
-                .notes("Primeira mensalidade da matricula")
+                .notes("Primeira mensalidade da matrícula")
                 .build();
 
         return paymentRepository.save(payment);
@@ -167,6 +167,9 @@ public class PaymentService {
         }
         if (payment.getStatus() == PaymentStatus.PAID) {
             throw new BusinessException("Não é possível alterar status de pagamento já quitado");
+        }
+        if (newStatus == PaymentStatus.OVERDUE && payment.getDueDate().isAfter(today())) {
+            throw new BusinessException("Não é possível marcar como atrasado um pagamento com vencimento futuro");
         }
 
         payment.setStatus(newStatus);

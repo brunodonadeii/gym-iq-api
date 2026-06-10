@@ -42,7 +42,7 @@ public class PaymentJobService {
     }
 
     @Transactional
-    @Auditable(action = AuditAction.GENERATE_MONTHLY_PAYMENTS, resourceType = ResourceType.JOB, description = "Gerou mensalidades automaticas")
+    @Auditable(action = AuditAction.GENERATE_MONTHLY_PAYMENTS, resourceType = ResourceType.JOB, description = "Gerou mensalidades automáticas")
     public int generateMonthlyPayments() {
         LocalDate today = today();
         List<Enrollment> activeEnrollments = enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE);
@@ -82,7 +82,7 @@ public class PaymentJobService {
     }
 
     private boolean isWithinEnrollmentPeriod(Enrollment enrollment, LocalDate dueDate) {
-        return enrollment.getEndDate() == null || !dueDate.isAfter(enrollment.getEndDate());
+        return enrollment.getEndDate() == null || dueDate.isBefore(enrollment.getEndDate());
     }
 
     private PaymentStatus resolveInitialStatus(LocalDate dueDate) {
