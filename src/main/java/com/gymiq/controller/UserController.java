@@ -1,5 +1,6 @@
 package com.gymiq.controller;
 
+import com.gymiq.dto.request.AdministrativeUserRoleFilter;
 import com.gymiq.dto.request.CreateUserRequest;
 import com.gymiq.dto.request.UpdateUserRequest;
 import com.gymiq.dto.response.UserResponse;
@@ -28,8 +29,9 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<UserResponse>> findAll(
+            @RequestParam(required = false, defaultValue = "ALL") AdministrativeUserRoleFilter role,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(userService.findAll(pageable));
+        return ResponseEntity.ok(userService.findAll(role, pageable));
     }
 
     @GetMapping("/{id}")

@@ -65,8 +65,9 @@ public class EnrollmentController {
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<EnrollmentResponse>> findByStudent(
             @PathVariable UUID studentId,
+            @RequestParam(required = false) EnrollmentStatus status,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(enrollmentService.findByStudent(studentId, pageable));
+        return ResponseEntity.ok(enrollmentService.findByStudent(studentId, status, pageable));
     }
 
     @GetMapping("/student/{studentId}/active")

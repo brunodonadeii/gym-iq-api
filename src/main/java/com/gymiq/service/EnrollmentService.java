@@ -106,8 +106,18 @@ public class EnrollmentService {
 
     @Transactional(readOnly = true)
     public Page<EnrollmentResponse> findByStudent(UUID studentId, Pageable pageable) {
+        return findByStudent(studentId, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findByStudent(UUID studentId, EnrollmentStatus status, Pageable pageable) {
         studentService.findEntityById(studentId);
-        return enrollmentRepository.findByStudentStudentId(studentId, pageable)
+
+        Page<Enrollment> enrollments = status != null
+                ? enrollmentRepository.findByStudentStudentIdAndStatus(studentId, status, pageable)
+                : enrollmentRepository.findByStudentStudentId(studentId, pageable);
+
+        return enrollments
                 .map(EnrollmentResponse::fromEntity);
     }
 

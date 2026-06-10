@@ -1,6 +1,7 @@
 package com.gymiq.service;
 
 import com.gymiq.aop.Auditable;
+import com.gymiq.dto.request.AdministrativeUserRoleFilter;
 import com.gymiq.dto.request.CreateUserRequest;
 import com.gymiq.dto.request.UpdateUserRequest;
 import com.gymiq.dto.response.UserResponse;
@@ -39,8 +40,21 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(Pageable pageable) {
-        return userRepository.findByRoleIn(ADMINISTRATIVE_ROLES, pageable)
-                .map(UserResponse::fromEntity);
+        return findAll(AdministrativeUserRoleFilter.ALL, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponse> findAll(AdministrativeUserRoleFilter role, Pageable pageable) {
+        AdministrativeUserRoleFilter resolvedRole =
+                role != null ? role : AdministrativeUserRoleFilter.ALL;
+
+        Page<User> users = switch (resolvedRole) {
+            case ADMIN -> userRepository.findByRole(User.Role.ADMIN, pageable);
+            case RECEPTION -> userRepository.findByRole(User.Role.RECEPTION, pageable);
+            case ALL -> userRepository.findByRoleIn(ADMINISTRATIVE_ROLES, pageable);
+        };
+
+        return users.map(UserResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
