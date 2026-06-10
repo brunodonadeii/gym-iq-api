@@ -40,18 +40,33 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(Pageable pageable) {
-        return findAll(AdministrativeUserRoleFilter.ALL, pageable);
+        return findAll(null, AdministrativeUserRoleFilter.ALL, pageable);
     }
 
     @Transactional(readOnly = true)
     public Page<UserResponse> findAll(AdministrativeUserRoleFilter role, Pageable pageable) {
+        return findAll(null, role, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponse> findAll(String term, AdministrativeUserRoleFilter role, Pageable pageable) {
         AdministrativeUserRoleFilter resolvedRole =
                 role != null ? role : AdministrativeUserRoleFilter.ALL;
+        String normalizedTerm = term != null ? term.trim() : "";
+        String emailHash = resolveEmailHashForSearch(normalizedTerm);
+
+        boolean hasSearch = !normalizedTerm.isBlank();
 
         Page<User> users = switch (resolvedRole) {
-            case ADMIN -> userRepository.findByRole(User.Role.ADMIN, pageable);
-            case RECEPTION -> userRepository.findByRole(User.Role.RECEPTION, pageable);
-            case ALL -> userRepository.findByRoleIn(ADMINISTRATIVE_ROLES, pageable);
+            case ADMIN -> hasSearch
+                    ? userRepository.searchByRoleAndTerm(User.Role.ADMIN, normalizedTerm, emailHash, pageable)
+                    : userRepository.findByRole(User.Role.ADMIN, pageable);
+            case RECEPTION -> hasSearch
+                    ? userRepository.searchByRoleAndTerm(User.Role.RECEPTION, normalizedTerm, emailHash, pageable)
+                    : userRepository.findByRole(User.Role.RECEPTION, pageable);
+            case ALL -> hasSearch
+                    ? userRepository.searchByRoleInAndTerm(ADMINISTRATIVE_ROLES, normalizedTerm, emailHash, pageable)
+                    : userRepository.findByRoleIn(ADMINISTRATIVE_ROLES, pageable);
         };
 
         return users.map(UserResponse::fromEntity);
@@ -186,5 +201,11 @@ public class UserService {
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
         return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
+    }
+
+    private String resolveEmailHashForSearch(String term) {
+        return term != null && term.contains("@")
+                ? personalDataProtectionService.emailHash(term)
+                : null;
     }
 }
