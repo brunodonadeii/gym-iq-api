@@ -19,7 +19,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -69,26 +68,6 @@ public class AuditLogController {
                 buildActionOptions(),
                 buildResourceTypeOptions(),
                 buildActorOptions()));
-    }
-
-    @GetMapping("/actor/{actorUserId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<AuditLogResponse>> findByActor(
-            @PathVariable UUID actorUserId,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(auditLogRepository.findByActorUserId(actorUserId, pageable)
-                .map(AuditLogResponse::fromEntity));
-    }
-
-    @GetMapping("/resource/{resourceType}/{resourceId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<AuditLogResponse>> findByResource(
-            @PathVariable String resourceType,
-            @PathVariable String resourceId,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(auditLogRepository
-                .findByResourceTypeAndResourceId(resolveRequiredResourceType(resourceType), resourceId, pageable)
-                .map(AuditLogResponse::fromEntity));
     }
 
     private Specification<com.gymiq.entity.AuditLog> buildSpecification(

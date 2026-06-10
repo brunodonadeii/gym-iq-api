@@ -33,13 +33,6 @@ public class PlanController {
         return ResponseEntity.ok(planService.findAll(status, q, hasRole(authentication, "ADMIN"), pageable));
     }
 
-    @GetMapping("/all")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<PlanResponse>> findAll(
-            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(planService.findAll(pageable));
-    }
-
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','STUDENT')")
     public ResponseEntity<PlanResponse> findById(@PathVariable Integer id) {
