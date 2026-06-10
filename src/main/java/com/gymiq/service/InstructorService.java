@@ -167,6 +167,10 @@ public class InstructorService {
     public void delete(UUID id) {
         Instructor instructor = findEntityById(id);
 
+        if (Boolean.TRUE.equals(instructor.getUser().getActive())) {
+            throw new BusinessException("Não é possível excluir um instrutor ativo. Inative o instrutor antes de excluir.");
+        }
+
         if (workoutSheetRepository.existsByInstructorInstructorId(id)) {
             throw new BusinessException("Não é possível excluir um instrutor vinculado a fichas de treino");
         }
