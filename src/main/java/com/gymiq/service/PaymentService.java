@@ -1,5 +1,8 @@
 package com.gymiq.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import com.gymiq.aop.Auditable;
@@ -21,10 +24,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 @Slf4j
 @Service
@@ -75,8 +74,7 @@ public class PaymentService {
                 ? paymentRepository.findAll(pageable)
                 : paymentRepository.findByStatus(status, pageable);
 
-        return payments
-                .map(PaymentResponse::fromEntity);
+        return payments.map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -86,32 +84,52 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> findByEnrollment(UUID enrollmentId, Pageable pageable) {
+        return findByEnrollment(enrollmentId, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PaymentResponse> findByEnrollment(UUID enrollmentId, PaymentStatus status, Pageable pageable) {
         if (!enrollmentRepository.existsById(enrollmentId)) {
             throw new ResourceNotFoundException("Matrícula não encontrada: " + enrollmentId);
         }
 
-        return paymentRepository.findByEnrollmentEnrollmentId(enrollmentId, pageable)
-                .map(PaymentResponse::fromEntity);
+        Page<Payment> payments = status == null
+                ? paymentRepository.findByEnrollmentEnrollmentId(enrollmentId, pageable)
+                : paymentRepository.findByEnrollmentEnrollmentIdAndStatus(enrollmentId, status, pageable);
+
+        return payments.map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> findByStudent(UUID studentId, Pageable pageable) {
+        return findByStudent(studentId, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PaymentResponse> findByStudent(UUID studentId, PaymentStatus status, Pageable pageable) {
         if (!studentRepository.existsById(studentId)) {
             throw new ResourceNotFoundException("Aluno não encontrado: " + studentId);
         }
 
-        return paymentRepository.findByEnrollmentStudentStudentId(studentId, pageable)
-                .map(PaymentResponse::fromEntity);
+        Page<Payment> payments = status == null
+                ? paymentRepository.findByEnrollmentStudentStudentId(studentId, pageable)
+                : paymentRepository.findByEnrollmentStudentStudentIdAndStatus(studentId, status, pageable);
+
+        return payments.map(PaymentResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> findByAuthenticatedStudent(String email, Pageable pageable) {
+        return findByAuthenticatedStudent(email, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PaymentResponse> findByAuthenticatedStudent(String email, PaymentStatus status, Pageable pageable) {
         UUID studentId = studentRepository.findByUserEmailHash(personalDataProtectionService.emailHash(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Aluno não encontrado para o usuário autenticado"))
                 .getStudentId();
 
-        return paymentRepository.findByEnrollmentStudentStudentId(studentId, pageable)
-                .map(PaymentResponse::fromEntity);
+        return findByStudent(studentId, status, pageable);
     }
 
     @Transactional
@@ -139,12 +157,6 @@ public class PaymentService {
         return PaymentResponse.fromEntity(payment);
     }
 
-    private void validatePaymentMethod(PayPaymentRequest request) {
-        if (request.getPaymentMethod() == null || request.getPaymentMethod().isBlank()) {
-            throw new BusinessException("Método de pagamento é obrigatório para quitar o pagamento");
-        }
-    }
-
     @Transactional
     @Auditable(action = AuditAction.CHANGE_PAYMENT_STATUS, resourceType = ResourceType.PAYMENT, description = "Alterou status do pagamento")
     public PaymentResponse changeStatus(UUID id, PaymentStatus newStatus) {
@@ -162,6 +174,12 @@ public class PaymentService {
         log.info("Status do pagamento id={} alterado para {}", id, newStatus);
 
         return PaymentResponse.fromEntity(payment);
+    }
+
+    private void validatePaymentMethod(PayPaymentRequest request) {
+        if (request.getPaymentMethod() == null || request.getPaymentMethod().isBlank()) {
+            throw new BusinessException("Método de pagamento é obrigatório para quitar o pagamento");
+        }
     }
 
     private Payment findEntityById(UUID id) {

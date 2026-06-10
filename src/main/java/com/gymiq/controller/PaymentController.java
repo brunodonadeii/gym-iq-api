@@ -41,24 +41,27 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PaymentResponse>> findByEnrollment(
             @PathVariable UUID enrollmentId,
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findByEnrollment(enrollmentId, pageable));
+        return ResponseEntity.ok(paymentService.findByEnrollment(enrollmentId, status, pageable));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<Page<PaymentResponse>> findMine(
             Authentication authentication,
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findByAuthenticatedStudent(authentication.getName(), pageable));
+        return ResponseEntity.ok(paymentService.findByAuthenticatedStudent(authentication.getName(), status, pageable));
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PaymentResponse>> findByStudent(
             @PathVariable UUID studentId,
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findByStudent(studentId, pageable));
+        return ResponseEntity.ok(paymentService.findByStudent(studentId, status, pageable));
     }
 
     @PatchMapping("/refresh-overdue")

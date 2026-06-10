@@ -61,6 +61,17 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             "enrollment.student.user",
             "enrollment.plan"
     })
+    Page<Payment> findByEnrollmentEnrollmentIdAndStatus(
+            UUID enrollmentId,
+            PaymentStatus status,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     List<Payment> findByEnrollmentStudentStudentId(UUID studentId);
 
     @EntityGraph(attributePaths = {
@@ -70,6 +81,17 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
             "enrollment.plan"
     })
     Page<Payment> findByEnrollmentStudentStudentId(UUID studentId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    Page<Payment> findByEnrollmentStudentStudentIdAndStatus(
+            UUID studentId,
+            PaymentStatus status,
+            Pageable pageable);
 
     @EntityGraph(attributePaths = {
             "enrollment",
