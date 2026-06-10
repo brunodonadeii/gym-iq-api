@@ -21,12 +21,10 @@ import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.PaymentRepository;
 import com.gymiq.repository.StudentRepository;
 import com.gymiq.repository.UserRepository;
-import com.gymiq.security.PersonalDataExposurePolicy;
 import com.gymiq.security.PersonalDataProtection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -153,16 +151,12 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public List<StudentOptionResponse> findOptions(String term) {
+    public List<StudentOptionResponse> findOptions(String term, Pageable pageable) {
         List<StudentOptionResponse> options = studentRepository.findOptions(
                 term,
                 resolveEmailHashForSearch(term),
                 resolveCpfHashForSearch(term),
-                PageRequest.of(0, 20));
-
-        if (PersonalDataExposurePolicy.canViewFullStudentData()) {
-            return options;
-        }
+                pageable);
 
         return options.stream()
                 .map(option -> new StudentOptionResponse(

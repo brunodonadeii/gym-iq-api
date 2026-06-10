@@ -63,8 +63,9 @@ public class StudentController {
     @GetMapping("/options")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<List<StudentOptionResponse>> findOptions(
-            @RequestParam(required = false, defaultValue = "") String q) {
-        return ResponseEntity.ok(studentService.findOptions(q));
+            @RequestParam(required = false, defaultValue = "") String q,
+            @PageableDefault(size = 20, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(studentService.findOptions(q, pageable));
     }
 
     @GetMapping("/address-by-zip-code/{zipCode}")
