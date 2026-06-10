@@ -2,6 +2,7 @@ package com.gymiq.service;
 
 import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreatePlanRequest;
+import com.gymiq.dto.request.PlanStatusFilter;
 import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Plan;
 import com.gymiq.enums.AuditAction;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +51,27 @@ public class PlanService {
     public Page<PlanResponse> findActive(Pageable pageable) {
         return planRepository.findByActiveTrue(pageable)
                 .map(PlanResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PlanResponse> findAll(PlanStatusFilter status, String term, Pageable pageable) {
+        return findAll(status, term, false, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PlanResponse> findAll(PlanStatusFilter status, String term, boolean admin, Pageable pageable) {
+        PlanStatusFilter resolvedStatus = resolveStatus(status);
+        String normalizedTerm = normalizeTerm(term);
+
+        if (resolvedStatus != PlanStatusFilter.ACTIVE && !admin) {
+            throw new AccessDeniedException("Apenas administradores podem consultar planos inativos");
+        }
+
+        Page<Plan> plans = normalizedTerm == null
+                ? findByStatus(resolvedStatus, pageable)
+                : searchByStatus(resolvedStatus, normalizedTerm, pageable);
+
+        return plans.map(PlanResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -126,5 +149,32 @@ public class PlanService {
     public Plan findEntityById(Integer id) {
         return planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado: " + id));
+    }
+
+    private Page<Plan> findByStatus(PlanStatusFilter status, Pageable pageable) {
+        return switch (status) {
+            case ACTIVE -> planRepository.findByActiveTrue(pageable);
+            case INACTIVE -> planRepository.findByActiveFalse(pageable);
+            case ALL -> planRepository.findAll(pageable);
+        };
+    }
+
+    private Page<Plan> searchByStatus(PlanStatusFilter status, String term, Pageable pageable) {
+        return switch (status) {
+            case ACTIVE -> planRepository.searchByTermAndActive(term, true, pageable);
+            case INACTIVE -> planRepository.searchByTermAndActive(term, false, pageable);
+            case ALL -> planRepository.searchByTerm(term, pageable);
+        };
+    }
+
+    private PlanStatusFilter resolveStatus(PlanStatusFilter status) {
+        return status != null ? status : PlanStatusFilter.ACTIVE;
+    }
+
+    private String normalizeTerm(String term) {
+        if (term == null || term.isBlank()) {
+            return null;
+        }
+        return term.trim();
     }
 }

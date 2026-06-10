@@ -28,8 +28,9 @@ public class EnrollmentController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<EnrollmentResponse>> findAll(
+            @RequestParam(required = false, defaultValue = "ACTIVE") EnrollmentStatus status,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(enrollmentService.findActive(pageable));
+        return ResponseEntity.ok(enrollmentService.findAll(status, pageable));
     }
 
     @PostMapping

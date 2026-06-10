@@ -50,6 +50,13 @@ public class EnrollmentService {
     }
 
     @Transactional(readOnly = true)
+    public Page<EnrollmentResponse> findAll(EnrollmentStatus status, Pageable pageable) {
+        EnrollmentStatus resolvedStatus = status != null ? status : EnrollmentStatus.ACTIVE;
+        return enrollmentRepository.findByStatus(resolvedStatus, pageable)
+                .map(EnrollmentResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
     public Page<EnrollmentResponse> findActive(Pageable pageable) {
         return enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE, pageable)
                 .map(EnrollmentResponse::fromEntity);
