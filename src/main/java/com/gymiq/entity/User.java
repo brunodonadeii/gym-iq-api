@@ -60,6 +60,13 @@ public class User {
     @Column(name = "lgpd_accepted_at")
     private LocalDateTime lgpdAcceptedAt;
 
+    @Column(name = "lgpd_policy_version", length = 20)
+    private String lgpdPolicyVersion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lgpd_consent_source", length = 40)
+    private LgpdConsentSource lgpdConsentSource;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -79,5 +86,11 @@ public class User {
         RECEPTION,
         INSTRUCTOR,
         STUDENT
+    }
+
+    public enum LgpdConsentSource {
+        ADMIN_REGISTRATION,
+        RECEPTION_REGISTRATION,
+        STUDENT_REGISTRATION
     }
 }

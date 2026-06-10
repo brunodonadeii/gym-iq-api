@@ -9,6 +9,7 @@ import com.gymiq.dto.request.UpdateInstructorRequest;
 import com.gymiq.dto.response.InstructorResponse;
 import com.gymiq.entity.Instructor;
 import com.gymiq.entity.User;
+import com.gymiq.entity.User.LgpdConsentSource;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,8 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class InstructorService {
 
+    private static final String LGPD_POLICY_VERSION = "1.0";
+
     private final InstructorRepository instructorRepository;
     private final UserRepository userRepository;
     private final WorkoutSheetRepository workoutSheetRepository;
@@ -39,7 +43,7 @@ public class InstructorService {
 
     @Transactional
     @Auditable(action = AuditAction.CREATE_INSTRUCTOR, resourceType = ResourceType.INSTRUCTOR, description = "Criou instrutor")
-    public InstructorResponse create(CreateInstructorRequest request) {
+    public InstructorResponse create(CreateInstructorRequest request, Authentication authentication) {
         String emailHash = personalDataProtectionService.emailHash(request.getEmail());
 
         if (userRepository.existsByEmailHash(emailHash)) {
@@ -58,6 +62,8 @@ public class InstructorService {
                 .active(true)
                 .lgpdAccepted(request.getLgpdAccepted())
                 .lgpdAcceptedAt(resolveLgpdAcceptedAt(request.getLgpdAccepted()))
+                .lgpdPolicyVersion(resolveLgpdPolicyVersion(request.getLgpdAccepted()))
+                .lgpdConsentSource(resolveConsentSource(authentication, request.getLgpdAccepted()))
                 .build();
         userRepository.save(user);
 
@@ -125,13 +131,6 @@ public class InstructorService {
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setEmailHash(emailHash);
-        user.setLgpdAccepted(request.getLgpdAccepted());
-        if (Boolean.TRUE.equals(request.getLgpdAccepted()) && user.getLgpdAcceptedAt() == null) {
-            user.setLgpdAcceptedAt(LocalDateTime.now());
-        }
-        if (Boolean.FALSE.equals(request.getLgpdAccepted())) {
-            user.setLgpdAcceptedAt(null);
-        }
 
         instructor.setCref(request.getCref());
         instructor.setPhone(request.getPhone());
@@ -193,6 +192,25 @@ public class InstructorService {
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
         return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
+    }
+
+    private String resolveLgpdPolicyVersion(Boolean lgpdAccepted) {
+        return Boolean.TRUE.equals(lgpdAccepted) ? LGPD_POLICY_VERSION : null;
+    }
+
+    private LgpdConsentSource resolveConsentSource(Authentication authentication, Boolean lgpdAccepted) {
+        if (!Boolean.TRUE.equals(lgpdAccepted)) {
+            return null;
+        }
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_RECEPTION"))) {
+            return LgpdConsentSource.RECEPTION_REGISTRATION;
+        }
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"))) {
+            return LgpdConsentSource.ADMIN_REGISTRATION;
+        }
+        return LgpdConsentSource.STUDENT_REGISTRATION;
     }
 
     private Page<Instructor> findByStatus(InstructorStatusFilter status, Pageable pageable) {

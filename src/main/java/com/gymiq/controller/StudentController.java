@@ -37,8 +37,9 @@ public class StudentController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<StudentResponse> create(
+            Authentication authentication,
             @Valid @RequestBody CreateStudentRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(studentService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(studentService.create(request, authentication));
     }
 
     @GetMapping

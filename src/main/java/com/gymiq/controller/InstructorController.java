@@ -29,8 +29,9 @@ public class InstructorController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<InstructorResponse> create(
+            Authentication authentication,
             @Valid @RequestBody CreateInstructorRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(instructorService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(instructorService.create(request, authentication));
     }
 
     @GetMapping

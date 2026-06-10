@@ -12,6 +12,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -47,6 +48,9 @@ public class DataInitializer implements ApplicationRunner {
                 .role(User.Role.ADMIN)
                 .active(true)
                 .lgpdAccepted(true)
+                .lgpdAcceptedAt(LocalDateTime.now())
+                .lgpdPolicyVersion("1.0")
+                .lgpdConsentSource(User.LgpdConsentSource.ADMIN_REGISTRATION)
                 .build();
 
         userRepository.save(admin);

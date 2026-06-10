@@ -20,6 +20,8 @@ public class UserResponse {
     private Boolean active;
     private Boolean lgpdAccepted;
     private LocalDateTime lgpdAcceptedAt;
+    private String lgpdPolicyVersion;
+    private String lgpdConsentSource;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -34,6 +36,8 @@ public class UserResponse {
                 .active(user.getActive())
                 .lgpdAccepted(user.getLgpdAccepted())
                 .lgpdAcceptedAt(user.getLgpdAcceptedAt())
+                .lgpdPolicyVersion(user.getLgpdPolicyVersion())
+                .lgpdConsentSource(user.getLgpdConsentSource() != null ? user.getLgpdConsentSource().name() : null)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

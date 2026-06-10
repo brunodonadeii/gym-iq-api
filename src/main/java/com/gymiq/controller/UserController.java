@@ -44,9 +44,10 @@ public class UserController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> create(
+            Authentication authentication,
             @Valid @RequestBody CreateUserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(userService.createAdministrativeUser(request));
+                .body(userService.createAdministrativeUser(request, authentication));
     }
 
     @PutMapping("/{id}")

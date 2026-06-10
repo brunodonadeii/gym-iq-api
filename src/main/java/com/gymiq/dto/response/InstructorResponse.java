@@ -22,6 +22,9 @@ public class InstructorResponse {
     private String specialty;
     private Boolean active;
     private Boolean lgpdAccepted;
+    private LocalDateTime lgpdAcceptedAt;
+    private String lgpdPolicyVersion;
+    private String lgpdConsentSource;
     private LocalDateTime createdAt;
 
     public static InstructorResponse fromEntity(Instructor instructor) {
@@ -37,6 +40,11 @@ public class InstructorResponse {
                 .specialty(instructor.getSpecialty())
                 .active(instructor.getUser().getActive())
                 .lgpdAccepted(instructor.getUser().getLgpdAccepted())
+                .lgpdAcceptedAt(instructor.getUser().getLgpdAcceptedAt())
+                .lgpdPolicyVersion(instructor.getUser().getLgpdPolicyVersion())
+                .lgpdConsentSource(instructor.getUser().getLgpdConsentSource() != null
+                        ? instructor.getUser().getLgpdConsentSource().name()
+                        : null)
                 .createdAt(instructor.getCreatedAt())
                 .build();
     }

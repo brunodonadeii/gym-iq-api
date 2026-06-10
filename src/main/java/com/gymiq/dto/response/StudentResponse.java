@@ -25,6 +25,9 @@ public class StudentResponse {
     private String address;
     private Boolean active;
     private Boolean lgpdAccepted;
+    private LocalDateTime lgpdAcceptedAt;
+    private String lgpdPolicyVersion;
+    private String lgpdConsentSource;
     private LocalDateTime createdAt;
 
     public static StudentResponse fromEntity(Student student) {
@@ -42,6 +45,11 @@ public class StudentResponse {
                 .address(fullDataAllowed ? student.getAddress() : null)
                 .active(student.getUser().getActive())
                 .lgpdAccepted(student.getUser().getLgpdAccepted())
+                .lgpdAcceptedAt(student.getUser().getLgpdAcceptedAt())
+                .lgpdPolicyVersion(student.getUser().getLgpdPolicyVersion())
+                .lgpdConsentSource(student.getUser().getLgpdConsentSource() != null
+                        ? student.getUser().getLgpdConsentSource().name()
+                        : null)
                 .createdAt(student.getCreatedAt())
                 .build();
     }

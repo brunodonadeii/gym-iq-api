@@ -1,9 +1,7 @@
 package com.gymiq.dto.request;
 
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -29,8 +27,4 @@ public class UpdateInstructorRequest {
     @NotBlank(message = "Especialidade é obrigatória")
     @Size(max = 100, message = "Especialidade deve ter no máximo 100 caracteres")
     private String specialty;
-
-    @NotNull(message = "Aceite LGPD é obrigatório")
-    @AssertTrue(message = "É necessário aceitar os termos de LGPD para concluir a atualização")
-    private Boolean lgpdAccepted;
 }

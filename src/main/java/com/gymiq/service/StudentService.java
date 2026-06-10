@@ -13,6 +13,7 @@ import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment.PaymentStatus;
 import com.gymiq.entity.Student;
 import com.gymiq.entity.User;
+import com.gymiq.entity.User.LgpdConsentSource;
 import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
@@ -25,8 +26,10 @@ import com.gymiq.security.PersonalDataProtection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +45,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StudentService {
 
+    private static final String LGPD_POLICY_VERSION = "1.0";
+
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -52,7 +57,7 @@ public class StudentService {
 
     @Transactional
     @Auditable(action = AuditAction.CREATE_STUDENT, resourceType = ResourceType.STUDENT, description = "Criou aluno")
-    public StudentResponse create(CreateStudentRequest request) {
+    public StudentResponse create(CreateStudentRequest request, Authentication authentication) {
         studentDataService.validateCpf(request.getCpf());
 
         String emailHash = personalDataProtectionService.emailHash(request.getEmail());
@@ -74,6 +79,8 @@ public class StudentService {
                 .active(true)
                 .lgpdAccepted(request.getLgpdAccepted())
                 .lgpdAcceptedAt(resolveLgpdAcceptedAt(request.getLgpdAccepted()))
+                .lgpdPolicyVersion(resolveLgpdPolicyVersion(request.getLgpdAccepted()))
+                .lgpdConsentSource(resolveConsentSource(authentication, request.getLgpdAccepted()))
                 .build();
         userRepository.save(user);
 
@@ -310,6 +317,25 @@ public class StudentService {
 
     private LocalDateTime resolveLgpdAcceptedAt(Boolean lgpdAccepted) {
         return Boolean.TRUE.equals(lgpdAccepted) ? LocalDateTime.now() : null;
+    }
+
+    private String resolveLgpdPolicyVersion(Boolean lgpdAccepted) {
+        return Boolean.TRUE.equals(lgpdAccepted) ? LGPD_POLICY_VERSION : null;
+    }
+
+    private LgpdConsentSource resolveConsentSource(Authentication authentication, Boolean lgpdAccepted) {
+        if (!Boolean.TRUE.equals(lgpdAccepted)) {
+            return null;
+        }
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_RECEPTION"))) {
+            return LgpdConsentSource.RECEPTION_REGISTRATION;
+        }
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"))) {
+            return LgpdConsentSource.ADMIN_REGISTRATION;
+        }
+        return LgpdConsentSource.STUDENT_REGISTRATION;
     }
 
     private void cancelActiveEnrollmentIfPresent(Student student) {
