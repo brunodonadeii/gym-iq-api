@@ -30,13 +30,6 @@ public class ExerciseController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR','STUDENT')")
-    public ResponseEntity<Page<ExerciseResponse>> findActive(
-            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(exerciseService.findActive(pageable));
-    }
-
-    @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
     public ResponseEntity<Page<ExerciseResponse>> findAll(
             @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         return ResponseEntity.ok(exerciseService.findAll(pageable));
@@ -66,8 +59,8 @@ public class ExerciseController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','INSTRUCTOR')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
-        exerciseService.deactivate(id);
+    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+        exerciseService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

@@ -1,5 +1,9 @@
 package com.gymiq.entity;
 
+import java.util.UUID;
+
+import com.gymiq.entity.converter.EncryptedLocalDateConverter;
+import com.gymiq.entity.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,10 +15,11 @@ import java.util.List;
 @Entity
 @Table(name = "student",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_student_cpf", columnNames = "cpf")
+                @UniqueConstraint(name = "uk_student_cpf_hash", columnNames = "cpf_hash")
         },
         indexes = {
-                @Index(name = "idx_student_user_id", columnList = "user_id")
+                @Index(name = "idx_student_user_id", columnList = "user_id"),
+                @Index(name = "idx_student_cpf_hash", columnList = "cpf_hash")
         })
 @Getter
 @Setter
@@ -24,28 +29,36 @@ import java.util.List;
 public class Student {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_student")
-    private Integer studentId;
+    private UUID studentId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true,
             foreignKey = @ForeignKey(name = "fk_student_user"))
     private User user;
 
-    @Column(name = "cpf", nullable = false, length = 14)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "cpf", nullable = false, columnDefinition = "TEXT")
     private String cpf;
 
-    @Column(name = "birth_date", nullable = false)
+    @Column(name = "cpf_hash", nullable = false, length = 64)
+    private String cpfHash;
+
+    @Convert(converter = EncryptedLocalDateConverter.class)
+    @Column(name = "birth_date", nullable = false, columnDefinition = "TEXT")
     private LocalDate birthDate;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "phone", nullable = false, columnDefinition = "TEXT")
     private String phone;
 
-    @Column(name = "zip_code", length = 9)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "zip_code", columnDefinition = "TEXT")
     private String zipCode;
 
-    @Column(name = "address", length = 255)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "address", columnDefinition = "TEXT")
     private String address;
 
     @CreationTimestamp

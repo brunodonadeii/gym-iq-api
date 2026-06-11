@@ -1,5 +1,7 @@
 package com.gymiq.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,9 +18,9 @@ import java.time.LocalDateTime;
 public class Presence {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_presence")
-    private Integer presenceId;
+    private UUID presenceId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false,
@@ -27,9 +29,6 @@ public class Presence {
 
     @Column(name = "check_in_at", nullable = false)
     private LocalDateTime checkInAt;
-
-    @Column(name = "check_out_at")
-    private LocalDateTime checkOutAt;
 
     @Column(name = "notes", length = 255)
     private String notes;

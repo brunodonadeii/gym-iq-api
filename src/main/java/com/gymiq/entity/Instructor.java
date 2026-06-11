@@ -1,5 +1,8 @@
 package com.gymiq.entity;
 
+import java.util.UUID;
+
+import com.gymiq.entity.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -20,9 +23,9 @@ import java.util.List;
 public class Instructor {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_instructor")
-    private Integer instructorId;
+    private UUID instructorId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true,
@@ -32,10 +35,11 @@ public class Instructor {
     @Column(name = "cref", nullable = false, length = 20)
     private String cref;
 
-    @Column(name = "phone", nullable = false, length = 20)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "phone", nullable = false, columnDefinition = "TEXT")
     private String phone;
 
-    @Column(name = "specialty", length = 100)
+    @Column(name = "specialty", nullable = false, length = 100)
     private String specialty;
 
     @CreationTimestamp

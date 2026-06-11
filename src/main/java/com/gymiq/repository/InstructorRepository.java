@@ -10,23 +10,58 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface InstructorRepository extends JpaRepository<Instructor, Integer> {
+public interface InstructorRepository extends JpaRepository<Instructor, UUID> {
+
+    @Override
+    @EntityGraph(attributePaths = "user")
+    Page<Instructor> findAll(Pageable pageable);
 
     Optional<Instructor> findByCref(String cref);
 
     boolean existsByCref(String cref);
 
-    Optional<Instructor> findByUserUserId(Integer userId);
+    Optional<Instructor> findByUserUserId(UUID userId);
 
     @EntityGraph(attributePaths = "user")
-    Optional<Instructor> findByUserEmailIgnoreCase(String email);
+    Page<Instructor> findByUserActive(Boolean active, Pageable pageable);
 
-    @Query("SELECT i FROM Instructor i JOIN i.user u WHERE " +
-            "LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
-            "LOWER(i.cref) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
-            "LOWER(i.specialty) LIKE LOWER(CONCAT('%', :term, '%'))")
-    Page<Instructor> searchByTerm(@Param("term") String term, Pageable pageable);
+    @EntityGraph(attributePaths = "user")
+    Optional<Instructor> findByUserEmailHash(String emailHash);
+
+    @Query("""
+            SELECT i
+            FROM Instructor i
+            JOIN i.user u
+            WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
+               OR (:emailHash IS NOT NULL AND u.emailHash = :emailHash)
+               OR LOWER(i.cref) LIKE LOWER(CONCAT('%', :term, '%'))
+               OR LOWER(i.specialty) LIKE LOWER(CONCAT('%', :term, '%'))
+            """)
+    @EntityGraph(attributePaths = "user")
+    Page<Instructor> searchByTerm(
+            @Param("term") String term,
+            @Param("emailHash") String emailHash,
+            Pageable pageable);
+
+    @Query("""
+            SELECT i
+            FROM Instructor i
+            JOIN i.user u
+            WHERE u.active = :active
+              AND (
+                    LOWER(u.name) LIKE LOWER(CONCAT('%', :term, '%'))
+                    OR (:emailHash IS NOT NULL AND u.emailHash = :emailHash)
+                    OR LOWER(i.cref) LIKE LOWER(CONCAT('%', :term, '%'))
+                    OR LOWER(i.specialty) LIKE LOWER(CONCAT('%', :term, '%'))
+              )
+            """)
+    @EntityGraph(attributePaths = "user")
+    Page<Instructor> searchByTermAndUserActive(
+            @Param("term") String term,
+            @Param("emailHash") String emailHash,
+            @Param("active") Boolean active,
+            Pageable pageable);
 }

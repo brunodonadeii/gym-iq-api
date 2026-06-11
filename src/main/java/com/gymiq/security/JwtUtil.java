@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -20,11 +21,11 @@ public class JwtUtil {
     @Value("${gymiq.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
-    public String generateToken(String email, String role, Integer userId) {
+    public String generateToken(String email, String role, UUID userId) {
         return Jwts.builder()
                 .subject(email)
                 .claim("role", role)
-                .claim("userId", userId)
+                .claim("userId", userId.toString())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getKey())
@@ -39,8 +40,8 @@ public class JwtUtil {
         return (String) parseClaims(token).get("role");
     }
 
-    public Integer extractUserId(String token) {
-        return ((Number) parseClaims(token).get("userId")).intValue();
+    public UUID extractUserId(String token) {
+        return UUID.fromString((String) parseClaims(token).get("userId"));
     }
 
     public boolean validateToken(String token) {

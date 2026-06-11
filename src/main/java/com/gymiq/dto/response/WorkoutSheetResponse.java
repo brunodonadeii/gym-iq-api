@@ -9,15 +9,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
 public class WorkoutSheetResponse {
 
-    private Integer workoutSheetId;
-    private Integer studentId;
+    private UUID workoutSheetId;
+    private UUID studentId;
     private String studentName;
-    private Integer instructorId;
+    private UUID instructorId;
     private String instructorName;
     private String name;
     private String goal;
@@ -25,6 +26,7 @@ public class WorkoutSheetResponse {
     private LocalDate endDate;
     private Boolean active;
     private String notes;
+    private List<WorkoutBlockResponse> blocks;
     private List<WorkoutSheetExerciseResponse> exercises;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -42,16 +44,28 @@ public class WorkoutSheetResponse {
                 .endDate(workoutSheet.getEndDate())
                 .active(workoutSheet.getActive())
                 .notes(workoutSheet.getNotes())
+                .blocks(mapBlocks(workoutSheet))
                 .exercises(mapExercises(workoutSheet))
                 .createdAt(workoutSheet.getCreatedAt())
                 .updatedAt(workoutSheet.getUpdatedAt())
                 .build();
     }
 
-    private static List<WorkoutSheetExerciseResponse> mapExercises(WorkoutSheet workoutSheet) {
-        return workoutSheet.getExercises()
+    private static List<WorkoutBlockResponse> mapBlocks(WorkoutSheet workoutSheet) {
+        return workoutSheet.getBlocks()
                 .stream()
-                .sorted(Comparator.comparing(WorkoutSheetExercise::getExecutionOrder))
+                .sorted(Comparator.comparing(block -> block.getExecutionOrder()))
+                .map(WorkoutBlockResponse::fromEntity)
+                .toList();
+    }
+
+    private static List<WorkoutSheetExerciseResponse> mapExercises(WorkoutSheet workoutSheet) {
+        return workoutSheet.getBlocks()
+                .stream()
+                .flatMap(block -> block.getExercises().stream())
+                .sorted(Comparator
+                        .<WorkoutSheetExercise, Integer>comparing(item -> item.getWorkoutBlock().getExecutionOrder())
+                        .thenComparing(WorkoutSheetExercise::getExecutionOrder))
                 .map(WorkoutSheetExerciseResponse::fromEntity)
                 .toList();
     }

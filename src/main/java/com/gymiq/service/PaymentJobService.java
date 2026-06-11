@@ -1,9 +1,12 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Payment.PaymentStatus;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.repository.EnrollmentRepository;
 import com.gymiq.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 @Slf4j
@@ -19,13 +23,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PaymentJobService {
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("America/Sao_Paulo");
+
     private final PaymentRepository paymentRepository;
     private final EnrollmentRepository enrollmentRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.REFRESH_OVERDUE_PAYMENTS, resourceType = ResourceType.JOB, description = "Atualizou pagamentos vencidos")
     public int refreshOverduePayments() {
         List<Payment> overduePayments = paymentRepository
-                .findByStatusAndDueDateBefore(PaymentStatus.PENDING, LocalDate.now());
+                .findByStatusAndDueDateBefore(PaymentStatus.PENDING, today());
 
         overduePayments.forEach(payment -> payment.setStatus(PaymentStatus.OVERDUE));
         paymentRepository.saveAll(overduePayments);
@@ -35,8 +42,9 @@ public class PaymentJobService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.GENERATE_MONTHLY_PAYMENTS, resourceType = ResourceType.JOB, description = "Gerou mensalidades automáticas")
     public int generateMonthlyPayments() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = today();
         List<Enrollment> activeEnrollments = enrollmentRepository.findByStatus(EnrollmentStatus.ACTIVE);
         int createdPayments = 0;
 
@@ -74,10 +82,14 @@ public class PaymentJobService {
     }
 
     private boolean isWithinEnrollmentPeriod(Enrollment enrollment, LocalDate dueDate) {
-        return enrollment.getEndDate() == null || !dueDate.isAfter(enrollment.getEndDate());
+        return enrollment.getEndDate() == null || dueDate.isBefore(enrollment.getEndDate());
     }
 
     private PaymentStatus resolveInitialStatus(LocalDate dueDate) {
-        return dueDate.isBefore(LocalDate.now()) ? PaymentStatus.OVERDUE : PaymentStatus.PENDING;
+        return dueDate.isBefore(today()) ? PaymentStatus.OVERDUE : PaymentStatus.PENDING;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(BUSINESS_ZONE);
     }
 }

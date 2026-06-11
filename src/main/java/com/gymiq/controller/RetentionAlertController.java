@@ -1,12 +1,17 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
+import com.gymiq.dto.response.RetentionAlertJobStatusResponse;
 import com.gymiq.dto.response.RetentionAlertResponse;
+import com.gymiq.service.RetentionAlertJobService;
 import com.gymiq.service.RetentionAlertService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,17 +24,27 @@ import java.util.List;
 public class RetentionAlertController {
 
     private final RetentionAlertService retentionAlertService;
+    private final RetentionAlertJobService retentionAlertJobService;
 
     @PostMapping("/student/{studentId}/generate")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RetentionAlertResponse> generateForStudent(@PathVariable Integer studentId) {
-        return ResponseEntity.ok(retentionAlertService.generateForStudent(studentId));
+    public ResponseEntity<RetentionAlertResponse> generateForStudent(@PathVariable UUID studentId) {
+        return retentionAlertService.generateForStudent(studentId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/generate-active-students")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<RetentionAlertResponse>> generateForActiveStudents() {
-        return ResponseEntity.ok(retentionAlertService.generateForActiveStudents());
+    public ResponseEntity<RetentionAlertJobStatusResponse> generateForActiveStudents() {
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(retentionAlertJobService.startGenerateActiveStudentsJob());
+    }
+
+    @GetMapping("/generate-active-students/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<RetentionAlertJobStatusResponse> getGenerateActiveStudentsStatus() {
+        return ResponseEntity.ok(retentionAlertJobService.getLatestJobStatus());
     }
 
     @PostMapping("/generate-overdue-students")
@@ -48,20 +63,20 @@ public class RetentionAlertController {
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<RetentionAlertResponse>> findByStudent(
-            @PathVariable Integer studentId,
+            @PathVariable UUID studentId,
             @PageableDefault(size = 10, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(retentionAlertService.findByStudent(studentId, pageable));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RetentionAlertResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<RetentionAlertResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(retentionAlertService.findById(id));
     }
 
     @PatchMapping("/{id}/resolve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RetentionAlertResponse> resolve(@PathVariable Integer id) {
+    public ResponseEntity<RetentionAlertResponse> resolve(@PathVariable UUID id) {
         return ResponseEntity.ok(retentionAlertService.resolve(id));
     }
 }

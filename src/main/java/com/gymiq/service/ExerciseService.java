@@ -1,11 +1,17 @@
 package com.gymiq.service;
 
+import java.util.UUID;
+
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreateExerciseRequest;
 import com.gymiq.dto.response.ExerciseResponse;
 import com.gymiq.entity.Exercise;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.ExerciseRepository;
+import com.gymiq.repository.WorkoutSheetExerciseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,8 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExerciseService {
 
     private final ExerciseRepository exerciseRepository;
+    private final WorkoutSheetExerciseRepository workoutSheetExerciseRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_EXERCISE, resourceType = ResourceType.EXERCISE, description = "Criou exercicio")
     public ExerciseResponse create(CreateExerciseRequest request) {
         ensureNameIsAvailable(request.getName(), null);
 
@@ -28,18 +36,11 @@ public class ExerciseService {
                 .name(request.getName())
                 .muscleGroup(request.getMuscleGroup())
                 .description(request.getDescription())
-                .active(true)
                 .build();
 
         exerciseRepository.save(exercise);
         log.info("Exercise created: id={}, name={}", exercise.getExerciseId(), exercise.getName());
         return ExerciseResponse.fromEntity(exercise);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<ExerciseResponse> findActive(Pageable pageable) {
-        return exerciseRepository.findByActiveTrue(pageable)
-                .map(ExerciseResponse::fromEntity);
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +61,7 @@ public class ExerciseService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_EXERCISE, resourceType = ResourceType.EXERCISE, description = "Atualizou exercicio")
     public ExerciseResponse update(Integer id, CreateExerciseRequest request) {
         Exercise exercise = findEntityById(id);
         ensureNameIsAvailable(request.getName(), id);
@@ -74,23 +76,28 @@ public class ExerciseService {
     }
 
     @Transactional
-    public void deactivate(Integer id) {
+    @Auditable(action = AuditAction.DELETE_EXERCISE, resourceType = ResourceType.EXERCISE, description = "Excluiu exercicio")
+    public void delete(Integer id) {
         Exercise exercise = findEntityById(id);
-        exercise.setActive(false);
-        exerciseRepository.save(exercise);
-        log.info("Exercise deactivated: id={}", id);
+
+        if (workoutSheetExerciseRepository.existsByExerciseExerciseId(id)) {
+            throw new BusinessException("Não é possível excluir um exercício vinculado a fichas de treino");
+        }
+
+        exerciseRepository.delete(exercise);
+        log.info("Exercise deleted: id={}", id);
     }
 
     public Exercise findEntityById(Integer id) {
         return exerciseRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercicio nao encontrado: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Exercício não encontrado: " + id));
     }
 
     private void ensureNameIsAvailable(String name, Integer currentExerciseId) {
         exerciseRepository.findByNameIgnoreCase(name)
                 .filter(exercise -> !exercise.getExerciseId().equals(currentExerciseId))
                 .ifPresent(exercise -> {
-                    throw new BusinessException("Ja existe um exercicio com o nome: " + name);
+            throw new BusinessException("Já existe um exercício com o nome: " + name);
                 });
     }
 }

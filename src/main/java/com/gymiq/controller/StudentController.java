@@ -1,10 +1,15 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.CreateStudentRequest;
+import com.gymiq.dto.request.StudentStatusFilter;
 import com.gymiq.dto.request.UpdateStudentRequest;
 import com.gymiq.dto.response.AddressLookupResponse;
+import com.gymiq.dto.response.StudentDataDeletionEligibilityResponse;
 import com.gymiq.dto.response.StudentOptionResponse;
 import com.gymiq.dto.response.StudentResponse;
+import com.gymiq.dto.response.StudentSummaryResponse;
 import com.gymiq.service.AddressLookupService;
 import com.gymiq.service.StudentService;
 import jakarta.validation.Valid;
@@ -32,30 +37,36 @@ public class StudentController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<StudentResponse> create(
+            Authentication authentication,
             @Valid @RequestBody CreateStudentRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(studentService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(studentService.create(request, authentication));
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<Page<StudentResponse>> findAll(
+    public ResponseEntity<Page<StudentSummaryResponse>> findAll(
+            Authentication authentication,
+            @RequestParam(required = false, defaultValue = "ACTIVE") StudentStatusFilter status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(studentService.findAll(pageable));
+        return ResponseEntity.ok(studentService.findAll(status, hasRole(authentication, "ADMIN"), pageable));
     }
 
     @GetMapping("/search")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<Page<StudentResponse>> search(
+    public ResponseEntity<Page<StudentSummaryResponse>> search(
+            Authentication authentication,
             @RequestParam String q,
+            @RequestParam(required = false, defaultValue = "ACTIVE") StudentStatusFilter status,
             @PageableDefault(size = 10, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(studentService.search(q, pageable));
+        return ResponseEntity.ok(studentService.search(q, status, hasRole(authentication, "ADMIN"), pageable));
     }
 
     @GetMapping("/options")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
     public ResponseEntity<List<StudentOptionResponse>> findOptions(
-            @RequestParam(required = false, defaultValue = "") String q) {
-        return ResponseEntity.ok(studentService.findOptions(q));
+            @RequestParam(required = false, defaultValue = "") String q,
+            @PageableDefault(size = 20, sort = "user.name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(studentService.findOptions(q, pageable));
     }
 
     @GetMapping("/address-by-zip-code/{zipCode}")
@@ -72,22 +83,57 @@ public class StudentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION','INSTRUCTOR')")
-    public ResponseEntity<StudentResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<StudentResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(studentService.findById(id));
+    }
+
+    @GetMapping("/{id}/personal-data/deletion-eligibility")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<StudentDataDeletionEligibilityResponse> checkDataDeletionEligibility(@PathVariable UUID id) {
+        return ResponseEntity.ok(studentService.checkDataDeletionEligibility(id));
+    }
+
+    @GetMapping("/me/personal-data/deletion-eligibility")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentDataDeletionEligibilityResponse> checkMyDataDeletionEligibility(Authentication authentication) {
+        return ResponseEntity.ok(studentService.checkAuthenticatedDataDeletionEligibility(authentication.getName()));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<StudentResponse> update(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody UpdateStudentRequest request) {
         return ResponseEntity.ok(studentService.update(id, request));
     }
 
-    @DeleteMapping("/{id}")
+    @PatchMapping("/{id}/inactive")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deactivate(@PathVariable Integer id) {
+    public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
         studentService.deactivate(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/active")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<StudentResponse> activate(@PathVariable UUID id) {
+        return ResponseEntity.ok(studentService.activate(id));
+    }
+
+    @DeleteMapping("/{id}/personal-data")
+    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
+    public ResponseEntity<StudentResponse> anonymizePersonalData(@PathVariable UUID id) {
+        return ResponseEntity.ok(studentService.anonymize(id));
+    }
+
+    @DeleteMapping("/me/personal-data")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<StudentResponse> anonymizeMyPersonalData(Authentication authentication) {
+        return ResponseEntity.ok(studentService.anonymizeAuthenticatedStudent(authentication.getName()));
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_" + role));
     }
 }

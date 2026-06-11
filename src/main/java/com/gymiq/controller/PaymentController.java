@@ -1,5 +1,7 @@
 package com.gymiq.controller;
 
+import java.util.UUID;
+
 import com.gymiq.dto.request.PayPaymentRequest;
 import com.gymiq.dto.response.PaymentJobResponse;
 import com.gymiq.dto.response.PaymentResponse;
@@ -30,39 +32,36 @@ public class PaymentController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PaymentResponse>> findAll(
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findAll(pageable));
+        return ResponseEntity.ok(paymentService.findAll(status, pageable));
     }
 
     @GetMapping("/enrollment/{enrollmentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PaymentResponse>> findByEnrollment(
-            @PathVariable Integer enrollmentId,
+            @PathVariable UUID enrollmentId,
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findByEnrollment(enrollmentId, pageable));
+        return ResponseEntity.ok(paymentService.findByEnrollment(enrollmentId, status, pageable));
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<Page<PaymentResponse>> findMine(
             Authentication authentication,
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findByAuthenticatedStudent(authentication.getName(), pageable));
+        return ResponseEntity.ok(paymentService.findByAuthenticatedStudent(authentication.getName(), status, pageable));
     }
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<Page<PaymentResponse>> findByStudent(
-            @PathVariable Integer studentId,
+            @PathVariable UUID studentId,
+            @RequestParam(required = false) PaymentStatus status,
             @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findByStudent(studentId, pageable));
-    }
-
-    @GetMapping("/overdue")
-    @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<Page<PaymentResponse>> findOverdue(
-            @PageableDefault(size = 10, sort = "dueDate", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(paymentService.findOverdue(pageable));
+        return ResponseEntity.ok(paymentService.findByStudent(studentId, status, pageable));
     }
 
     @PatchMapping("/refresh-overdue")
@@ -78,14 +77,14 @@ public class PaymentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
-    public ResponseEntity<PaymentResponse> findById(@PathVariable Integer id) {
+    public ResponseEntity<PaymentResponse> findById(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentService.findById(id));
     }
 
     @PatchMapping("/{id}/pay")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<PaymentResponse> pay(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @Valid @RequestBody(required = false) PayPaymentRequest request) {
         return ResponseEntity.ok(paymentService.pay(id, request));
     }
@@ -93,7 +92,7 @@ public class PaymentController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN','RECEPTION')")
     public ResponseEntity<PaymentResponse> changeStatus(
-            @PathVariable Integer id,
+            @PathVariable UUID id,
             @RequestParam PaymentStatus newStatus) {
         return ResponseEntity.ok(paymentService.changeStatus(id, newStatus));
     }

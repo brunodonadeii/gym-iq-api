@@ -17,8 +17,6 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Integer> {
 
     Optional<Exercise> findByNameIgnoreCase(String name);
 
-    Page<Exercise> findByActiveTrue(Pageable pageable);
-
     @Query("SELECT e FROM Exercise e WHERE " +
             "LOWER(e.name) LIKE LOWER(CONCAT('%', :term, '%')) OR " +
             "LOWER(e.muscleGroup) LIKE LOWER(CONCAT('%', :term, '%'))")

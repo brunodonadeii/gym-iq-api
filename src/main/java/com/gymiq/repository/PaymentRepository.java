@@ -1,46 +1,153 @@
 package com.gymiq.repository;
 
+import java.util.UUID;
+
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Enrollment.EnrollmentStatus;
 import com.gymiq.entity.Payment.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface PaymentRepository extends JpaRepository<Payment, Integer> {
+public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
-    List<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId);
+    @Override
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    Page<Payment> findAll(Pageable pageable);
 
-    List<Payment> findByEnrollmentEnrollmentIdOrderByDueDateDesc(Integer enrollmentId);
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    List<Payment> findByEnrollmentEnrollmentId(UUID enrollmentId);
 
-    Page<Payment> findByEnrollmentEnrollmentId(Integer enrollmentId, Pageable pageable);
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    List<Payment> findByEnrollmentEnrollmentIdOrderByDueDateDesc(UUID enrollmentId);
 
-    List<Payment> findByEnrollmentStudentStudentId(Integer studentId);
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    Page<Payment> findByEnrollmentEnrollmentId(UUID enrollmentId, Pageable pageable);
 
-    Page<Payment> findByEnrollmentStudentStudentId(Integer studentId, Pageable pageable);
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    Page<Payment> findByEnrollmentEnrollmentIdAndStatus(
+            UUID enrollmentId,
+            PaymentStatus status,
+            Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    List<Payment> findByEnrollmentStudentStudentId(UUID studentId);
+
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    Page<Payment> findByEnrollmentStudentStudentId(UUID studentId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
+    Page<Payment> findByEnrollmentStudentStudentIdAndStatus(
+            UUID studentId,
+            PaymentStatus status,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     List<Payment> findByStatus(PaymentStatus status);
 
+    @EntityGraph(attributePaths = {
+            "enrollment",
+            "enrollment.student",
+            "enrollment.student.user",
+            "enrollment.plan"
+    })
     Page<Payment> findByStatus(PaymentStatus status, Pageable pageable);
 
     List<Payment> findByStatusAndDueDateBefore(PaymentStatus status, LocalDate date);
 
-    boolean existsByEnrollmentEnrollmentIdAndDueDate(Integer enrollmentId, LocalDate dueDate);
+    long countByStatusAndDueDateBetween(PaymentStatus status, LocalDate startDate, LocalDate endDate);
 
-    Optional<Payment> findTopByEnrollmentEnrollmentIdOrderByDueDateDesc(Integer enrollmentId);
+    @Query("""
+            SELECT SUM(p.amount)
+            FROM Payment p
+            WHERE p.status = :status
+              AND p.dueDate BETWEEN :startDate AND :endDate
+            """)
+    BigDecimal sumAmountByStatusAndDueDateBetween(
+            @Param("status") PaymentStatus status,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
-    long countByEnrollmentStudentStudentIdAndStatus(Integer studentId, PaymentStatus status);
+    boolean existsByEnrollmentEnrollmentIdAndDueDate(UUID enrollmentId, LocalDate dueDate);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END
+            FROM Payment p
+            WHERE p.enrollment.student.studentId = :studentId
+              AND p.enrollment.plan.planId = :planId
+              AND p.dueDate = :dueDate
+            """)
+    boolean existsByStudentPlanAndDueDate(
+            @Param("studentId") UUID studentId,
+            @Param("planId") Integer planId,
+            @Param("dueDate") LocalDate dueDate);
+
+    Optional<Payment> findTopByEnrollmentEnrollmentIdOrderByDueDateDesc(UUID enrollmentId);
+
+    long countByEnrollmentStudentStudentIdAndStatus(UUID studentId, PaymentStatus status);
+
+    boolean existsByEnrollmentStudentStudentIdAndStatusIn(
+            UUID studentId,
+            Collection<PaymentStatus> statuses);
 
     long countByEnrollmentStudentStudentIdAndStatusAndDueDateBefore(
-            Integer studentId,
+            UUID studentId,
             PaymentStatus status,
             LocalDate date);
 
@@ -54,7 +161,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Integer> {
                     OR (p.status = :pendingStatus AND p.dueDate < :today)
               )
             """)
-    List<Integer> findActiveStudentIdsWithOverduePayments(
+    List<UUID> findActiveStudentIdsWithOverduePayments(
             @Param("activeStatus") EnrollmentStatus activeStatus,
             @Param("overdueStatus") PaymentStatus overdueStatus,
             @Param("pendingStatus") PaymentStatus pendingStatus,

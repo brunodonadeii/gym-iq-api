@@ -1,21 +1,24 @@
 package com.gymiq.entity;
 
+import com.gymiq.entity.converter.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 
 @Entity
 @Table(name = "users",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_user_email", columnNames = "email")
+                @UniqueConstraint(name = "uk_user_email_hash", columnNames = "email_hash")
         },
         indexes = {
                 @Index(name = "idx_user_name", columnList = "name"),
-                @Index(name = "idx_user_active", columnList = "active")
+                @Index(name = "idx_user_active", columnList = "active"),
+                @Index(name = "idx_user_email_hash", columnList = "email_hash")
         })
 @Getter
 @Setter
@@ -25,15 +28,19 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_user")
-    private Integer userId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id_user", nullable = false, updatable = false, columnDefinition = "uuid")
+    private UUID userId;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "email", nullable = false, length = 150)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "email", nullable = false, columnDefinition = "TEXT")
     private String email;
+
+    @Column(name = "email_hash", nullable = false, length = 64)
+    private String emailHash;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
@@ -52,6 +59,13 @@ public class User {
 
     @Column(name = "lgpd_accepted_at")
     private LocalDateTime lgpdAcceptedAt;
+
+    @Column(name = "lgpd_policy_version", length = 20)
+    private String lgpdPolicyVersion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lgpd_consent_source", length = 40)
+    private LgpdConsentSource lgpdConsentSource;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -72,5 +86,11 @@ public class User {
         RECEPTION,
         INSTRUCTOR,
         STUDENT
+    }
+
+    public enum LgpdConsentSource {
+        ADMIN_REGISTRATION,
+        RECEPTION_REGISTRATION,
+        STUDENT_REGISTRATION
     }
 }

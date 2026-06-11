@@ -1,5 +1,7 @@
 package com.gymiq.dto.response;
 
+import java.util.UUID;
+
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Payment;
 import lombok.Builder;
@@ -13,9 +15,9 @@ import java.util.List;
 @Builder
 public class EnrollmentResponse {
 
-    private Integer enrollmentId;
+    private UUID enrollmentId;
 
-    private Integer studentId;
+    private UUID studentId;
     private String studentName;
     private String studentEmail;
 

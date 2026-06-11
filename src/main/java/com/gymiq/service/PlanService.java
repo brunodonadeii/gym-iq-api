@@ -1,8 +1,12 @@
 package com.gymiq.service;
 
+import com.gymiq.aop.Auditable;
 import com.gymiq.dto.request.CreatePlanRequest;
+import com.gymiq.dto.request.PlanStatusFilter;
 import com.gymiq.dto.response.PlanResponse;
 import com.gymiq.entity.Plan;
+import com.gymiq.enums.AuditAction;
+import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.BusinessException;
 import com.gymiq.exception.ResourceNotFoundException;
 import com.gymiq.repository.EnrollmentRepository;
@@ -11,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +28,7 @@ public class PlanService {
     private final EnrollmentRepository enrollmentRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.CREATE_PLAN, resourceType = ResourceType.PLAN, description = "Criou plano")
     public PlanResponse create(CreatePlanRequest request) {
         if (planRepository.existsByNameIgnoreCase(request.getName())) {
             throw new BusinessException("Já existe um plano com o nome: " + request.getName());
@@ -48,6 +54,27 @@ public class PlanService {
     }
 
     @Transactional(readOnly = true)
+    public Page<PlanResponse> findAll(PlanStatusFilter status, String term, Pageable pageable) {
+        return findAll(status, term, false, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PlanResponse> findAll(PlanStatusFilter status, String term, boolean admin, Pageable pageable) {
+        PlanStatusFilter resolvedStatus = resolveStatus(status);
+        String normalizedTerm = normalizeTerm(term);
+
+        if (resolvedStatus != PlanStatusFilter.ACTIVE && !admin) {
+            throw new AccessDeniedException("Apenas administradores podem consultar planos inativos");
+        }
+
+        Page<Plan> plans = normalizedTerm == null
+                ? findByStatus(resolvedStatus, pageable)
+                : searchByStatus(resolvedStatus, normalizedTerm, pageable);
+
+        return plans.map(PlanResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
     public Page<PlanResponse> findAll(Pageable pageable) {
         return planRepository.findAll(pageable)
                 .map(PlanResponse::fromEntity);
@@ -59,6 +86,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE_PLAN, resourceType = ResourceType.PLAN, description = "Atualizou plano")
     public PlanResponse update(Integer id, CreatePlanRequest request) {
         Plan plan = findEntityById(id);
 
@@ -66,7 +94,9 @@ public class PlanService {
                 .filter(p -> p.getName().equalsIgnoreCase(request.getName())
                         && !p.getPlanId().equals(id))
                 .findFirst()
-                .ifPresent(p -> { throw new BusinessException("Nome já usado por outro plano"); });
+                .ifPresent(p -> {
+                    throw new BusinessException("Nome já usado por outro plano");
+                });
 
         plan.setName(request.getName());
         plan.setDescription(request.getDescription());
@@ -79,11 +109,19 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE_PLAN, resourceType = ResourceType.PLAN, description = "Excluiu ou inativou plano")
     public void delete(Integer id) {
         Plan plan = findEntityById(id);
 
+        if (Boolean.TRUE.equals(plan.getActive())) {
+            plan.setActive(false);
+            planRepository.save(plan);
+            log.info("Plan deactivated by delete request: id={}", id);
+            return;
+        }
+
         if (enrollmentRepository.existsByPlanPlanId(id)) {
-            throw new BusinessException("NÃ£o Ã© possÃ­vel excluir um plano vinculado a matrÃ­culas");
+            throw new BusinessException("Não é possível excluir fisicamente um plano vinculado a matrículas");
         }
 
         planRepository.delete(plan);
@@ -91,6 +129,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DEACTIVATE_PLAN, resourceType = ResourceType.PLAN, description = "Inativou plano")
     public void deactivate(Integer id) {
         Plan plan = findEntityById(id);
         plan.setActive(false);
@@ -99,6 +138,7 @@ public class PlanService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.ACTIVATE_PLAN, resourceType = ResourceType.PLAN, description = "Ativou plano")
     public void activate(Integer id) {
         Plan plan = findEntityById(id);
         plan.setActive(true);
@@ -109,5 +149,32 @@ public class PlanService {
     public Plan findEntityById(Integer id) {
         return planRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Plano não encontrado: " + id));
+    }
+
+    private Page<Plan> findByStatus(PlanStatusFilter status, Pageable pageable) {
+        return switch (status) {
+            case ACTIVE -> planRepository.findByActiveTrue(pageable);
+            case INACTIVE -> planRepository.findByActiveFalse(pageable);
+            case ALL -> planRepository.findAll(pageable);
+        };
+    }
+
+    private Page<Plan> searchByStatus(PlanStatusFilter status, String term, Pageable pageable) {
+        return switch (status) {
+            case ACTIVE -> planRepository.searchByTermAndActive(term, true, pageable);
+            case INACTIVE -> planRepository.searchByTermAndActive(term, false, pageable);
+            case ALL -> planRepository.searchByTerm(term, pageable);
+        };
+    }
+
+    private PlanStatusFilter resolveStatus(PlanStatusFilter status) {
+        return status != null ? status : PlanStatusFilter.ACTIVE;
+    }
+
+    private String normalizeTerm(String term) {
+        if (term == null || term.isBlank()) {
+            return null;
+        }
+        return term.trim();
     }
 }
