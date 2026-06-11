@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -110,6 +111,31 @@ class WorkoutSheetServiceTest {
         verify(workoutSheetRepository).save(workoutSheet);
     }
 
+    @Test
+    void updateShouldKeepExistingBlocksWhenNoWorkoutStructureIsSent() {
+        WorkoutSheet workoutSheet = TestDataFactory.workoutSheet();
+        Student student = workoutSheet.getStudent();
+        Instructor instructor = workoutSheet.getInstructor();
+        CreateWorkoutSheetRequest request = metadataOnlyRequest(student, instructor);
+
+        when(workoutSheetRepository.findById(workoutSheet.getWorkoutSheetId())).thenReturn(Optional.of(workoutSheet));
+        when(studentRepository.findById(student.getStudentId())).thenReturn(Optional.of(student));
+        when(instructorRepository.findById(instructor.getInstructorId())).thenReturn(Optional.of(instructor));
+
+        WorkoutSheetResponse response = workoutSheetService.update(
+                workoutSheet.getWorkoutSheetId(),
+                request,
+                "admin@gymiq.com",
+                true);
+
+        assertThat(response.getName()).isEqualTo("Ficha Ajustada");
+        assertThat(response.getBlocks()).hasSize(1);
+        assertThat(response.getExercises()).hasSize(1);
+        verify(exerciseRepository, never()).findById(any());
+        verify(workoutSheetRepository, never()).flush();
+        verify(workoutSheetRepository).save(workoutSheet);
+    }
+
     private CreateWorkoutSheetRequest validRequest(Student student, Instructor instructor) {
         CreateWorkoutSheetRequest request = new CreateWorkoutSheetRequest();
         request.setStudentId(student.getStudentId());
@@ -120,6 +146,18 @@ class WorkoutSheetServiceTest {
         request.setEndDate(LocalDate.of(2026, 8, 1));
         request.setNotes("Ajustar cargas semanalmente");
         request.setExercises(List.of(exerciseItem("A", 1)));
+        return request;
+    }
+
+    private CreateWorkoutSheetRequest metadataOnlyRequest(Student student, Instructor instructor) {
+        CreateWorkoutSheetRequest request = new CreateWorkoutSheetRequest();
+        request.setStudentId(student.getStudentId());
+        request.setInstructorId(instructor.getInstructorId());
+        request.setName("Ficha Ajustada");
+        request.setGoal("Condicionamento");
+        request.setStartDate(LocalDate.of(2026, 5, 1));
+        request.setEndDate(LocalDate.of(2026, 8, 1));
+        request.setNotes("Atualizar objetivo");
         return request;
     }
 

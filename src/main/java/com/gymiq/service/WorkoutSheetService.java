@@ -222,8 +222,12 @@ public class WorkoutSheetService {
         workoutSheet.setStartDate(resolveStartDate(request.getStartDate()));
         workoutSheet.setEndDate(request.getEndDate());
         workoutSheet.setNotes(request.getNotes());
-        workoutSheet.getBlocks().clear();
-        workoutSheet.getBlocks().addAll(buildBlocks(workoutSheet, request));
+        if (hasWorkoutStructure(request)) {
+            List<WorkoutBlock> blocks = buildBlocks(workoutSheet, request);
+            workoutSheet.getBlocks().clear();
+            workoutSheetRepository.flush();
+            workoutSheet.getBlocks().addAll(blocks);
+        }
 
         workoutSheetRepository.save(workoutSheet);
         log.info("Workout sheet updated: id={}", id);
@@ -344,6 +348,11 @@ public class WorkoutSheetService {
         return blockDrafts.stream()
                 .map(blockDraft -> buildBlock(workoutSheet, blockDraft))
                 .toList();
+    }
+
+    private boolean hasWorkoutStructure(CreateWorkoutSheetRequest request) {
+        return (request.getBlocks() != null && !request.getBlocks().isEmpty())
+                || (request.getExercises() != null && !request.getExercises().isEmpty());
     }
 
     private WorkoutBlock buildBlock(WorkoutSheet workoutSheet, BlockDraft blockDraft) {
