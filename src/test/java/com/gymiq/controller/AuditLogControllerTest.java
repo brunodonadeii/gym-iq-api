@@ -7,6 +7,7 @@ import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.InvalidParameterException;
 import com.gymiq.repository.AuditLogRepository;
+import com.gymiq.service.AuditLogResponseService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -34,13 +35,20 @@ class AuditLogControllerTest {
     @Mock
     private AuditLogRepository auditLogRepository;
 
+    @Mock
+    private AuditLogResponseService auditLogResponseService;
+
     @Test
     void filterShouldNormalizeEnumParamsAndReturnPagedLogs() {
-        AuditLogController controller = new AuditLogController(auditLogRepository);
+        AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
         AuditLog log = auditLog();
+        AuditLogResponse mappedResponse = auditLogResponse(log);
+        Page<AuditLog> logs = new PageImpl<>(List.of(log));
+        Page<AuditLogResponse> mappedPage = new PageImpl<>(List.of(mappedResponse));
 
         when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
-                .thenReturn(new PageImpl<>(List.of(log)));
+                .thenReturn(logs);
+        when(auditLogResponseService.toResponsePage(logs)).thenReturn(mappedPage);
 
         ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
                 log.getActorUserId(),
@@ -54,12 +62,14 @@ class AuditLogControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getContent()).hasSize(1);
         assertThat(response.getBody().getContent().get(0).getAction()).isEqualTo(AuditAction.LOGIN);
+        assertThat(response.getBody().getContent().get(0).getActionLabel()).isEqualTo("Login");
         verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
+        verify(auditLogResponseService).toResponsePage(logs);
     }
 
     @Test
     void filterShouldRejectUnknownAction() {
-        AuditLogController controller = new AuditLogController(auditLogRepository);
+        AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
 
         assertThatThrownBy(() -> controller.filter(null, "acao-inexistente", null, null, null, null, Pageable.unpaged()))
                 .isInstanceOf(InvalidParameterException.class)
@@ -68,7 +78,7 @@ class AuditLogControllerTest {
 
     @Test
     void filterShouldRejectUnknownResourceType() {
-        AuditLogController controller = new AuditLogController(auditLogRepository);
+        AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
 
         assertThatThrownBy(() -> controller.filter(null, null, "tipo-inexistente", null, null, null, Pageable.unpaged()))
                 .isInstanceOf(InvalidParameterException.class)
@@ -77,7 +87,7 @@ class AuditLogControllerTest {
 
     @Test
     void findFilterOptionsShouldReturnActionsResourceTypesAndActors() {
-        AuditLogController controller = new AuditLogController(auditLogRepository);
+        AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
         AuditLog first = auditLog();
         AuditLog duplicatedActor = auditLog();
         duplicatedActor.setAuditLogId(2L);
@@ -102,11 +112,15 @@ class AuditLogControllerTest {
 
     @Test
     void filterByActorShouldUseMainFilterEndpoint() {
-        AuditLogController controller = new AuditLogController(auditLogRepository);
+        AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
         AuditLog log = auditLog();
+        AuditLogResponse mappedResponse = auditLogResponse(log);
+        Page<AuditLog> logs = new PageImpl<>(List.of(log));
+        Page<AuditLogResponse> mappedPage = new PageImpl<>(List.of(mappedResponse));
 
         when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
-                .thenReturn(new PageImpl<>(List.of(log)));
+                .thenReturn(logs);
+        when(auditLogResponseService.toResponsePage(logs)).thenReturn(mappedPage);
 
         ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
                 log.getActorUserId(),
@@ -124,11 +138,15 @@ class AuditLogControllerTest {
 
     @Test
     void filterByResourceShouldUseMainFilterEndpoint() {
-        AuditLogController controller = new AuditLogController(auditLogRepository);
+        AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
         AuditLog log = auditLog();
+        AuditLogResponse mappedResponse = auditLogResponse(log);
+        Page<AuditLog> logs = new PageImpl<>(List.of(log));
+        Page<AuditLogResponse> mappedPage = new PageImpl<>(List.of(mappedResponse));
 
         when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
-                .thenReturn(new PageImpl<>(List.of(log)));
+                .thenReturn(logs);
+        when(auditLogResponseService.toResponsePage(logs)).thenReturn(mappedPage);
 
         ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
                 null,
@@ -157,6 +175,24 @@ class AuditLogControllerTest {
                 .description("Realizou login")
                 .ipAddress("127.0.0.1")
                 .createdAt(LocalDateTime.now())
+                .build();
+    }
+
+    private AuditLogResponse auditLogResponse(AuditLog log) {
+        return AuditLogResponse.builder()
+                .auditLogId(log.getAuditLogId())
+                .actorUserId(log.getActorUserId())
+                .actorEmail(log.getActorEmail())
+                .actorLabel(log.getActorEmail())
+                .actorRole(log.getActorRole())
+                .action(log.getAction())
+                .actionLabel("Login")
+                .resourceType(log.getResourceType())
+                .resourceId(log.getResourceId())
+                .resourceLabel("Admin GymIQ (admin@gymiq.com)")
+                .description(log.getDescription())
+                .ipAddress(log.getIpAddress())
+                .createdAt(log.getCreatedAt())
                 .build();
     }
 }

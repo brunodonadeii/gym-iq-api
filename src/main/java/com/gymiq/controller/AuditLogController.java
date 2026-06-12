@@ -9,6 +9,7 @@ import com.gymiq.enums.AuditAction;
 import com.gymiq.enums.ResourceType;
 import com.gymiq.exception.InvalidParameterException;
 import com.gymiq.repository.AuditLogRepository;
+import com.gymiq.service.AuditLogResponseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.domain.Page;
@@ -39,6 +40,7 @@ import java.util.UUID;
 public class AuditLogController {
 
     private final AuditLogRepository auditLogRepository;
+    private final AuditLogResponseService auditLogResponseService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -50,15 +52,14 @@ public class AuditLogController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(auditLogRepository
-                .findAll(buildSpecification(
+        Page<AuditLog> logs = auditLogRepository.findAll(buildSpecification(
                         actorUserId,
                         resolveAuditAction(action),
                         resolveResourceType(resourceType),
                         resourceId,
                         from,
-                        to), pageable)
-                .map(AuditLogResponse::fromEntity));
+                        to), pageable);
+        return ResponseEntity.ok(auditLogResponseService.toResponsePage(logs));
     }
 
     @GetMapping("/filter-options")
