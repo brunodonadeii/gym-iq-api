@@ -134,6 +134,7 @@ class AuditLogControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getTotalElements()).isEqualTo(1);
         verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
+        verify(auditLogResponseService).toResponsePage(logs);
     }
 
     @Test
@@ -160,6 +161,7 @@ class AuditLogControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getContent().get(0).getResourceType()).isEqualTo(ResourceType.USER);
         verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
+        verify(auditLogResponseService).toResponsePage(logs);
     }
 
     private AuditLog auditLog() {
