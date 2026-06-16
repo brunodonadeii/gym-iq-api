@@ -124,7 +124,7 @@ public class AuditLogResponseService {
     private String fallbackActorLabel(AuditLog log) {
         if (log.getActorEmail() != null && !log.getActorEmail().isBlank()) {
             if (!isAdministrativeRole(log.getActorRole())) {
-                return log.getActorRole() == null ? "Usuario" : log.getActorRole();
+                return log.getActorRole() == null ? "Usuário" : log.getActorRole();
             }
             return log.getActorEmail();
         }
@@ -136,7 +136,7 @@ public class AuditLogResponseService {
             return null;
         }
         if (resourceType == ResourceType.JOB) {
-            return "Rotina automatica";
+            return "Rotina automática";
         }
         if (resourceId == null || resourceId.isBlank()) {
             return resourceType.getLabel();
@@ -162,7 +162,7 @@ public class AuditLogResponseService {
                     .orElse(defaultLabel(resourceType, resourceId));
             case ENROLLMENT -> findUuid(resourceId)
                     .flatMap(id -> context.enrollmentCache.computeIfAbsent(id, enrollmentRepository::findById))
-                    .map(enrollment -> "Matricula de " + enrollment.getStudent().getUser().getName())
+                    .map(enrollment -> "Matrícula de " + enrollment.getStudent().getUser().getName())
                     .orElse(defaultLabel(resourceType, resourceId));
             case PAYMENT -> findUuid(resourceId)
                     .flatMap(id -> context.paymentCache.computeIfAbsent(id, paymentRepository::findById))
@@ -192,7 +192,7 @@ public class AuditLogResponseService {
                     .flatMap(id -> context.retentionAlertCache.computeIfAbsent(id, retentionAlertRepository::findById))
                     .map(alert -> "Alerta de " + alert.getStudent().getUser().getName())
                     .orElse(defaultLabel(resourceType, resourceId));
-            case JOB -> "Rotina automatica";
+            case JOB -> "Rotina automática";
         });
     }
 

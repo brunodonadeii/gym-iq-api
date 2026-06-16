@@ -1,6 +1,5 @@
 package com.gymiq.dto.response;
 
-import com.gymiq.entity.AuditLog;
 import com.gymiq.entity.Enrollment;
 import com.gymiq.entity.Payment;
 import com.gymiq.entity.Presence;
@@ -89,20 +88,22 @@ class ResponseMappingTest {
     @Test
     void administrativeResponsesShouldMapValues() {
         User user = TestDataFactory.activeAdminUser();
-        AuditLog log = AuditLog.builder()
+
+        UserResponse userResponse = UserResponse.fromEntity(user);
+        AuditLogResponse auditLogResponse = AuditLogResponse.builder()
                 .auditLogId(1L)
                 .actorUserId(user.getUserId())
                 .actorEmail(user.getEmail())
+                .actorLabel(user.getName() + " (" + user.getEmail() + ")")
                 .actorRole(user.getRole().name())
                 .action(AuditAction.LOGIN)
+                .actionLabel(AuditAction.LOGIN.getLabel())
                 .resourceType(ResourceType.USER)
                 .resourceId(user.getUserId().toString())
+                .resourceLabel(user.getName() + " (" + user.getEmail() + ")")
                 .description("Realizou login")
                 .ipAddress("127.0.0.1")
                 .build();
-
-        UserResponse userResponse = UserResponse.fromEntity(user);
-        AuditLogResponse auditLogResponse = AuditLogResponse.fromEntity(log);
         AuditFilterOptionResponse option = new AuditFilterOptionResponse(AuditAction.LOGIN.name(), AuditAction.LOGIN.getLabel());
         AuditActorOptionResponse actor = new AuditActorOptionResponse(user.getUserId(), user.getEmail(), user.getRole().name());
         AuditFilterOptionsResponse options = new AuditFilterOptionsResponse(List.of(option), List.of(), List.of(actor));
@@ -114,6 +115,7 @@ class ResponseMappingTest {
 
         assertThat(userResponse.getEmail()).contains("***");
         assertThat(auditLogResponse.getAction()).isEqualTo(AuditAction.LOGIN);
+        assertThat(auditLogResponse.getActionLabel()).isEqualTo("Login");
         assertThat(option.getLabel()).isEqualTo("Login");
         assertThat(actor.getLabel()).contains("ADMIN");
         assertThat(options.getActors()).hasSize(1);

@@ -43,10 +43,12 @@ class AuditLogControllerTest {
         AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
         AuditLog log = auditLog();
         AuditLogResponse mappedResponse = auditLogResponse(log);
+        Page<AuditLog> logs = new PageImpl<>(List.of(log));
+        Page<AuditLogResponse> mappedPage = new PageImpl<>(List.of(mappedResponse));
 
         when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
-                .thenReturn(new PageImpl<>(List.of(log)));
-        when(auditLogResponseService.toResponse(log)).thenReturn(mappedResponse);
+                .thenReturn(logs);
+        when(auditLogResponseService.toResponsePage(logs)).thenReturn(mappedPage);
 
         ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
                 log.getActorUserId(),
@@ -62,7 +64,7 @@ class AuditLogControllerTest {
         assertThat(response.getBody().getContent().get(0).getAction()).isEqualTo(AuditAction.LOGIN);
         assertThat(response.getBody().getContent().get(0).getActionLabel()).isEqualTo("Login");
         verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
-        verify(auditLogResponseService).toResponse(log);
+        verify(auditLogResponseService).toResponsePage(logs);
     }
 
     @Test
@@ -113,10 +115,12 @@ class AuditLogControllerTest {
         AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
         AuditLog log = auditLog();
         AuditLogResponse mappedResponse = auditLogResponse(log);
+        Page<AuditLog> logs = new PageImpl<>(List.of(log));
+        Page<AuditLogResponse> mappedPage = new PageImpl<>(List.of(mappedResponse));
 
         when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
-                .thenReturn(new PageImpl<>(List.of(log)));
-        when(auditLogResponseService.toResponse(log)).thenReturn(mappedResponse);
+                .thenReturn(logs);
+        when(auditLogResponseService.toResponsePage(logs)).thenReturn(mappedPage);
 
         ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
                 log.getActorUserId(),
@@ -130,6 +134,7 @@ class AuditLogControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getTotalElements()).isEqualTo(1);
         verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
+        verify(auditLogResponseService).toResponsePage(logs);
     }
 
     @Test
@@ -137,10 +142,12 @@ class AuditLogControllerTest {
         AuditLogController controller = new AuditLogController(auditLogRepository, auditLogResponseService);
         AuditLog log = auditLog();
         AuditLogResponse mappedResponse = auditLogResponse(log);
+        Page<AuditLog> logs = new PageImpl<>(List.of(log));
+        Page<AuditLogResponse> mappedPage = new PageImpl<>(List.of(mappedResponse));
 
         when(auditLogRepository.findAll(any(Specification.class), eq(Pageable.unpaged())))
-                .thenReturn(new PageImpl<>(List.of(log)));
-        when(auditLogResponseService.toResponse(log)).thenReturn(mappedResponse);
+                .thenReturn(logs);
+        when(auditLogResponseService.toResponsePage(logs)).thenReturn(mappedPage);
 
         ResponseEntity<Page<AuditLogResponse>> response = controller.filter(
                 null,
@@ -154,6 +161,7 @@ class AuditLogControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getContent().get(0).getResourceType()).isEqualTo(ResourceType.USER);
         verify(auditLogRepository).findAll(any(Specification.class), eq(Pageable.unpaged()));
+        verify(auditLogResponseService).toResponsePage(logs);
     }
 
     private AuditLog auditLog() {
