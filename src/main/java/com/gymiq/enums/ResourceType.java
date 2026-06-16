@@ -1,18 +1,18 @@
 package com.gymiq.enums;
 
 public enum ResourceType {
-    USER("Usuario"),
+    USER("Usuário"),
     STUDENT("Aluno"),
     INSTRUCTOR("Instrutor"),
     PLAN("Plano"),
-    ENROLLMENT("Matricula"),
+    ENROLLMENT("Matrícula"),
     PAYMENT("Pagamento"),
-    PRESENCE("Presenca"),
-    EXERCISE("Exercicio"),
+    PRESENCE("Presença"),
+    EXERCISE("Exercício"),
     WORKOUT_SHEET("Ficha de treino"),
     WORKOUT_BLOCK("Treino da ficha"),
-    WORKOUT_SHEET_EXERCISE("Exercicio da ficha"),
-    RETENTION_ALERT("Alerta de retencao"),
+    WORKOUT_SHEET_EXERCISE("Exercício da ficha"),
+    RETENTION_ALERT("Alerta de retenção"),
     JOB("Job");
 
     private final String label;

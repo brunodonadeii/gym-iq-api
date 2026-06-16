@@ -57,7 +57,6 @@ public class UserService {
                 role != null ? role : AdministrativeUserRoleFilter.ALL;
         String normalizedTerm = term != null ? term.trim() : "";
         String emailHash = resolveEmailHashForSearch(normalizedTerm);
-
         boolean hasSearch = !normalizedTerm.isBlank();
 
         Page<User> users = switch (resolvedRole) {
